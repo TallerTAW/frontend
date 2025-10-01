@@ -1,13 +1,104 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sports Venue Booking Management System</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlympiaHub - Reserva tu Deporte, Ahora</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    </head>
+<body>
+
+    <header id="main-header">
+        <div class="logo-container">
+            <img src="img/logo.png" alt="OlympiaHub Logo" class="logo-img">
+            <span class="app-name">OlympiaHub</span>
+        </div>
+        
+        <div class="nav-elements"> 
+             <nav>
+                <div class="dropdown">
+                    <a href="#" class="nav-link dropdown-toggle">Sobre Nosotros <span class="dropdown-arrow"></span></a>
+                    <div class="dropdown-menu">
+                        <a href="#quienes-somos">Quiénes Somos</a>
+                        <a href="#mision">Misión & Visión</a>
+                        <a href="#valores">Valores</a>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="auth-buttons">
+                <button class="btn btn-primary btn-explore">Explora Canchas</button>
+                <a href="#" class="auth-link">Iniciar Sesión</a>
+                <a href="#" class="auth-link btn-signup">Registrarse →</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Tu Cancha. Tu Hora. <br> Reservada al Instante.
+                </h1>
+                <p class="hero-subtitle">
+                    La plataforma que conecta a deportistas con los mejores espacios cerca de ti, con tecnología de vanguardia.
+                </p>
+                <button class="btn btn-cta">
+                    ¡Reserva Ahora!
+                </button>
+            </div>
+        </section>
+
+        <section id="quienes-somos" class="info-section">
+            <h2 class="section-title">Quiénes Somos</h2>
+            <p>Somos un equipo de apasionados por el deporte y la tecnología, dedicados a eliminar las barreras entre los deportistas y sus canchas. **OlympiaHub** nació de la frustración de no encontrar un lugar disponible, y hoy somos el puente digital que facilita el juego.</p>
+        </section>
+
+        <section id="mision" class="info-section alternate-bg">
+            <h2 class="section-title">Misión & Visión</h2>
+            <div class="mission-vision-grid">
+                <div>
+                    <h3 class="subsection-title">Nuestra Misión</h3>
+                    <p>Facilitar la reserva de espacios deportivos de forma rápida, segura y eficiente, impulsando la práctica deportiva y el bienestar en la comunidad.</p>
+                </div>
+                <div>
+                    <h3 class="subsection-title">Nuestra Visión</h3>
+                    <p>Ser la plataforma líder mundial en gestión y reserva de espacios deportivos, reconocida por su innovación tecnológica y su impacto positivo en la vida de los atletas.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="valores" class="info-section">
+            <h2 class="section-title">Nuestros Valores</h2>
+            <ul class="values-list">
+                <li>**Innovación:** Buscamos constantemente la mejor tecnología.</li>
+                <li>**Integridad:** Transparencia en cada reserva.</li>
+                <li>**Comunidad:** Conectar a los amantes del deporte.</li>
+                <li>**Pasión:** Vivimos y respiramos deporte.</li>
+            </ul>
+        </section>
+
+    </main>
+    
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">OlympiaHub</div>
+            <div class="footer-links">
+                <a href="#quienes-somos">Acerca de</a>
+                <a href="#">Ayuda</a>
+                <a href="#">Términos y Condiciones</a>
+                <a href="#">Política de Privacidad</a>
+            </div>
+            <div class="footer-social">
+                <p>Síguenos en redes</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2025 OlympiaHub. Todos los derechos reservados.
+        </div>
+    </footer>
+
+    <script src="index.js"></script>
+</body>
 </html>
