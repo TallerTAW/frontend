@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { reservasApi } from '../api/reservas';
 import { toast } from 'react-toastify';
 import {
   Box,
@@ -15,118 +15,171 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
 } from '@mui/material';
 import { Star, Edit } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
+// Servicio de comentarios (mock - debes crear el backend para esto)
+const comentariosApi = {
+  create: async (comentarioData) => {
+    // TODO: Implementar llamada real a tu backend
+    console.log('Creando comentario:', comentarioData);
+    return { 
+      id_comentario: Date.now(), 
+      ...comentarioData,
+      fecha_comentario: new Date().toISOString()
+    };
+  },
+  
+  update: async (id, comentarioData) => {
+    // TODO: Implementar llamada real a tu backend
+    console.log('Actualizando comentario:', id, comentarioData);
+    return { 
+      id_comentario: id, 
+      ...comentarioData 
+    };
+  },
+  
+  getByUsuario: async (usuarioId) => {
+    // TODO: Implementar llamada real a tu backend
+    console.log('Obteniendo comentarios del usuario:', usuarioId);
+    return [];
+  },
+  
+  getByCancha: async (canchaId) => {
+    // TODO: Implementar llamada real a tu backend
+    console.log('Obteniendo comentarios de la cancha:', canchaId);
+    return [];
+  }
+};
+
 export default function Ratings() {
   const { profile } = useAuth();
-  const [reservations, setReservations] = useState([]);
-  const [ratings, setRatings] = useState([]);
+  const [reservas, setReservas] = useState([]);
+  const [comentarios, setComentarios] = useState([]);
   const [ratingDialog, setRatingDialog] = useState(null);
   const [ratingValue, setRatingValue] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comentario, setComentario] = useState('');
 
   useEffect(() => {
-    fetchData();
+    if (profile) {
+      fetchData();
+    }
   }, [profile]);
 
   const fetchData = async () => {
     try {
-      const [reservationsRes, ratingsRes] = await Promise.all([
-        supabase
-          .from('reservations')
-          .select(`
-            *,
-            courts (
-              id,
-              name,
-              sports (name, icon),
-              sports_facilities (name)
-            )
-          `)
-          .eq('user_id', profile.id)
-          .in('status', ['completed', 'confirmed'])
-          .order('reservation_date', { ascending: false }),
-        supabase
-          .from('ratings')
-          .select(`
-            *,
-            courts (
-              name,
-              sports (name, icon),
-              sports_facilities (name)
-            )
-          `)
-          .eq('user_id', profile.id)
-          .order('created_at', { ascending: false }),
-      ]);
-
-      if (reservationsRes.error) throw reservationsRes.error;
-      if (ratingsRes.error) throw ratingsRes.error;
-
-      setReservations(reservationsRes.data || []);
-      setRatings(ratingsRes.data || []);
+      const reservasData = await reservasApi.getByUsuario(profile.id);
+      
+      // Filtrar reservas completadas para calificar
+      const reservasCompletadas = reservasData.filter(reserva => 
+        reserva.estado === 'completada' || reserva.estado === 'confirmada'
+      );
+      
+      setReservas(reservasCompletadas);
+      
+      // Cargar comentarios existentes del usuario
+      const comentariosData = await comentariosApi.getByUsuario(profile.id);
+      setComentarios(comentariosData);
     } catch (error) {
-      toast.error('Error al cargar datos');
+      console.error('Error al cargar datos:', error);
+      // Para desarrollo, usar datos de ejemplo
+      setComentarios([]);
     }
   };
 
-  const handleOpenDialog = (reservation) => {
-    const existingRating = ratings.find(r => r.reservation_id === reservation.id);
-    if (existingRating) {
-      setRatingValue(existingRating.rating);
-      setComment(existingRating.comment);
+  const handleOpenDialog = (reserva) => {
+    // Buscar si ya existe un comentario para esta reserva/cancha
+    const existingComment = comentarios.find(c => 
+      c.id_cancha === reserva.id_cancha || c.id_reserva === reserva.id_reserva
+    );
+    
+    if (existingComment) {
+      setRatingValue(existingComment.calificacion || 0);
+      setComentario(existingComment.descripcion || '');
     } else {
       setRatingValue(0);
-      setComment('');
+      setComentario('');
     }
-    setRatingDialog(reservation);
+    setRatingDialog(reserva);
   };
 
   const handleSubmitRating = async () => {
     if (!ratingDialog || ratingValue === 0) return;
 
     try {
-      const existingRating = ratings.find(r => r.reservation_id === ratingDialog.id);
+      const commentData = {
+        descripcion: comentario,
+        calificacion: ratingValue,
+        id_usuario: profile.id,
+        id_cancha: ratingDialog.id_cancha,
+        // Si tu modelo de comentarios soporta relación con reservas:
+        // id_reserva: ratingDialog.id_reserva
+      };
 
-      if (existingRating) {
-        const { error } = await supabase
-          .from('ratings')
-          .update({
-            rating: ratingValue,
-            comment,
-          })
-          .eq('id', existingRating.id);
-
-        if (error) throw error;
+      const existingComment = comentarios.find(c => 
+        c.id_cancha === ratingDialog.id_cancha
+      );
+      
+      let resultado;
+      if (existingComment) {
+        resultado = await comentariosApi.update(existingComment.id_comentario, commentData);
         toast.success('Calificación actualizada correctamente');
       } else {
-        const { error } = await supabase
-          .from('ratings')
-          .insert({
-            user_id: profile.id,
-            court_id: ratingDialog.courts.id,
-            reservation_id: ratingDialog.id,
-            rating: ratingValue,
-            comment,
-          });
-
-        if (error) throw error;
+        resultado = await comentariosApi.create(commentData);
         toast.success('Calificación enviada correctamente');
+      }
+
+      // Actualizar lista de comentarios
+      if (existingComment) {
+        setComentarios(prev => 
+          prev.map(c => c.id_comentario === existingComment.id_comentario ? resultado : c)
+        );
+      } else {
+        setComentarios(prev => [...prev, resultado]);
       }
 
       setRatingDialog(null);
       setRatingValue(0);
-      setComment('');
-      fetchData();
+      setComentario('');
+      
     } catch (error) {
       toast.error('Error al guardar la calificación');
+      console.error('Error:', error);
     }
   };
 
-  const hasRating = (reservationId) => {
-    return ratings.some(r => r.reservation_id === reservationId);
+  const hasRating = (canchaId) => {
+    return comentarios.some(c => c.id_cancha === canchaId);
+  };
+
+  const getRatingForCancha = (canchaId) => {
+    const comment = comentarios.find(c => c.id_cancha === canchaId);
+    return comment ? comment.calificacion : 0;
+  };
+
+  const getCommentForCancha = (canchaId) => {
+    const comment = comentarios.find(c => c.id_cancha === canchaId);
+    return comment ? comment.descripcion : '';
+  };
+
+  const getSportIcon = (canchaTipo) => {
+    const icons = {
+      'Fútbol': '⚽',
+      'Básquetbol': '🏀',
+      'Tenis': '🎾',
+      'Vóleibol': '🏐',
+      'Rugby': '🏉',
+      'Béisbol': '⚾',
+      'Hockey': '🏒',
+      'Ping Pong': '🏓',
+      'Boxeo': '🥊',
+      'Billar': '🎱',
+      'Natación': '🏊',
+      'Atletismo': '🏃'
+    };
+    return icons[canchaTipo] || '🏆';
   };
 
   return (
@@ -149,38 +202,41 @@ export default function Ratings() {
           Reservas Disponibles para Calificar
         </Typography>
         <Grid container spacing={3}>
-          {reservations.filter(r => !hasRating(r.id)).map((reservation, index) => (
-            <Grid item xs={12} md={6} key={reservation.id}>
+          {reservas.filter(r => !hasRating(r.id_cancha)).map((reserva, index) => (
+            <Grid item xs={12} md={6} key={reserva.id_reserva}>
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
                 <Card className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300">
-                  <Box className="bg-gradient-to-r from-secondary to-accent p-4 text-white">
+                  <Box className="bg-gradient-to-r from-secondary to-accent p-4 text-white rounded-t-2xl">
                     <Box className="flex items-center gap-2">
                       <Typography className="text-4xl">
-                        {reservation.courts.sports.icon}
+                        {getSportIcon(reserva.cancha?.tipo)}
                       </Typography>
                       <Box>
                         <Typography variant="h6" className="font-title">
-                          {reservation.courts.name}
+                          {reserva.cancha?.nombre}
                         </Typography>
                         <Typography variant="caption">
-                          {reservation.courts.sports_facilities.name}
+                          {new Date(reserva.fecha_reserva).toLocaleDateString('es-ES')}
                         </Typography>
                       </Box>
                     </Box>
                   </Box>
                   <CardContent>
+                    <Typography className="font-body text-gray-600 mb-2">
+                      <strong>Horario:</strong> {reserva.hora_inicio?.slice(0,5)} - {reserva.hora_fin?.slice(0,5)}
+                    </Typography>
                     <Typography className="font-body text-gray-600 mb-4">
-                      Fecha: {new Date(reservation.reservation_date).toLocaleDateString('es-ES')}
+                      <strong>Estado:</strong> {reserva.estado}
                     </Typography>
                     <Button
                       fullWidth
                       variant="contained"
                       startIcon={<Star />}
-                      onClick={() => handleOpenDialog(reservation)}
+                      onClick={() => handleOpenDialog(reserva)}
                       sx={{
                         background: 'linear-gradient(to right, #9eca3f, #fbab22)',
                         '&:hover': {
@@ -197,8 +253,9 @@ export default function Ratings() {
             </Grid>
           ))}
         </Grid>
-        {reservations.filter(r => !hasRating(r.id)).length === 0 && (
+        {reservas.filter(r => !hasRating(r.id_cancha)).length === 0 && (
           <Box className="text-center py-8 bg-gray-50 rounded-xl">
+            <Star sx={{ fontSize: 60, color: '#9eca3f', opacity: 0.5, mb: 2 }} />
             <Typography className="text-gray-500 font-body">
               No tienes reservas pendientes de calificar
             </Typography>
@@ -211,66 +268,86 @@ export default function Ratings() {
           Mis Calificaciones
         </Typography>
         <Grid container spacing={3}>
-          {ratings.map((rating, index) => (
-            <Grid item xs={12} md={6} key={rating.id}>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="rounded-2xl shadow-lg">
-                  <Box className="bg-gradient-to-r from-primary to-secondary p-4 text-white">
-                    <Box className="flex items-center justify-between">
-                      <Box className="flex items-center gap-2">
-                        <Typography className="text-4xl">
-                          {rating.courts.sports.icon}
-                        </Typography>
-                        <Box>
-                          <Typography variant="h6" className="font-title">
-                            {rating.courts.name}
+          {comentarios.map((comentarioItem, index) => {
+            // Encontrar la reserva correspondiente para mostrar detalles
+            const reservaCorrespondiente = reservas.find(r => 
+              r.id_cancha === comentarioItem.id_cancha
+            );
+            
+            return (
+              <Grid item xs={12} md={6} key={comentarioItem.id_comentario || index}>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Card className="rounded-2xl shadow-lg">
+                    <Box className="bg-gradient-to-r from-primary to-secondary p-4 text-white rounded-t-2xl">
+                      <Box className="flex items-center justify-between">
+                        <Box className="flex items-center gap-2">
+                          <Typography className="text-4xl">
+                            {getSportIcon(reservaCorrespondiente?.cancha?.tipo)}
                           </Typography>
-                          <Typography variant="caption">
-                            {rating.courts.sports_facilities.name}
-                          </Typography>
+                          <Box>
+                            <Typography variant="h6" className="font-title">
+                              {reservaCorrespondiente?.cancha?.nombre || 'Cancha'}
+                            </Typography>
+                            <Typography variant="caption">
+                              Calificado el {new Date(
+                                comentarioItem.fecha_comentario || new Date()
+                              ).toLocaleDateString('es-ES')}
+                            </Typography>
+                          </Box>
                         </Box>
+                        <IconButton
+                          onClick={() => {
+                            if (reservaCorrespondiente) {
+                              handleOpenDialog(reservaCorrespondiente);
+                            }
+                          }}
+                          className="text-white"
+                        >
+                          <Edit />
+                        </IconButton>
                       </Box>
-                      <IconButton
-                        onClick={() => {
-                          const reservation = reservations.find(r => r.id === rating.reservation_id);
-                          if (reservation) handleOpenDialog(reservation);
-                        }}
-                        className="text-white"
-                      >
-                        <Edit />
-                      </IconButton>
                     </Box>
-                  </Box>
-                  <CardContent>
-                    <Box className="flex items-center gap-2 mb-2">
-                      <Rating value={rating.rating} readOnly size="large" />
-                      <Typography variant="h6" className="font-title">
-                        {rating.rating}/5
-                      </Typography>
-                    </Box>
-                    {rating.comment && (
-                      <Typography className="font-body text-gray-700 mt-2 italic">
-                        "{rating.comment}"
-                      </Typography>
-                    )}
-                    <Typography variant="caption" className="text-gray-500 mt-2 block">
-                      {new Date(rating.created_at).toLocaleDateString('es-ES')}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </Grid>
-          ))}
+                    <CardContent>
+                      <Box className="flex items-center gap-2 mb-2">
+                        <Rating 
+                          value={comentarioItem.calificacion} 
+                          readOnly 
+                          size="large" 
+                        />
+                        <Typography variant="h6" className="font-title">
+                          {comentarioItem.calificacion}/5
+                        </Typography>
+                      </Box>
+                      {comentarioItem.descripcion && (
+                        <Typography className="font-body text-gray-700 mt-2 italic">
+                          "{comentarioItem.descripcion}"
+                        </Typography>
+                      )}
+                      {reservaCorrespondiente && (
+                        <Typography variant="caption" className="text-gray-500 mt-2 block">
+                          Reserva: {new Date(reservaCorrespondiente.fecha_reserva).toLocaleDateString('es-ES')} • 
+                          {reservaCorrespondiente.hora_inicio?.slice(0,5)} - {reservaCorrespondiente.hora_fin?.slice(0,5)}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Grid>
+            );
+          })}
         </Grid>
-        {ratings.length === 0 && (
+        {comentarios.length === 0 && (
           <Box className="text-center py-12">
             <Star sx={{ fontSize: 100, color: '#fbab22', opacity: 0.3 }} />
             <Typography variant="h6" className="text-gray-500 mt-4 font-body">
               Aún no has calificado ninguna cancha
+            </Typography>
+            <Typography variant="body2" className="text-gray-400 mt-2 font-body">
+              Las calificaciones estarán disponibles después de completar tus reservas
             </Typography>
           </Box>
         )}
@@ -293,13 +370,14 @@ export default function Ratings() {
             <Box>
               <Box className="text-center mb-6">
                 <Typography className="text-6xl mb-2">
-                  {ratingDialog.courts.sports.icon}
+                  {getSportIcon(ratingDialog.cancha?.tipo)}
                 </Typography>
                 <Typography variant="h6" className="font-title">
-                  {ratingDialog.courts.name}
+                  {ratingDialog.cancha?.nombre}
                 </Typography>
                 <Typography variant="body2" className="text-gray-600">
-                  {ratingDialog.courts.sports_facilities.name}
+                  {new Date(ratingDialog.fecha_reserva).toLocaleDateString('es-ES')} • 
+                  {ratingDialog.hora_inicio?.slice(0,5)} - {ratingDialog.hora_fin?.slice(0,5)}
                 </Typography>
               </Box>
               <Box className="text-center mb-6">
@@ -314,21 +392,30 @@ export default function Ratings() {
                     fontSize: '3rem',
                   }}
                 />
+                {ratingValue > 0 && (
+                  <Typography variant="body2" className="text-gray-600 mt-2">
+                    {ratingValue} {ratingValue === 1 ? 'estrella' : 'estrellas'}
+                  </Typography>
+                )}
               </Box>
               <TextField
                 fullWidth
                 label="Comentario (opcional)"
                 multiline
                 rows={4}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
                 placeholder="Comparte tu experiencia con otros usuarios..."
+                helperText="Tu comentario ayudará a otros usuarios a elegir la mejor cancha"
               />
             </Box>
           )}
         </DialogContent>
         <DialogActions className="p-4">
-          <Button onClick={() => setRatingDialog(null)} className="text-gray-600">
+          <Button 
+            onClick={() => setRatingDialog(null)} 
+            className="text-gray-600"
+          >
             Cancelar
           </Button>
           <Button
@@ -343,21 +430,10 @@ export default function Ratings() {
               textTransform: 'none',
             }}
           >
-            Enviar Calificación
+            {comentarios.some(c => c.id_cancha === ratingDialog?.id_cancha) ? 'Actualizar' : 'Enviar'} Calificación
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
-  );
-}
-
-function IconButton({ onClick, className, children }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`p-2 rounded-full hover:bg-white/20 transition-all ${className}`}
-    >
-      {children}
-    </button>
   );
 }

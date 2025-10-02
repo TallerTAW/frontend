@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { toast } from 'react-toastify';
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import {
+  getSports,
+  createSport,
+  updateSport,
+  deleteSport,
+} from "../api/sportsApi";
+
 import {
   Box,
   Typography,
@@ -15,17 +21,17 @@ import {
   TextField,
   IconButton,
   CardActions,
-} from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+} from "@mui/material";
+import { Add, Edit, Delete } from "@mui/icons-material";
+import { motion } from "framer-motion";
 
 export default function Sports() {
   const [sports, setSports] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    icon: '⚽',
+    name: "",
+    icon: "⚽",
   });
 
   useEffect(() => {
@@ -34,15 +40,10 @@ export default function Sports() {
 
   const fetchSports = async () => {
     try {
-      const { data, error } = await supabase
-        .from('sports')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setSports(data || []);
+      const data = await getSports();
+      setSports(data);
     } catch (error) {
-      toast.error('Error al cargar deportes');
+      toast.error("Error al cargar deportes");
     }
   };
 
@@ -50,28 +51,18 @@ export default function Sports() {
     e.preventDefault();
     try {
       if (editing) {
-        const { error } = await supabase
-          .from('sports')
-          .update(formData)
-          .eq('id', editing.id);
-
-        if (error) throw error;
-        toast.success('Deporte actualizado correctamente');
+        await updateSport(editing.id, formData);
+        toast.success("Deporte actualizado correctamente");
       } else {
-        const { error } = await supabase
-          .from('sports')
-          .insert(formData);
-
-        if (error) throw error;
-        toast.success('Deporte creado correctamente');
+        await createSport(formData);
+        toast.success("Deporte creado correctamente");
       }
-
       setOpen(false);
       setEditing(null);
-      setFormData({ name: '', icon: '⚽' });
+      setFormData({ name: "", icon: "⚽" });
       fetchSports();
     } catch (error) {
-      toast.error('Error al guardar el deporte');
+      toast.error("Error al guardar el deporte");
     }
   };
 
@@ -82,18 +73,13 @@ export default function Sports() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este deporte?')) {
+    if (window.confirm("¿Estás seguro de eliminar este deporte?")) {
       try {
-        const { error } = await supabase
-          .from('sports')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-        toast.success('Deporte eliminado correctamente');
+        await deleteSport(id);
+        toast.success("Deporte eliminado correctamente");
         fetchSports();
       } catch (error) {
-        toast.error('Error al eliminar el deporte');
+        toast.error("Error al eliminar el deporte");
       }
     }
   };
@@ -101,10 +87,10 @@ export default function Sports() {
   const handleClose = () => {
     setOpen(false);
     setEditing(null);
-    setFormData({ name: '', icon: '⚽' });
+    setFormData({ name: "", icon: "⚽" });
   };
 
-  const sportIcons = ['⚽', '🏀', '🎾', '🏐', '🏈', '⚾', '🏒', '🏓', '🥊', '🎱'];
+  const sportIcons = ["⚽", "🏀", "🎾", "🏐", "🏈", "⚾", "🏒", "🏓", "🥊", "🎱"];
 
   return (
     <Box>
@@ -129,10 +115,10 @@ export default function Sports() {
             onClick={() => setOpen(true)}
             className="bg-gradient-to-r from-secondary to-accent text-white rounded-xl shadow-lg"
             sx={{
-              textTransform: 'none',
-              background: 'linear-gradient(to right, #9eca3f, #fbab22)',
-              '&:hover': {
-                background: 'linear-gradient(to right, #8ab637, #e09a1e)',
+              textTransform: "none",
+              background: "linear-gradient(to right, #9eca3f, #fbab22)",
+              "&:hover": {
+                background: "linear-gradient(to right, #8ab637, #e09a1e)",
               },
             }}
           >
@@ -151,9 +137,7 @@ export default function Sports() {
             >
               <Card className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-secondary/10 to-accent/10">
                 <CardContent className="text-center py-8">
-                  <Box className="text-7xl mb-4">
-                    {sport.icon}
-                  </Box>
+                  <Box className="text-7xl mb-4">{sport.icon}</Box>
                   <Typography variant="h5" className="font-title text-gray-800">
                     {sport.name}
                   </Typography>
@@ -184,11 +168,11 @@ export default function Sports() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          className: 'rounded-2xl',
+          className: "rounded-2xl",
         }}
       >
         <DialogTitle className="bg-gradient-to-r from-secondary to-accent text-white font-title">
-          {editing ? 'Editar Deporte' : 'Nuevo Deporte'}
+          {editing ? "Editar Deporte" : "Nuevo Deporte"}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent className="mt-4">
@@ -196,26 +180,34 @@ export default function Sports() {
               fullWidth
               label="Nombre"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
               margin="normal"
             />
             <Box className="mt-4">
-              <Typography variant="body2" className="mb-2 font-body text-gray-600">
+              <Typography
+                variant="body2"
+                className="mb-2 font-body text-gray-600"
+              >
                 Selecciona un ícono:
               </Typography>
               <Grid container spacing={1}>
                 {sportIcons.map((icon) => (
                   <Grid item key={icon}>
                     <Button
-                      variant={formData.icon === icon ? 'contained' : 'outlined'}
+                      variant={formData.icon === icon ? "contained" : "outlined"}
                       onClick={() => setFormData({ ...formData, icon })}
                       className="text-4xl min-w-0 w-16 h-16"
                       sx={{
-                        borderColor: formData.icon === icon ? '#9eca3f' : '#ddd',
-                        backgroundColor: formData.icon === icon ? '#9eca3f' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: formData.icon === icon ? '#8ab637' : '#f5f5f5',
+                        borderColor:
+                          formData.icon === icon ? "#9eca3f" : "#ddd",
+                        backgroundColor:
+                          formData.icon === icon ? "#9eca3f" : "transparent",
+                        "&:hover": {
+                          backgroundColor:
+                            formData.icon === icon ? "#8ab637" : "#f5f5f5",
                         },
                       }}
                     >
@@ -235,14 +227,14 @@ export default function Sports() {
               variant="contained"
               className="bg-gradient-to-r from-secondary to-accent"
               sx={{
-                textTransform: 'none',
-                background: 'linear-gradient(to right, #9eca3f, #fbab22)',
-                '&:hover': {
-                  background: 'linear-gradient(to right, #8ab637, #e09a1e)',
+                textTransform: "none",
+                background: "linear-gradient(to right, #9eca3f, #fbab22)",
+                "&:hover": {
+                  background: "linear-gradient(to right, #8ab637, #e09a1e)",
                 },
               }}
             >
-              {editing ? 'Actualizar' : 'Crear'}
+              {editing ? "Actualizar" : "Crear"}
             </Button>
           </DialogActions>
         </form>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { canchasApi } from '../api/canchas';
+import { espaciosApi } from '../api/espacios';
+import { disciplinasApi } from '../api/disciplinas';
 import { toast } from 'react-toastify';
 import {
   Box,
@@ -9,7 +11,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -28,19 +29,19 @@ import { motion } from 'framer-motion';
 
 export default function Courts() {
   const { profile } = useAuth();
-  const [courts, setCourts] = useState([]);
-  const [facilities, setFacilities] = useState([]);
-  const [sports, setSports] = useState([]);
+  const [canchas, setCanchas] = useState([]);
+  const [espacios, setEspacios] = useState([]);
+  const [disciplinas, setDisciplinas] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
-    facility_id: '',
-    sport_id: '',
-    name: '',
-    description: '',
-    price_per_hour: '',
-    image_url: '',
-    available: true,
+    nombre: '',
+    tipo: '',
+    hora_apertura: '08:00',
+    hora_cierre: '22:00',
+    precio_por_hora: '',
+    id_espacio_deportivo: '',
+    estado: 'disponible'
   });
 
   useEffect(() => {
@@ -49,25 +50,15 @@ export default function Courts() {
 
   const fetchData = async () => {
     try {
-      const [courtsRes, facilitiesRes, sportsRes] = await Promise.all([
-        profile?.role === 'admin_facility'
-          ? supabase.from('courts').select('*, sports_facilities(name), sports(name, icon)').eq('facility_id', profile.facility_id)
-          : supabase.from('courts').select('*, sports_facilities(name), sports(name, icon)'),
-        supabase.from('sports_facilities').select('*'),
-        supabase.from('sports').select('*'),
+      const [canchasData, espaciosData, disciplinasData] = await Promise.all([
+        canchasApi.getAll(),
+        espaciosApi.getAll(),
+        disciplinasApi.getAll()
       ]);
 
-      if (courtsRes.error) throw courtsRes.error;
-      if (facilitiesRes.error) throw facilitiesRes.error;
-      if (sportsRes.error) throw sportsRes.error;
-
-      setCourts(courtsRes.data || []);
-      setFacilities(facilitiesRes.data || []);
-      setSports(sportsRes.data || []);
-
-      if (profile?.role === 'admin_facility') {
-        setFormData(prev => ({ ...prev, facility_id: profile.facility_id }));
-      }
+      setCanchas(canchasData);
+      setEspacios(espaciosData);
+      setDisciplinas(disciplinasData);
     } catch (error) {
       toast.error('Error al cargar datos');
     }
@@ -78,43 +69,35 @@ export default function Courts() {
     try {
       const dataToSave = {
         ...formData,
-        price_per_hour: parseFloat(formData.price_per_hour),
+        precio_por_hora: parseFloat(formData.precio_por_hora),
+        id_espacio_deportivo: parseInt(formData.id_espacio_deportivo)
       };
 
       if (editing) {
-        const { error } = await supabase
-          .from('courts')
-          .update(dataToSave)
-          .eq('id', editing.id);
-
-        if (error) throw error;
+        await canchasApi.update(editing.id_cancha, dataToSave);
         toast.success('Cancha actualizada correctamente');
       } else {
-        const { error } = await supabase
-          .from('courts')
-          .insert(dataToSave);
-
-        if (error) throw error;
+        await canchasApi.create(dataToSave);
         toast.success('Cancha creada correctamente');
       }
 
       handleClose();
       fetchData();
     } catch (error) {
-      toast.error('Error al guardar la cancha');
+      toast.error(error.response?.data?.detail || 'Error al guardar la cancha');
     }
   };
 
-  const handleEdit = (court) => {
-    setEditing(court);
+  const handleEdit = (cancha) => {
+    setEditing(cancha);
     setFormData({
-      facility_id: court.facility_id,
-      sport_id: court.sport_id,
-      name: court.name,
-      description: court.description,
-      price_per_hour: court.price_per_hour,
-      image_url: court.image_url,
-      available: court.available,
+      nombre: cancha.nombre,
+      tipo: cancha.tipo || '',
+      hora_apertura: cancha.hora_apertura.slice(0, 5),
+      hora_cierre: cancha.hora_cierre.slice(0, 5),
+      precio_por_hora: cancha.precio_por_hora,
+      id_espacio_deportivo: cancha.id_espacio_deportivo.toString(),
+      estado: cancha.estado
     });
     setOpen(true);
   };
@@ -122,13 +105,9 @@ export default function Courts() {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar esta cancha?')) {
       try {
-        const { error } = await supabase
-          .from('courts')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-        toast.success('Cancha eliminada correctamente');
+        // En tu backend podrías implementar un delete o desactivar
+        await canchasApi.update(id, { estado: 'inactiva' });
+        toast.success('Cancha desactivada correctamente');
         fetchData();
       } catch (error) {
         toast.error('Error al eliminar la cancha');
@@ -140,14 +119,37 @@ export default function Courts() {
     setOpen(false);
     setEditing(null);
     setFormData({
-      facility_id: profile?.role === 'admin_facility' ? profile.facility_id : '',
-      sport_id: '',
-      name: '',
-      description: '',
-      price_per_hour: '',
-      image_url: '',
-      available: true,
+      nombre: '',
+      tipo: '',
+      hora_apertura: '08:00',
+      hora_cierre: '22:00',
+      precio_por_hora: '',
+      id_espacio_deportivo: '',
+      estado: 'disponible'
     });
+  };
+
+  const getSportIcon = (tipo) => {
+    const icons = {
+      'Fútbol': '⚽',
+      'Básquetbol': '🏀',
+      'Tenis': '🎾',
+      'Vóleibol': '🏐',
+      'Rugby': '🏉',
+      'Béisbol': '⚾',
+      'Hockey': '🏒',
+      'Ping Pong': '🏓',
+      'Boxeo': '🥊',
+      'Billar': '🎱',
+      'Natación': '🏊',
+      'Atletismo': '🏃'
+    };
+    return icons[tipo] || '🏆';
+  };
+
+  const getEspacioNombre = (idEspacio) => {
+    const espacio = espacios.find(e => e.id_espacio_deportivo === idEspacio);
+    return espacio ? espacio.nombre : 'N/A';
   };
 
   return (
@@ -186,66 +188,61 @@ export default function Courts() {
       </Box>
 
       <Grid container spacing={3}>
-        {courts.map((court, index) => (
-          <Grid item xs={12} sm={6} md={4} key={court.id}>
+        {canchas.map((cancha, index) => (
+          <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                <CardMedia
-                  component="div"
-                  className="h-48 bg-gradient-to-br from-accent to-highlight flex items-center justify-center relative"
-                  sx={{
-                    backgroundImage: court.image_url
-                      ? `url(${court.image_url})`
-                      : 'linear-gradient(to bottom right, #fbab22, #f87326)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
+              <Card className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
+                cancha.estado !== 'disponible' ? 'opacity-60' : ''
+              }`}>
+                <Box
+                  className="h-48 bg-gradient-to-br from-accent to-highlight flex items-center justify-center rounded-t-2xl relative"
                 >
-                  {!court.image_url && (
-                    <Box className="text-8xl opacity-50">
-                      {court.sports?.icon || '⚽'}
-                    </Box>
-                  )}
+                  <Box className="text-8xl opacity-50">
+                    {getSportIcon(cancha.tipo)}
+                  </Box>
                   <Chip
-                    label={court.available ? 'Disponible' : 'No disponible'}
+                    label={cancha.estado}
                     className={`absolute top-2 right-2 ${
-                      court.available ? 'bg-secondary' : 'bg-gray-500'
+                      cancha.estado === 'disponible' ? 'bg-secondary' : 'bg-gray-500'
                     } text-white font-bold`}
                     size="small"
                   />
-                </CardMedia>
+                </Box>
                 <CardContent>
                   <Box className="flex items-center gap-2 mb-2">
-                    <Typography className="text-3xl">{court.sports?.icon}</Typography>
+                    <Typography className="text-3xl">{getSportIcon(cancha.tipo)}</Typography>
                     <Box>
                       <Typography variant="h6" className="font-title">
-                        {court.name}
+                        {cancha.nombre}
                       </Typography>
                       <Typography variant="caption" className="text-gray-500">
-                        {court.sports_facilities?.name}
+                        {getEspacioNombre(cancha.id_espacio_deportivo)}
                       </Typography>
                     </Box>
                   </Box>
                   <Typography variant="body2" className="text-gray-600 font-body mb-2">
-                    {court.description || 'Sin descripción'}
+                    Tipo: {cancha.tipo || 'No especificado'}
+                  </Typography>
+                  <Typography variant="body2" className="text-gray-600 font-body mb-2">
+                    Horario: {cancha.hora_apertura.slice(0,5)} - {cancha.hora_cierre.slice(0,5)}
                   </Typography>
                   <Typography variant="h6" className="font-title text-accent">
-                    ${court.price_per_hour}/hora
+                    ${cancha.precio_por_hora}/hora
                   </Typography>
                 </CardContent>
                 <CardActions className="justify-end p-4">
                   <IconButton
-                    onClick={() => handleEdit(court)}
+                    onClick={() => handleEdit(cancha)}
                     className="text-primary hover:bg-primary/10"
                   >
                     <Edit />
                   </IconButton>
                   <IconButton
-                    onClick={() => handleDelete(court.id)}
+                    onClick={() => handleDelete(cancha.id_cancha)}
                     className="text-highlight hover:bg-highlight/10"
                   >
                     <Delete />
@@ -271,30 +268,16 @@ export default function Courts() {
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent className="mt-4">
-            <FormControl fullWidth margin="normal" disabled={profile?.role === 'admin_facility'}>
+            <FormControl fullWidth margin="normal">
               <InputLabel>Espacio Deportivo</InputLabel>
               <Select
-                value={formData.facility_id}
-                onChange={(e) => setFormData({ ...formData, facility_id: e.target.value })}
+                value={formData.id_espacio_deportivo}
+                onChange={(e) => setFormData({ ...formData, id_espacio_deportivo: e.target.value })}
                 required
               >
-                {facilities.map((facility) => (
-                  <MenuItem key={facility.id} value={facility.id}>
-                    {facility.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Deporte</InputLabel>
-              <Select
-                value={formData.sport_id}
-                onChange={(e) => setFormData({ ...formData, sport_id: e.target.value })}
-                required
-              >
-                {sports.map((sport) => (
-                  <MenuItem key={sport.id} value={sport.id}>
-                    {sport.icon} {sport.name}
+                {espacios.map((espacio) => (
+                  <MenuItem key={espacio.id_espacio_deportivo} value={espacio.id_espacio_deportivo}>
+                    {espacio.nombre}
                   </MenuItem>
                 ))}
               </Select>
@@ -302,45 +285,58 @@ export default function Courts() {
             <TextField
               fullWidth
               label="Nombre"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={formData.nombre}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
               margin="normal"
             />
             <TextField
               fullWidth
-              label="Descripción"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              multiline
-              rows={3}
+              label="Tipo"
+              value={formData.tipo}
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
               margin="normal"
+              helperText="Ej: Fútbol, Básquetbol, Tenis, etc."
             />
+            <Box className="flex gap-2">
+              <TextField
+                fullWidth
+                label="Hora Apertura"
+                type="time"
+                value={formData.hora_apertura}
+                onChange={(e) => setFormData({ ...formData, hora_apertura: e.target.value })}
+                required
+                margin="normal"
+              />
+              <TextField
+                fullWidth
+                label="Hora Cierre"
+                type="time"
+                value={formData.hora_cierre}
+                onChange={(e) => setFormData({ ...formData, hora_cierre: e.target.value })}
+                required
+                margin="normal"
+              />
+            </Box>
             <TextField
               fullWidth
               label="Precio por hora"
               type="number"
-              value={formData.price_per_hour}
-              onChange={(e) => setFormData({ ...formData, price_per_hour: e.target.value })}
+              value={formData.precio_por_hora}
+              onChange={(e) => setFormData({ ...formData, precio_por_hora: e.target.value })}
               required
               margin="normal"
               inputProps={{ step: '0.01', min: '0' }}
             />
-            <TextField
-              fullWidth
-              label="URL de Imagen"
-              value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              margin="normal"
-            />
             <FormControl fullWidth margin="normal">
-              <InputLabel>Disponibilidad</InputLabel>
+              <InputLabel>Estado</InputLabel>
               <Select
-                value={formData.available}
-                onChange={(e) => setFormData({ ...formData, available: e.target.value })}
+                value={formData.estado}
+                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
               >
-                <MenuItem value={true}>Disponible</MenuItem>
-                <MenuItem value={false}>No disponible</MenuItem>
+                <MenuItem value="disponible">Disponible</MenuItem>
+                <MenuItem value="mantenimiento">En Mantenimiento</MenuItem>
+                <MenuItem value="inactiva">Inactiva</MenuItem>
               </Select>
             </FormControl>
           </DialogContent>

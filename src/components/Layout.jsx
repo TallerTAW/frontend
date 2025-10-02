@@ -30,6 +30,9 @@ import {
   People,
   Logout,
   Category,
+  QrCodeScanner,
+  Assessment,
+  Payment,
 } from '@mui/icons-material';
 
 export default function Layout() {
@@ -43,22 +46,43 @@ export default function Layout() {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
+    setAnchorEl(null);
   };
 
+  // Menú basado en los roles REALES de tu backend
   const menuItems = [
-    { text: 'Inicio', icon: <Dashboard />, path: '/', roles: ['admin_general', 'admin_facility', 'client', 'regulator'] },
-    { text: 'Espacios Deportivos', icon: <Stadium />, path: '/facilities', roles: ['admin_general'] },
-    { text: 'Deportes', icon: <Category />, path: '/sports', roles: ['admin_general'] },
-    { text: 'Canchas', icon: <SportsSoccer />, path: '/courts', roles: ['admin_general', 'admin_facility'] },
-    { text: 'Reservar', icon: <CalendarMonth />, path: '/book', roles: ['client'] },
-    { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/reservations', roles: ['client', 'admin_general', 'admin_facility'] },
-    { text: 'Calificar', icon: <Star />, path: '/ratings', roles: ['client'] },
-    { text: 'Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['client'] },
-    { text: 'Usuarios', icon: <People />, path: '/users', roles: ['admin_general', 'regulator'] },
+    { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'gestor', 'control_acceso', 'cliente'] },
+    
+    // Admin y Gestor
+    { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
+    { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
+    { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },
+    
+    // Cliente
+    { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente'] },
+    { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
+    
+    // Todos los autenticados
+    { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
+    
+    // Control de acceso
+    { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
+    
+    // Reportes (Admin)
+    { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
+    
+    // Pagos
+    { text: 'Pagos', icon: <Payment />, path: '/pagos', roles: ['admin', 'cliente'] },
+    
+    // Usuarios (Solo admin)
+    { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
+    
+    // Cupones
+    { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
   ];
 
   const filteredMenuItems = menuItems.filter(item =>
-    item.roles.includes(profile?.role)
+    item.roles.includes(profile?.rol) // Cambié 'role' por 'rol' para coincidir con tu backend
   );
 
   const drawer = (
@@ -97,6 +121,16 @@ export default function Layout() {
     </Box>
   );
 
+  const getRolDisplayName = (rol) => {
+    const roles = {
+      'admin': 'Administrador',
+      'gestor': 'Gestor de Espacios',
+      'control_acceso': 'Control de Acceso',
+      'cliente': 'Cliente'
+    };
+    return roles[rol] || rol;
+  };
+
   return (
     <Box className="flex min-h-screen bg-gray-50">
       <AppBar
@@ -123,14 +157,14 @@ export default function Layout() {
 
           <Box className="flex items-center gap-2">
             <Typography className="hidden sm:block text-white font-body">
-              {profile?.full_name}
+              {profile?.nombre || 'Usuario'}
             </Typography>
             <IconButton
               onClick={(e) => setAnchorEl(e.currentTarget)}
               className="text-white"
             >
               <Avatar className="bg-accent">
-                {profile?.full_name?.charAt(0) || 'U'}
+                {profile?.nombre?.charAt(0) || 'U'}
               </Avatar>
             </IconButton>
           </Box>
@@ -139,13 +173,15 @@ export default function Layout() {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
             <MenuItem disabled>
               <Typography className="font-body">{profile?.email}</Typography>
             </MenuItem>
             <MenuItem disabled>
-              <Typography className="text-sm text-gray-500 capitalize">
-                {profile?.role?.replace('_', ' ')}
+              <Typography className="text-sm text-gray-500">
+                {getRolDisplayName(profile?.rol)}
               </Typography>
             </MenuItem>
             <Divider />
@@ -169,6 +205,7 @@ export default function Layout() {
           '& .MuiDrawer-paper': {
             width: 240,
             boxSizing: 'border-box',
+            border: 'none',
           },
         }}
       >
@@ -180,6 +217,7 @@ export default function Layout() {
         className="flex-grow p-6 mt-16 transition-all duration-300"
         sx={{
           marginLeft: isMobile ? 0 : '240px',
+          width: isMobile ? '100%' : 'calc(100% - 240px)',
         }}
       >
         <Outlet />

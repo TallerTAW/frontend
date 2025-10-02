@@ -1,25 +1,49 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { TextField, Button, Container, Box, Typography, Paper } from '@mui/material';
+import { 
+  TextField, 
+  Button, 
+  Container, 
+  Box, 
+  Typography, 
+  Paper,
+  Alert,
+  CircularProgress
+} from '@mui/material';
 import { motion } from 'framer-motion';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
-
-    if (!error) {
-      navigate('/');
+    
+    if (!email || !password) {
+      return;
     }
+
+    setIsLoading(true);
+    clearError(); // Limpiar errores anteriores
+
+    console.log('Enviando formulario de login...');
+    
+    const { error: authError } = await signIn(email, password);
+    
+    console.log('Resultado del login:', { authError });
+    
+    if (!authError) {
+      console.log('Login exitoso, redirigiendo...');
+      navigate('/');
+    } else {
+      console.log('Error en login:', authError);
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -36,9 +60,19 @@ export default function Login() {
                 ReservaDeportiva
               </Typography>
               <Typography variant="body1" className="text-gray-600 font-body">
-                Inicia sesión para gestionar tus reservas
+                Inicia sesión en el sistema
               </Typography>
             </Box>
+
+            {error && (
+              <Alert 
+                severity="error" 
+                className="mb-4"
+                onClose={clearError}
+              >
+                {error}
+              </Alert>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <TextField
@@ -49,6 +83,8 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 variant="outlined"
+                disabled={isLoading}
+                error={!!error}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '&:hover fieldset': {
@@ -69,6 +105,8 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 variant="outlined"
+                disabled={isLoading}
+                error={!!error}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '&:hover fieldset': {
@@ -85,8 +123,8 @@ export default function Login() {
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={loading}
-                className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 py-3 rounded-xl font-title text-white shadow-lg transition-all duration-300 transform hover:scale-105"
+                disabled={isLoading}
+                className="py-3 rounded-xl font-title text-white shadow-lg transition-all duration-300 transform hover:scale-105"
                 sx={{
                   textTransform: 'none',
                   fontSize: '1.1rem',
@@ -94,9 +132,19 @@ export default function Login() {
                   '&:hover': {
                     background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
                   },
+                  '&:disabled': {
+                    background: '#ccc',
+                  },
                 }}
               >
-                {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+                {isLoading ? (
+                  <Box className="flex items-center gap-2">
+                    <CircularProgress size={20} color="inherit" />
+                    Iniciando sesión...
+                  </Box>
+                ) : (
+                  'Iniciar Sesión'
+                )}
               </Button>
             </form>
 
@@ -104,7 +152,20 @@ export default function Login() {
               <Typography variant="body2" className="text-gray-600 font-body">
                 Sistema de gestión de reservas deportivas
               </Typography>
+              <Typography variant="caption" className="text-gray-400 mt-2 block">
+                Backend: http://127.0.0.1:8000
+              </Typography>
             </Box>
+
+            {/* Información de debug (solo en desarrollo) */}
+            {process.env.NODE_ENV === 'development' && (
+              <Box className="mt-4 p-3 bg-gray-100 rounded-lg">
+                <Typography variant="caption" className="text-gray-600">
+                  <strong>Debug:</strong> {email ? `Email: ${email}` : 'Sin email'} | 
+                  {password ? ` Contraseña: ${'*'.repeat(password.length)}` : ' Sin contraseña'}
+                </Typography>
+              </Box>
+            )}
           </Paper>
         </motion.div>
       </Container>

@@ -17,8 +17,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(profile?.role)) {
-    return <Navigate to="/" replace />;
+  // Verificar roles - usa 'rol' que viene del backend
+  if (allowedRoles && !allowedRoles.includes(profile?.rol)) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;

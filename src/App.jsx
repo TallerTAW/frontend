@@ -8,13 +8,13 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import Facilities from './pages/Facilities';
-import Sports from './pages/Sports';
+import Disciplinas from './pages/Disciplinas';
 import Courts from './pages/Courts';
-import Book from './pages/Book';
-import Reservations from './pages/Reservations';
+//import Book from './pages/Book';
+import Reservations from './pages/Reservar';
 import Ratings from './pages/Ratings';
 import Wallet from './pages/Wallet';
-import Users from './pages/Users';
+import Usuarios from './pages/Usuarios';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -43,7 +43,7 @@ function AppRoutes() {
           path="sports"
           element={
             <ProtectedRoute allowedRoles={['admin_general']}>
-              <Sports />
+              <Disciplinas />
             </ProtectedRoute>
           }
         />
@@ -55,14 +55,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
+        {/* <Route
           path="book"
           element={
             <ProtectedRoute allowedRoles={['client']}>
               <Book />
             </ProtectedRoute>
           }
-        />
+        /> */}
         <Route
           path="reservations"
           element={
@@ -91,7 +91,7 @@ function AppRoutes() {
           path="users"
           element={
             <ProtectedRoute allowedRoles={['admin_general', 'regulator']}>
-              <Users />
+              <Usuarios />
             </ProtectedRoute>
           }
         />

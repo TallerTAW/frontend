@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { espaciosApi } from '../api/espacios';
 import { toast } from 'react-toastify';
 import {
   Box,
@@ -8,7 +8,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -21,29 +20,24 @@ import { Add, Edit, Delete, Stadium } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function Facilities() {
-  const [facilities, setFacilities] = useState([]);
+  const [espacios, setEspacios] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    description: '',
-    image_url: '',
+    nombre: '',
+    ubicacion: '',
+    capacidad: '',
+    descripcion: '',
   });
 
   useEffect(() => {
-    fetchFacilities();
+    fetchEspacios();
   }, []);
 
-  const fetchFacilities = async () => {
+  const fetchEspacios = async () => {
     try {
-      const { data, error } = await supabase
-        .from('sports_facilities')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setFacilities(data || []);
+      const data = await espaciosApi.getAll();
+      setEspacios(data);
     } catch (error) {
       toast.error('Error al cargar espacios deportivos');
     }
@@ -53,58 +47,61 @@ export default function Facilities() {
     e.preventDefault();
     try {
       if (editing) {
-        const { error } = await supabase
-          .from('sports_facilities')
-          .update(formData)
-          .eq('id', editing.id);
-
-        if (error) throw error;
+        await espaciosApi.update(editing.id_espacio_deportivo, formData);
         toast.success('Espacio actualizado correctamente');
       } else {
-        const { error } = await supabase
-          .from('sports_facilities')
-          .insert(formData);
-
-        if (error) throw error;
+        await espaciosApi.create(formData);
         toast.success('Espacio creado correctamente');
       }
-
-      setOpen(false);
-      setEditing(null);
-      setFormData({ name: '', address: '', description: '', image_url: '' });
-      fetchFacilities();
+      handleClose();
+      fetchEspacios();
     } catch (error) {
-      toast.error('Error al guardar el espacio');
+      toast.error(error.response?.data?.detail || 'Error al guardar el espacio');
     }
   };
 
-  const handleEdit = (facility) => {
-    setEditing(facility);
-    setFormData(facility);
+  const handleEdit = (espacio) => {
+    setEditing(espacio);
+    setFormData({
+      nombre: espacio.nombre,
+      ubicacion: espacio.ubicacion || '',
+      capacidad: espacio.capacidad || '',
+      descripcion: espacio.descripcion || '',
+    });
     setOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este espacio?')) {
+    if (window.confirm('¿Estás seguro de desactivar este espacio?')) {
       try {
-        const { error } = await supabase
-          .from('sports_facilities')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-        toast.success('Espacio eliminado correctamente');
-        fetchFacilities();
+        await espaciosApi.desactivar(id);
+        toast.success('Espacio desactivado correctamente');
+        fetchEspacios();
       } catch (error) {
-        toast.error('Error al eliminar el espacio');
+        toast.error('Error al desactivar el espacio');
       }
+    }
+  };
+
+  const handleActivar = async (id) => {
+    try {
+      await espaciosApi.activar(id);
+      toast.success('Espacio activado correctamente');
+      fetchEspacios();
+    } catch (error) {
+      toast.error('Error al activar el espacio');
     }
   };
 
   const handleClose = () => {
     setOpen(false);
     setEditing(null);
-    setFormData({ name: '', address: '', description: '', image_url: '' });
+    setFormData({
+      nombre: '',
+      ubicacion: '',
+      capacidad: '',
+      descripcion: '',
+    });
   };
 
   return (
@@ -143,51 +140,67 @@ export default function Facilities() {
       </Box>
 
       <Grid container spacing={3}>
-        {facilities.map((facility, index) => (
-          <Grid item xs={12} sm={6} md={4} key={facility.id}>
+        {espacios.map((espacio, index) => (
+          <Grid item xs={12} sm={6} md={4} key={espacio.id_espacio_deportivo}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                <CardMedia
-                  component="div"
-                  className="h-48 bg-gradient-to-br from-primary to-secondary flex items-center justify-center"
-                  sx={{
-                    backgroundImage: facility.image_url
-                      ? `url(${facility.image_url})`
-                      : 'linear-gradient(to bottom right, #0f9fe1, #9eca3f)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
+              <Card className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
+                espacio.estado === 'inactivo' ? 'opacity-60' : ''
+              }`}>
+                <Box
+                  className="h-48 bg-gradient-to-br from-primary to-secondary flex items-center justify-center rounded-t-2xl"
                 >
-                  {!facility.image_url && <Stadium sx={{ fontSize: 80, color: 'white', opacity: 0.5 }} />}
-                </CardMedia>
+                  <Stadium sx={{ fontSize: 80, color: 'white', opacity: 0.5 }} />
+                </Box>
                 <CardContent>
                   <Typography variant="h6" className="font-title mb-2">
-                    {facility.name}
+                    {espacio.nombre}
                   </Typography>
                   <Typography variant="body2" className="text-gray-600 font-body mb-2">
-                    {facility.address}
+                    {espacio.ubicacion}
+                  </Typography>
+                  <Typography variant="body2" className="text-gray-500 font-body mb-2">
+                    Capacidad: {espacio.capacidad} personas
                   </Typography>
                   <Typography variant="body2" className="text-gray-500 font-body">
-                    {facility.description || 'Sin descripción'}
+                    {espacio.descripcion || 'Sin descripción'}
                   </Typography>
+                  <Box className="mt-2">
+                    <Typography 
+                      variant="caption" 
+                      className={`font-bold ${
+                        espacio.estado === 'activo' ? 'text-green-600' : 'text-gray-500'
+                      }`}
+                    >
+                      {espacio.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
+                    </Typography>
+                  </Box>
                 </CardContent>
                 <CardActions className="justify-end p-4">
                   <IconButton
-                    onClick={() => handleEdit(facility)}
+                    onClick={() => handleEdit(espacio)}
                     className="text-primary hover:bg-primary/10"
                   >
                     <Edit />
                   </IconButton>
-                  <IconButton
-                    onClick={() => handleDelete(facility.id)}
-                    className="text-highlight hover:bg-highlight/10"
-                  >
-                    <Delete />
-                  </IconButton>
+                  {espacio.estado === 'activo' ? (
+                    <IconButton
+                      onClick={() => handleDelete(espacio.id_espacio_deportivo)}
+                      className="text-highlight hover:bg-highlight/10"
+                    >
+                      <Delete />
+                    </IconButton>
+                  ) : (
+                    <IconButton
+                      onClick={() => handleActivar(espacio.id_espacio_deportivo)}
+                      className="text-green-600 hover:bg-green-600/10"
+                    >
+                      <Add />
+                    </IconButton>
+                  )}
                 </CardActions>
               </Card>
             </motion.div>
@@ -212,36 +225,37 @@ export default function Facilities() {
             <TextField
               fullWidth
               label="Nombre"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={formData.nombre}
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
-              className="mb-4"
               margin="normal"
             />
             <TextField
               fullWidth
-              label="Dirección"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              label="Ubicación"
+              value={formData.ubicacion}
+              onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
               required
               margin="normal"
+            />
+            <TextField
+              fullWidth
+              label="Capacidad"
+              type="number"
+              value={formData.capacidad}
+              onChange={(e) => setFormData({ ...formData, capacidad: parseInt(e.target.value) })}
+              required
+              margin="normal"
+              inputProps={{ min: '1' }}
             />
             <TextField
               fullWidth
               label="Descripción"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={formData.descripcion}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
               multiline
               rows={3}
               margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="URL de Imagen"
-              value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              margin="normal"
-              helperText="URL de una imagen del espacio deportivo"
             />
           </DialogContent>
           <DialogActions className="p-4">

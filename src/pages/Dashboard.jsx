@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { espaciosApi } from '../api/espacios';
+import { canchasApi } from '../api/canchas';
+import { reservasApi } from '../api/reservas';
+import { usuariosApi } from '../api/usuarios';
 import { Grid, Card, CardContent, Typography, Box } from '@mui/material';
-import { Stadium, SportsSoccer, CalendarMonth, Star } from '@mui/icons-material';
+import { Stadium, SportsSoccer, CalendarMonth, People } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function Dashboard() {
   const { profile } = useAuth();
   const [stats, setStats] = useState({
-    facilities: 0,
-    courts: 0,
-    reservations: 0,
-    ratings: 0,
+    espacios: 0,
+    canchas: 0,
+    reservas: 0,
+    usuarios: 0,
   });
 
   useEffect(() => {
@@ -20,43 +23,45 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      if (profile?.role === 'admin_general') {
-        const [facilities, courts, reservations, ratings] = await Promise.all([
-          supabase.from('sports_facilities').select('*', { count: 'exact', head: true }),
-          supabase.from('courts').select('*', { count: 'exact', head: true }),
-          supabase.from('reservations').select('*', { count: 'exact', head: true }),
-          supabase.from('ratings').select('*', { count: 'exact', head: true }),
+      if (profile?.rol === 'admin') {
+        const [espaciosData, canchasData, reservasData, usuariosData] = await Promise.all([
+          espaciosApi.getAll(),
+          canchasApi.getAll(),
+          reservasApi.getAll(),
+          usuariosApi.getAll()
         ]);
 
         setStats({
-          facilities: facilities.count || 0,
-          courts: courts.count || 0,
-          reservations: reservations.count || 0,
-          ratings: ratings.count || 0,
+          espacios: espaciosData.length,
+          canchas: canchasData.length,
+          reservas: reservasData.length,
+          usuarios: usuariosData.length,
         });
-      } else if (profile?.role === 'admin_facility') {
-        const [courts, reservations] = await Promise.all([
-          supabase.from('courts').select('*', { count: 'exact', head: true }).eq('facility_id', profile.facility_id),
-          supabase.from('courts').select('id').eq('facility_id', profile.facility_id).then(async ({ data }) => {
-            if (!data) return { count: 0 };
-            const courtIds = data.map(c => c.id);
-            return supabase.from('reservations').select('*', { count: 'exact', head: true }).in('court_id', courtIds);
-          }),
+      } else if (profile?.rol === 'gestor') {
+        const [canchasData, reservasData] = await Promise.all([
+          canchasApi.getAll(),
+          reservasApi.getAll()
         ]);
 
+        // Filtrar canchas del gestor (asumiendo que el gestor está asociado a espacios)
+        const canchasGestor = canchasData.filter(cancha => 
+          // Aquí deberías tener lógica para filtrar por espacios que gestiona
+          true // Por ahora mostramos todas
+        );
+
         setStats({
-          courts: courts.count || 0,
-          reservations: reservations.count || 0,
+          canchas: canchasGestor.length,
+          reservas: reservasData.length,
+          espacios: 0,
+          usuarios: 0
         });
-      } else if (profile?.role === 'client') {
-        const [reservations, ratings] = await Promise.all([
-          supabase.from('reservations').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
-          supabase.from('ratings').select('*', { count: 'exact', head: true }).eq('user_id', profile.id),
-        ]);
-
+      } else if (profile?.rol === 'cliente') {
+        const reservasData = await reservasApi.getByUsuario(profile.id);
         setStats({
-          reservations: reservations.count || 0,
-          ratings: ratings.count || 0,
+          reservas: reservasData.length,
+          espacios: 0,
+          canchas: 0,
+          usuarios: 0
         });
       }
     } catch (error) {
@@ -66,24 +71,37 @@ export default function Dashboard() {
 
   const statCards = [];
 
-  if (profile?.role === 'admin_general') {
+  if (profile?.rol === 'admin') {
     statCards.push(
-      { title: 'Espacios Deportivos', value: stats.facilities, icon: <Stadium />, color: 'from-primary to-secondary' },
-      { title: 'Canchas', value: stats.courts, icon: <SportsSoccer />, color: 'from-secondary to-accent' },
-      { title: 'Reservas', value: stats.reservations, icon: <CalendarMonth />, color: 'from-accent to-highlight' },
-      { title: 'Calificaciones', value: stats.ratings, icon: <Star />, color: 'from-highlight to-primary' }
+      { title: 'Espacios Deportivos', value: stats.espacios, icon: <Stadium />, color: 'from-primary to-secondary' },
+      { title: 'Canchas', value: stats.canchas, icon: <SportsSoccer />, color: 'from-secondary to-accent' },
+      { title: 'Reservas', value: stats.reservas, icon: <CalendarMonth />, color: 'from-accent to-highlight' },
+      { title: 'Usuarios', value: stats.usuarios, icon: <People />, color: 'from-highlight to-primary' }
     );
-  } else if (profile?.role === 'admin_facility') {
+  } else if (profile?.rol === 'gestor') {
     statCards.push(
-      { title: 'Canchas', value: stats.courts, icon: <SportsSoccer />, color: 'from-primary to-secondary' },
-      { title: 'Reservas', value: stats.reservations, icon: <CalendarMonth />, color: 'from-secondary to-accent' }
+      { title: 'Canchas Gestionadas', value: stats.canchas, icon: <SportsSoccer />, color: 'from-primary to-secondary' },
+      { title: 'Reservas', value: stats.reservas, icon: <CalendarMonth />, color: 'from-secondary to-accent' }
     );
-  } else if (profile?.role === 'client') {
+  } else if (profile?.rol === 'cliente') {
     statCards.push(
-      { title: 'Mis Reservas', value: stats.reservations, icon: <CalendarMonth />, color: 'from-primary to-secondary' },
-      { title: 'Mis Calificaciones', value: stats.ratings, icon: <Star />, color: 'from-secondary to-accent' }
+      { title: 'Mis Reservas', value: stats.reservas, icon: <CalendarMonth />, color: 'from-primary to-secondary' }
+    );
+  } else if (profile?.rol === 'control_acceso') {
+    statCards.push(
+      { title: 'Reservas Hoy', value: stats.reservas, icon: <CalendarMonth />, color: 'from-primary to-secondary' }
     );
   }
+
+  const getRolDisplayName = (rol) => {
+    const roles = {
+      'admin': 'Administrador',
+      'gestor': 'Gestor de Espacios',
+      'control_acceso': 'Control de Acceso',
+      'cliente': 'Cliente'
+    };
+    return roles[rol] || rol;
+  };
 
   return (
     <Box>
@@ -93,10 +111,10 @@ export default function Dashboard() {
         transition={{ duration: 0.5 }}
       >
         <Typography variant="h4" className="font-title mb-2 text-primary">
-          Bienvenido, {profile?.full_name}
+          Bienvenido, {profile?.nombre}
         </Typography>
         <Typography variant="body1" className="text-gray-600 mb-8 font-body">
-          Panel de control - {profile?.role?.replace('_', ' ')}
+          Panel de control - {getRolDisplayName(profile?.rol)}
         </Typography>
       </motion.div>
 
@@ -111,8 +129,7 @@ export default function Dashboard() {
               <Card
                 className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
                 sx={{
-                  background: `linear-gradient(135deg, ${card.color.split(' ')[0].replace('from-', '#')} 0%, ${card.color.split(' ')[1].replace('to-', '#')} 100%)`,
-                  backgroundImage: `linear-gradient(135deg, ${getColorValue(card.color.split(' ')[0])} 0%, ${getColorValue(card.color.split(' ')[1])} 100%)`,
+                  background: `linear-gradient(135deg, ${getColorValue(card.color.split(' ')[0])} 0%, ${getColorValue(card.color.split(' ')[1])} 100%)`,
                 }}
               >
                 <CardContent className="text-white p-6">
@@ -133,6 +150,46 @@ export default function Dashboard() {
           </Grid>
         ))}
       </Grid>
+
+      {/* Información adicional para cada rol */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="mt-8"
+      >
+        <Card className="rounded-2xl shadow-lg p-6">
+          <Typography variant="h5" className="font-title text-primary mb-4">
+            Información del Sistema
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body1" className="font-body text-gray-700 mb-2">
+                <strong>Usuario:</strong> {profile?.nombre} {profile?.apellido}
+              </Typography>
+              <Typography variant="body1" className="font-body text-gray-700 mb-2">
+                <strong>Email:</strong> {profile?.email}
+              </Typography>
+              <Typography variant="body1" className="font-body text-gray-700">
+                <strong>Rol:</strong> {getRolDisplayName(profile?.rol)}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body1" className="font-body text-gray-700 mb-2">
+                <strong>Fecha:</strong> {new Date().toLocaleDateString('es-ES', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </Typography>
+              <Typography variant="body1" className="font-body text-gray-700">
+                <strong>Hora:</strong> {new Date().toLocaleTimeString('es-ES')}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Card>
+      </motion.div>
     </Box>
   );
 }
