@@ -51,38 +51,37 @@ export default function Layout() {
 
   // Menú basado en los roles REALES de tu backend
   const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'gestor', 'control_acceso', 'cliente'] },
-    
-    // Admin y Gestor
-    { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
-    { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
-    { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },
-    
-    // Cliente
-    { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente'] },
-    { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
-    
-    // Todos los autenticados
-    { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
-    
-    // Control de acceso
-    { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
-    
-    // Reportes (Admin)
-    { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
-    
-    // Pagos
-    { text: 'Pagos', icon: <Payment />, path: '/pagos', roles: ['admin', 'cliente'] },
-    
-    // Usuarios (Solo admin)
-    { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
-    
-    // Cupones
-    { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
-  ];
+  { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'gestor', 'control_acceso', 'cliente'] },
+  
+  // Admin y Gestor
+  { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
+  { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
+  { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },
+  
+  // Cliente
+  { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente'] },
+  { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
+  { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente'] },
+  { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
+  
+  // Gestor y Admin para reservas generales
+  { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
+  
+  // Control de acceso
+  { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
+  
+  // Reportes (Admin)
+  { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
+  
+  // Usuarios (Solo admin)
+  { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
+  
+  // Cupones (Admin)
+  { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
+];
 
   const filteredMenuItems = menuItems.filter(item =>
-    item.roles.includes(profile?.rol) // Cambié 'role' por 'rol' para coincidir con tu backend
+    item.roles.includes(profile?.rol)
   );
 
   const drawer = (
@@ -95,7 +94,6 @@ export default function Layout() {
       <List className="px-2 mt-4">
         {filteredMenuItems.map((item) => (
           <ListItem
-            button
             key={item.text}
             component={Link}
             to={item.path}
@@ -105,6 +103,8 @@ export default function Layout() {
               '&:hover': {
                 transform: 'translateX(8px)',
               },
+              textDecoration: 'none',
+              color: 'inherit'
             }}
           >
             <ListItemIcon className="text-primary">{item.icon}</ListItemIcon>

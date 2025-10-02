@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { canchasApi } from '../api/canchas';
 import { espaciosApi } from '../api/espacios';
-import { disciplinasApi } from '../api/disciplinas';
 import { toast } from 'react-toastify';
 import {
   Box,
@@ -23,15 +22,16 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
-import { Add, Edit, Delete, SportsSoccer } from '@mui/icons-material';
+import { Add, Edit, Delete, SportsSoccer, Block, CheckCircle } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function Courts() {
   const { profile } = useAuth();
   const [canchas, setCanchas] = useState([]);
   const [espacios, setEspacios] = useState([]);
-  const [disciplinas, setDisciplinas] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
@@ -50,15 +50,13 @@ export default function Courts() {
 
   const fetchData = async () => {
     try {
-      const [canchasData, espaciosData, disciplinasData] = await Promise.all([
+      const [canchasData, espaciosData] = await Promise.all([
         canchasApi.getAll(),
-        espaciosApi.getAll(),
-        disciplinasApi.getAll()
+        espaciosApi.getAll()
       ]);
 
       setCanchas(canchasData);
       setEspacios(espaciosData);
-      setDisciplinas(disciplinasData);
     } catch (error) {
       toast.error('Error al cargar datos');
     }
@@ -105,13 +103,32 @@ export default function Courts() {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar esta cancha?')) {
       try {
-        // En tu backend podrías implementar un delete o desactivar
-        await canchasApi.update(id, { estado: 'inactiva' });
-        toast.success('Cancha desactivada correctamente');
+        await canchasApi.delete(id);
+        toast.success('Cancha eliminada correctamente');
         fetchData();
       } catch (error) {
-        toast.error('Error al eliminar la cancha');
+        toast.error(error.response?.data?.detail || 'Error al eliminar la cancha');
       }
+    }
+  };
+
+  const handleDesactivar = async (id) => {
+    try {
+      await canchasApi.desactivar(id);
+      toast.success('Cancha desactivada correctamente');
+      fetchData();
+    } catch (error) {
+      toast.error('Error al desactivar la cancha');
+    }
+  };
+
+  const handleActivar = async (id) => {
+    try {
+      await canchasApi.activar(id);
+      toast.success('Cancha activada correctamente');
+      fetchData();
+    } catch (error) {
+      toast.error('Error al activar la cancha');
     }
   };
 
@@ -147,6 +164,24 @@ export default function Courts() {
     return icons[tipo] || '🏆';
   };
 
+  const getEstadoColor = (estado) => {
+    const colors = {
+      'disponible': 'success',
+      'mantenimiento': 'warning',
+      'inactiva': 'default'
+    };
+    return colors[estado] || 'default';
+  };
+
+  const getEstadoText = (estado) => {
+    const texts = {
+      'disponible': 'Disponible',
+      'mantenimiento': 'Mantenimiento',
+      'inactiva': 'Inactiva'
+    };
+    return texts[estado] || estado;
+  };
+
   const getEspacioNombre = (idEspacio) => {
     const espacio = espacios.find(e => e.id_espacio_deportivo === idEspacio);
     return espacio ? espacio.nombre : 'N/A';
@@ -161,7 +196,7 @@ export default function Courts() {
           transition={{ duration: 0.5 }}
         >
           <Typography variant="h4" className="font-title text-primary">
-            Canchas
+            Gestión de Canchas
           </Typography>
         </motion.div>
         <motion.div
@@ -196,7 +231,7 @@ export default function Courts() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
               <Card className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
-                cancha.estado !== 'disponible' ? 'opacity-60' : ''
+                cancha.estado !== 'disponible' ? 'opacity-70' : ''
               }`}>
                 <Box
                   className="h-48 bg-gradient-to-br from-accent to-highlight flex items-center justify-center rounded-t-2xl relative"
@@ -205,10 +240,9 @@ export default function Courts() {
                     {getSportIcon(cancha.tipo)}
                   </Box>
                   <Chip
-                    label={cancha.estado}
-                    className={`absolute top-2 right-2 ${
-                      cancha.estado === 'disponible' ? 'bg-secondary' : 'bg-gray-500'
-                    } text-white font-bold`}
+                    label={getEstadoText(cancha.estado)}
+                    color={getEstadoColor(cancha.estado)}
+                    className="absolute top-2 right-2 text-white font-bold"
                     size="small"
                   />
                 </Box>
@@ -241,9 +275,24 @@ export default function Courts() {
                   >
                     <Edit />
                   </IconButton>
+                  {cancha.estado === 'disponible' ? (
+                    <IconButton
+                      onClick={() => handleDesactivar(cancha.id_cancha)}
+                      className="text-warning hover:bg-warning/10"
+                    >
+                      <Block />
+                    </IconButton>
+                  ) : (
+                    <IconButton
+                      onClick={() => handleActivar(cancha.id_cancha)}
+                      className="text-success hover:bg-success/10"
+                    >
+                      <CheckCircle />
+                    </IconButton>
+                  )}
                   <IconButton
                     onClick={() => handleDelete(cancha.id_cancha)}
-                    className="text-highlight hover:bg-highlight/10"
+                    className="text-error hover:bg-error/10"
                   >
                     <Delete />
                   </IconButton>
@@ -253,6 +302,15 @@ export default function Courts() {
           </Grid>
         ))}
       </Grid>
+
+      {canchas.length === 0 && (
+        <Box className="text-center py-12">
+          <SportsSoccer sx={{ fontSize: 100, color: '#fbab22', opacity: 0.3 }} />
+          <Typography variant="h6" className="text-gray-500 mt-4 font-body">
+            No hay canchas registradas
+          </Typography>
+        </Box>
+      )}
 
       <Dialog
         open={open}
@@ -269,7 +327,7 @@ export default function Courts() {
         <form onSubmit={handleSubmit}>
           <DialogContent className="mt-4">
             <FormControl fullWidth margin="normal">
-              <InputLabel>Espacio Deportivo</InputLabel>
+              <InputLabel>Espacio Deportivo *</InputLabel>
               <Select
                 value={formData.id_espacio_deportivo}
                 onChange={(e) => setFormData({ ...formData, id_espacio_deportivo: e.target.value })}
@@ -284,7 +342,7 @@ export default function Courts() {
             </FormControl>
             <TextField
               fullWidth
-              label="Nombre"
+              label="Nombre *"
               value={formData.nombre}
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
@@ -301,7 +359,7 @@ export default function Courts() {
             <Box className="flex gap-2">
               <TextField
                 fullWidth
-                label="Hora Apertura"
+                label="Hora Apertura *"
                 type="time"
                 value={formData.hora_apertura}
                 onChange={(e) => setFormData({ ...formData, hora_apertura: e.target.value })}
@@ -310,7 +368,7 @@ export default function Courts() {
               />
               <TextField
                 fullWidth
-                label="Hora Cierre"
+                label="Hora Cierre *"
                 type="time"
                 value={formData.hora_cierre}
                 onChange={(e) => setFormData({ ...formData, hora_cierre: e.target.value })}
@@ -320,7 +378,7 @@ export default function Courts() {
             </Box>
             <TextField
               fullWidth
-              label="Precio por hora"
+              label="Precio por hora *"
               type="number"
               value={formData.precio_por_hora}
               onChange={(e) => setFormData({ ...formData, precio_por_hora: e.target.value })}

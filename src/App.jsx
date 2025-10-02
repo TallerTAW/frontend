@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -10,18 +10,19 @@ import Dashboard from './pages/Dashboard';
 import Facilities from './pages/Facilities';
 import Disciplinas from './pages/Disciplinas';
 import Courts from './pages/Courts';
-//import Book from './pages/Book';
-import Reservations from './pages/Reservar';
+import Reservar from './pages/Reservar';
+import Reservations from './pages/Reservations';
 import Ratings from './pages/Ratings';
 import Wallet from './pages/Wallet';
 import Usuarios from './pages/Usuarios';
+import Unauthorized from './pages/No';
 
 function AppRoutes() {
-  const { user } = useAuth();
-
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
+      
       <Route
         path="/"
         element={
@@ -31,50 +32,62 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        
+        {/* Rutas para Admin */}
         <Route
-          path="facilities"
+          path="espacios"
           element={
-            <ProtectedRoute allowedRoles={['admin_general']}>
+            <ProtectedRoute allowedRoles={['admin', 'gestor']}>
               <Facilities />
             </ProtectedRoute>
           }
         />
         <Route
-          path="sports"
+          path="disciplinas"
           element={
-            <ProtectedRoute allowedRoles={['admin_general']}>
+            <ProtectedRoute allowedRoles={['admin', 'gestor']}>
               <Disciplinas />
             </ProtectedRoute>
           }
         />
         <Route
-          path="courts"
+          path="canchas"
           element={
-            <ProtectedRoute allowedRoles={['admin_general', 'admin_facility']}>
+            <ProtectedRoute allowedRoles={['admin', 'gestor']}>
               <Courts />
             </ProtectedRoute>
           }
         />
-        {/* <Route
-          path="book"
+        <Route
+          path="usuarios"
           element={
-            <ProtectedRoute allowedRoles={['client']}>
-              <Book />
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Usuarios />
             </ProtectedRoute>
           }
-        /> */}
+        />
+        
+        {/* Rutas para Cliente */}
         <Route
-          path="reservations"
+          path="reservar"
           element={
-            <ProtectedRoute allowedRoles={['client', 'admin_general', 'admin_facility']}>
+            <ProtectedRoute allowedRoles={['cliente']}>
+              <Reservar />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="mis-reservas"
+          element={
+            <ProtectedRoute allowedRoles={['cliente']}>
               <Reservations />
             </ProtectedRoute>
           }
         />
         <Route
-          path="ratings"
+          path="calificaciones"
           element={
-            <ProtectedRoute allowedRoles={['client']}>
+            <ProtectedRoute allowedRoles={['cliente']}>
               <Ratings />
             </ProtectedRoute>
           }
@@ -82,20 +95,49 @@ function AppRoutes() {
         <Route
           path="wallet"
           element={
-            <ProtectedRoute allowedRoles={['client']}>
+            <ProtectedRoute allowedRoles={['cliente']}>
+              <Wallet />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Rutas para Gestor y Control de Acceso */}
+        <Route
+          path="reservas"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'gestor', 'control_acceso']}>
+              <Reservations />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Rutas adicionales */}
+        <Route
+          path="cupones"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
               <Wallet />
             </ProtectedRoute>
           }
         />
         <Route
-          path="users"
+          path="reportes"
           element={
-            <ProtectedRoute allowedRoles={['admin_general', 'regulator']}>
-              <Usuarios />
+            <ProtectedRoute allowedRoles={['admin']}>
+              <div>Página de Reportes - En construcción</div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="control-acceso"
+          element={
+            <ProtectedRoute allowedRoles={['control_acceso']}>
+              <div>Página de Control de Acceso - En construcción</div>
             </ProtectedRoute>
           }
         />
       </Route>
+      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
