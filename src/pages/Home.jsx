@@ -2,12 +2,12 @@ import { Box, Typography, Container, Grid } from "@mui/material";
 import { motion } from "framer-motion";
 import HeaderHome from '../components/HeaderHome'; 
 
-// Importa las imágenes desde assets (según tu estructura: src/assets)
+// Importa las imágenes desde assets
 import TenisImage from '../assets/bannercancha.jpg'; 
 import BalonImage from '../assets/balon2.jpg'; 
-import AroImage from '../assets/baloncesto.jpg'; 
+import AroImage from '../assets/baloncesto.jpg';  
 
-const sportyBlue = "#4dc0b5"; // Color de fondo turquesa/azul verdoso
+const sportyBlue = "#4dc0b5"; 
 
 export default function Home() {
   return (
@@ -45,7 +45,7 @@ export default function Home() {
         </motion.div>
       </Box>
 
-      {/* Sección Quiénes somos: FONDO NEGRO y LETRA BLANCA (CORREGIDO) */}
+      {/* Quiénes somos */}
       <Container 
         maxWidth="xl" 
         className="py-16" 
@@ -69,17 +69,26 @@ export default function Home() {
               </Typography>
             </motion.div>
           </Grid>
+
+          {/* Imagen al lado del texto */}
           <Grid item xs={12} md={6}>
-            {/* Placeholder for optional image */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.8 }}
+            >
+              
+            </motion.div>
           </Grid>
         </Grid>
       </Container>
       
-       {/* Sección Servicios, Misión y Visión (Fondo azul) */}
+      {/* Misión, Visión y Objetivos */}
       <Box sx={{ backgroundColor: sportyBlue, color: 'white' }}>
         <Container maxWidth="xl" className="py-24">
           
-          {/* Fila superior para Servicios */}
+          {/* Servicios */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -94,12 +103,8 @@ export default function Home() {
             </Typography>
           </motion.div>
 
-          {/* ------------------------------------------- */}
-          {/* SECCIÓN MISIÓN: Texto Izquierda, Imagen Derecha */}
-          {/* ------------------------------------------- */}
+          {/* Misión */}
           <Grid container spacing={8} alignItems="center" sx={{ mb: 12 }}>
-            
-            {/* COLUMNA IZQUIERDA (md=6): TEXTO MISIÓN */}
             <Grid item xs={12} md={6}> 
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
@@ -119,53 +124,42 @@ export default function Home() {
               </motion.div>
             </Grid>
 
-            
             <Grid item xs={12} md={6}> 
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.8 }}
-                // Eliminado 'className="flex justify-end"' para que la imagen se ajuste mejor
               >
-                {/* Imagen del aro: Usamos width:100% para que ocupe todo el espacio de la columna */}
                 <Box
                   component="img"
                   src={AroImage} 
                   alt="Aro de Baloncesto"
-                  // Ajuste clave: width: 100% del contenedor Grid, max-width solo si es necesario limitar el tamaño.
                   sx={{ width: '100%', height: 'auto', objectFit: 'cover' }}
                 />
               </motion.div>
             </Grid>
           </Grid>
 
-          {/* ------------------------------------------- */}
-          
-          {/* ------------------------------------------- */}
-          <Grid container spacing={8} alignItems="center">
-            
-            
+          {/* Visión */}
+          <Grid container spacing={8} alignItems="center" sx={{ mb: 12 }}>
             <Grid item xs={12} md={6}> 
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.8 }}
-                className="flex justify-center md:justify-start" // Asegura que la imagen se alinee a la izquierda en desktop
+                className="flex justify-center md:justify-start"
               >
-                {/* Imagen del balón: Usamos width:100% y un max-width para el círculo */}
                 <Box
-                    component="img"
-                    src={BalonImage} 
-                    alt="Balón de Fútbol Autografiado"
-                    // Ajuste clave: width: 100% del contenedor Grid, max-width para limitar el tamaño y mantener la forma.
-                    sx={{ width: '100%', maxWidth: '300px', height: 'auto', borderRadius: '50%' }}
+                  component="img"
+                  src={BalonImage} 
+                  alt="Balón de Fútbol"
+                  sx={{ width: '100%', maxWidth: '300px', height: 'auto', borderRadius: '50%' }}
                 />
               </motion.div>
             </Grid>
 
-            
             <Grid item xs={12} md={6}> 
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
@@ -184,6 +178,25 @@ export default function Home() {
               </motion.div>
             </Grid>
           </Grid>
+
+          {/* Objetivos */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.8 }}
+          >
+            <Typography variant="h4" fontWeight="bold" sx={{ mb: 2 }}>
+              OBJETIVOS
+            </Typography>
+            <Typography variant="body1" sx={{ lineHeight: 1.8, maxWidth: '800px', margin: '0 auto' }}>
+              • Promover la vida activa y el bienestar en la comunidad. <br/>
+              • Facilitar el acceso a instalaciones deportivas de forma práctica y segura. <br/>
+              • Fomentar el trabajo en equipo y la creación de comunidades deportivas. <br/>
+              • Impulsar la innovación tecnológica aplicada al deporte. <br/>
+              • Convertirnos en un referente regional en la gestión de espacios deportivos.
+            </Typography>
+          </motion.div>
         </Container>
       </Box>
     </Box>
