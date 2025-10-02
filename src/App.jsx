@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import Home from './pages/Home'; // ⬅️ Nueva página pública
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -20,11 +21,16 @@ import Unauthorized from './pages/No';
 function AppRoutes() {
   return (
     <Routes>
+      {/* Página pública principal */}
+      <Route path="/" element={<Home />} />
+
+      {/* Login */}
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-      
+
+      {/* Rutas protegidas */}
       <Route
-        path="/"
+        path="/app"
         element={
           <ProtectedRoute>
             <Layout />
@@ -32,7 +38,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
-        
+
         {/* Rutas para Admin */}
         <Route
           path="espacios"
@@ -66,7 +72,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* Rutas para Cliente */}
         <Route
           path="reservar"
@@ -100,7 +106,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* Rutas para Gestor y Control de Acceso */}
         <Route
           path="reservas"
@@ -110,7 +116,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* Rutas adicionales */}
         <Route
           path="cupones"
@@ -137,7 +143,8 @@ function AppRoutes() {
           }
         />
       </Route>
-      
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
