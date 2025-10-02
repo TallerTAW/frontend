@@ -1,28 +1,270 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400&display=swap');
+/* src/index.css */
 
+/* Directivas de Tailwind CSS */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* VARIABLES CSS - PALETA DE COLORES */
+:root {
+    --color-primary-blue: #007bff; /* Azul Eléctrico */
+    --color-secondary-green: #28a745; /* Verde Brillante */
+    --color-accent-orange: #ff6f00; /* Naranja Vibrante (CTA) */
+    --color-dark-text: #343a40; /* Gris Carbón (Color del Footer/Nuevo Navbar) */
+    --color-light: #ffffff;
+    --color-bg-light: #f8f9fa; /* Fondo alternativo para secciones */
+
+    --font-heading: 'Montserrat', sans-serif;
+    --font-body: 'Roboto', sans-serif;
+}
+
+/* ESTILOS GLOBALES Y RESET BÁSICO */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+    min-height: 100vh;
+    scroll-behavior: smooth;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden;
+    /* --- CRÍTICO: Ajusta el scroll-padding-top a la altura de tu navbar fijo --- */
+    scroll-padding-top: 130px; /* Asegúrate que esto sea mayor o igual a la altura de tu Navbar */
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #fefefe;
-  color: #333;
+    font-family: var(--font-body);
+    color: var(--color-dark-text);
+    background-color: var(--color-light);
+    line-height: 1.6;
+    /* CRÍTICO: El padding-top debe ser suficiente para que el contenido no se oculte bajo el Navbar */
+    padding-top: 120px; 
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 700;
+/* Estilos personalizados para el Navbar (si no usas Tailwind para todo) */
+/* Los estilos del navbar irán en el componente Navbar.jsx con clases de Tailwind o con CSS Modules/Inline */
+
+/* ESTILOS ESPECÍFICOS DEL DROPDOWN (mantener si no se hace con Tailwind) */
+.dropdown {
+    position: relative;
+    display: inline-block; 
 }
 
-#root {
-  min-height: 100vh;
+.dropdown-toggle {
+    text-decoration: none;
+    color: var(--color-light); 
+    padding: 0 0px; 
+    font-weight: 500;
+    font-size: 1.4rem; 
+    display: flex; 
+    align-items: center;
+    cursor: pointer;
+    transition: color 0.2s;
 }
+
+.dropdown-toggle:hover {
+    color: var(--color-primary-blue);
+}
+
+.dropdown-arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 8px; 
+    vertical-align: middle;
+    border-top: 6px solid var(--color-light); 
+    border-right: 6px solid transparent;
+    border-left: 6px solid transparent;
+    transition: transform 0.2s ease, border-top-color 0.2s;
+}
+
+.dropdown-toggle:hover .dropdown-arrow {
+    border-top-color: var(--color-primary-blue); 
+}
+
+.dropdown.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    display: none; 
+    position: absolute;
+    top: 100%; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    background-color: var(--color-light);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); 
+    z-index: 1;
+    min-width: 250px; 
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 0; 
+}
+
+.dropdown-menu a {
+    color: var(--color-dark-text);
+    padding: 18px 22px; 
+    text-decoration: none;
+    display: block;
+    font-size: 1.3rem; 
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.dropdown-menu a:hover {
+    background-color: var(--color-bg-light);
+    color: var(--color-primary-blue);
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+/* CLASE SCROLLED para el Navbar (se agregará con JS en el Navbar.jsx) */
+.scrolled {
+    background-color: var(--color-dark-text); /* Mantener el color oscuro */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); /* Sombra más visible al hacer scroll */
+}
+
+/* MEDIA QUERIES para adaptación móvil (mantener aquí si son globales) */
+@media (max-width: 900px) {
+    html {
+        scroll-padding-top: 90px; 
+    }
+    body {
+        padding-top: 100px; 
+    }
+    /* #main-header, .nav-elements, .logo-img, .app-name, .dropdown-toggle, .auth-link, .btn -
+       Estos deberían ajustarse en sus componentes con clases de Tailwind o media queries específicas.
+       Si quieres mantener las media queries aquí para estos elementos, puedes hacerlo, pero lo ideal
+       sería usar las variantes responsivas de Tailwind como `md:` `lg:`.
+    */
+    #main-header {
+        padding: 20px 30px;
+        flex-wrap: wrap;
+        min-height: 80px; 
+    }
+    .nav-elements {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 15px;
+        gap: 20px;
+    }
+    .auth-buttons {
+        gap: 10px;
+    }
+    .logo-img {
+        width: 35px;
+        height: 35px;
+        border-radius: 0; 
+    }
+    .app-name {
+        font-size: 1.8rem;
+        color: var(--color-light);
+    }
+    .dropdown-toggle, .auth-link, .btn {
+        font-size: 1rem;
+        padding: 10px 15px;
+        color: var(--color-light);
+    }
+}
+
+/* Estilos de las secciones (si no se usa Tailwind para todo) */
+.info-section {
+    padding: 80px 10%;
+    text-align: center;
+}
+.alternate-bg {
+    background-color: var(--color-bg-light);
+}
+.section-title {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    color: var(--color-primary-blue);
+    margin-bottom: 40px;
+}
+.info-section p {
+    max-width: 800px;
+    margin: 0 auto 20px;
+    font-size: 1.1rem;
+}
+.mission-vision-grid {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 30px;
+    text-align: left;
+}
+.mission-vision-grid > div {
+    max-width: 400px;
+}
+.subsection-title {
+    font-family: var(--font-heading);
+    color: var(--color-secondary-green);
+    margin-bottom: 15px;
+}
+.values-list {
+    list-style: none;
+    max-width: 600px;
+    margin: 30px auto 0;
+    text-align: left;
+    padding-left: 0;
+}
+.values-list li {
+    font-size: 1.1rem;
+    padding: 10px 0;
+    border-bottom: 1px dashed #ddd;
+}
+.values-list li:last-child {
+    border-bottom: none;
+}
+
+/* FOOTER (si no se usa Tailwind para todo el footer) */
+footer {
+    background-color: var(--color-dark-text); 
+    color: var(--color-light);
+    padding: 40px 10%;
+    font-family: var(--font-body);
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-logo {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    color: var(--color-secondary-green);
+}
+
+.footer-links a {
+    color: var(--color-light);
+    text-decoration: none;
+    margin-left: 20px;
+    font-weight: 300;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: var(--color-primary-blue);
+}
+
+.footer-social p {
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 20px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
