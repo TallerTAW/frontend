@@ -38,7 +38,7 @@ export default function Login() {
     
     if (!authError) {
       console.log('Login exitoso, redirigiendo...');
-      navigate('/');
+      navigate('/dashboard');
     } else {
       console.log('Error en login:', authError);
     }

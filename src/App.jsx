@@ -3,7 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import Home from './pages/Home'; // ⬅️ Nueva página pública
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -28,20 +28,19 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Rutas protegidas */}
+      {/* Rutas protegidas con Layout */}
       <Route
-        path="/app"
         element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Rutas para Admin */}
         <Route
-          path="espacios"
+          path="/espacios"
           element={
             <ProtectedRoute allowedRoles={['admin', 'gestor']}>
               <Facilities />
@@ -49,7 +48,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="disciplinas"
+          path="/disciplinas"
           element={
             <ProtectedRoute allowedRoles={['admin', 'gestor']}>
               <Disciplinas />
@@ -57,7 +56,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="canchas"
+          path="/canchas"
           element={
             <ProtectedRoute allowedRoles={['admin', 'gestor']}>
               <Courts />
@@ -65,7 +64,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="usuarios"
+          path="/usuarios"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <Usuarios />
@@ -73,9 +72,9 @@ function AppRoutes() {
           }
         />
 
-        {/* Rutas para Cliente */}
+        {/* Cliente */}
         <Route
-          path="reservar"
+          path="/reservar"
           element={
             <ProtectedRoute allowedRoles={['cliente']}>
               <Reservar />
@@ -83,7 +82,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="mis-reservas"
+          path="/mis-reservas"
           element={
             <ProtectedRoute allowedRoles={['cliente']}>
               <Reservations />
@@ -91,7 +90,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="calificaciones"
+          path="/calificaciones"
           element={
             <ProtectedRoute allowedRoles={['cliente']}>
               <Ratings />
@@ -99,7 +98,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="wallet"
+          path="/wallet"
           element={
             <ProtectedRoute allowedRoles={['cliente']}>
               <Wallet />
@@ -107,19 +106,27 @@ function AppRoutes() {
           }
         />
 
-        {/* Rutas para Gestor y Control de Acceso */}
+        {/* Gestor / Control de acceso */}
         <Route
-          path="reservas"
+          path="/reservas"
           element={
             <ProtectedRoute allowedRoles={['admin', 'gestor', 'control_acceso']}>
               <Reservations />
             </ProtectedRoute>
           }
         />
-
-        {/* Rutas adicionales */}
         <Route
-          path="cupones"
+          path="/control-acceso"
+          element={
+            <ProtectedRoute allowedRoles={['control_acceso']}>
+              <div>Página de Control de Acceso - En construcción</div>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin extra */}
+        <Route
+          path="/cupones"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <Wallet />
@@ -127,25 +134,17 @@ function AppRoutes() {
           }
         />
         <Route
-          path="reportes"
+          path="/reportes"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <div>Página de Reportes - En construcción</div>
             </ProtectedRoute>
           }
         />
-        <Route
-          path="control-acceso"
-          element={
-            <ProtectedRoute allowedRoles={['control_acceso']}>
-              <div>Página de Control de Acceso - En construcción</div>
-            </ProtectedRoute>
-          }
-        />
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Fallback: cualquier otra ruta manda a dashboard si está logueado */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

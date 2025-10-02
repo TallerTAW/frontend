@@ -51,7 +51,7 @@ export default function Layout() {
 
   // Menú basado en los roles REALES de tu backend
   const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'gestor', 'control_acceso', 'cliente'] },
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'gestor', 'control_acceso', 'cliente'] },
   
   // Admin y Gestor
   { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
