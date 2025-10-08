@@ -1,12 +1,18 @@
+// frontend/src/App.jsx (COMPLETO)
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ContentProvider } from './context/ContentContext'; 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Importaciones de Páginas
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+// ... (Otras importaciones de páginas) ...
+import AdminContent from './pages/AdminContent'; // 🚨 Nueva Importación
 import Dashboard from './pages/Dashboard';
 import Facilities from './pages/Facilities';
 import Disciplinas from './pages/Disciplinas';
@@ -21,10 +27,7 @@ import Unauthorized from './pages/No';
 function AppRoutes() {
   return (
     <Routes>
-      {/* Página pública principal */}
       <Route path="/" element={<Home />} />
-
-      {/* Login */}
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -37,6 +40,16 @@ function AppRoutes() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* 🚨 AGREGAR: Ruta para el Gestor de Contenido (CMS) */}
+        <Route
+          path="/admin/content"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'gestor']}>
+              <AdminContent /> 
+            </ProtectedRoute>
+          }
+        />
 
         {/* Rutas para Admin */}
         <Route
@@ -152,21 +165,24 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-      </AuthProvider>
+      {/* 🚨 INTEGRACIÓN: ContentProvider debe envolver AuthProvider */}
+      <ContentProvider> 
+        <AuthProvider>
+          <AppRoutes />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
+        </AuthProvider>
+      </ContentProvider>
     </BrowserRouter>
   );
 }

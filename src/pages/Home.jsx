@@ -1,15 +1,39 @@
 import { Box, Typography, Container, Grid } from "@mui/material";
 import { motion } from "framer-motion";
 import HeaderHome from '../components/HeaderHome'; 
+// 🚨 1. Importar el hook para acceder al contenido dinámico
+import { useContent } from '../context/ContentContext'; 
 
-// Importa las imágenes desde assets
+// Importa las imágenes locales (las mantenemos como fallback, aunque usaremos la URL de la BD)
 import TenisImage from '../assets/bannercancha.jpg'; 
 import BalonImage from '../assets/balon2.jpg'; 
-import AroImage from '../assets/baloncesto.jpg';  
+import AroImage from '../assets/baloncesto.jpg';  
 
 const sportyBlue = "#4dc0b5"; 
 
 export default function Home() {
+  // 🚨 2. Usar el hook para obtener el contenido
+  const { content, isLoading } = useContent(); 
+
+  // 3. Manejar el estado de carga (opcional: muestra un skeleton o null)
+  if (isLoading) {
+    // Puedes retornar un skeleton o un loading más elegante si quieres
+    return <Box className="h-screen flex items-center justify-center">Cargando la experiencia deportiva...</Box>;
+  }
+
+  // 4. Extraer los valores dinámicos
+  // Usar valores de la BD o un fallback si la clave no existe o falla
+  const heroTitle = content.hero_title || "ESPACIO DEPORTIVO A TU DISPOSICIÓN";
+  const aboutUsText = content.about_us_text || "Somos una plataforma que conecta personas con espacios deportivos de forma rápida, segura y accesible...";
+  // Usar la URL de la BD, o si falla, usar la imagen local por defecto
+  const heroImageUrl = content.hero_image_url || TenisImage; 
+  
+  // OTRAS SECCIONES (Misión, Visión, Objetivos) - Si también las haces dinámicas, 
+  // seguirías el mismo patrón:
+  const misionText = content.mision_text || "Brindar una solución tecnológica...";
+  const visionText = content.vision_text || "Transformar la manera...";
+  // etc.
+
   return (
     <Box>
       <HeaderHome /> 
@@ -18,7 +42,8 @@ export default function Home() {
       <Box
         className="h-[70vh] flex items-center justify-center text-center text-white"
         sx={{
-          backgroundImage: `url(${TenisImage})`, 
+          // 🚨 REEMPLAZO 1: Usar la URL dinámica para la imagen de fondo
+          backgroundImage: `url(${heroImageUrl})`, 
           backgroundSize: "cover",
           backgroundPosition: "center",
           position: 'relative',
@@ -40,7 +65,7 @@ export default function Home() {
           style={{ zIndex: 1 }}
         >
           <Typography variant="h2" fontWeight="bold">
-            ESPACIO DEPORTIVO A TU DISPOSICIÓN
+            {heroTitle} {/* 🚨 REEMPLAZO 2: Título dinámico */}
           </Typography>
         </motion.div>
       </Box>
@@ -63,32 +88,21 @@ export default function Home() {
                 Quiénes somos
               </Typography>
               <Typography variant="body1" sx={{ maxWidth: '400px', lineHeight: 1.8 }}>
-                Somos una plataforma que conecta personas con espacios deportivos de forma rápida,
-                segura y accesible. Promovemos el deporte, la vida activa, el bienestar y la
-                creación de comunidades saludables y mejor conectadas.
+                {aboutUsText} {/* 🚨 REEMPLAZO 3: Texto de Quiénes Somos dinámico */}
               </Typography>
             </motion.div>
           </Grid>
 
           {/* Imagen al lado del texto */}
-          <Grid item xs={12} md={6}>
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.8 }}
-            >
-              
-            </motion.div>
-          </Grid>
+          {/* ... (Tu Grid item de imagen que estaba vacío) ... */}
         </Grid>
       </Container>
       
-      {/* Misión, Visión y Objetivos */}
+      {/* Misión, Visión y Objetivos (Si quieres que sean dinámicos, usa el mismo patrón) */}
       <Box sx={{ backgroundColor: sportyBlue, color: 'white' }}>
         <Container maxWidth="xl" className="py-24">
           
-          {/* Servicios */}
+          {/* Servicios (Dejaré este fijo, pero se puede dinamizar) */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -115,30 +129,18 @@ export default function Home() {
                 <Typography variant="h4" fontWeight="bold" sx={{ mb: 2 }}>
                   MISIÓN
                 </Typography>
+                {/* 🚨 REEMPLAZO 4 (EJEMPLO): Si tuvieras mision_text en la BD */}
                 <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                  Brindar una solución tecnológica confiable y sencilla que conecte a los
-                  usuarios con los centros deportivos, facilitando el acceso a espacios
-                  recreativos y optimizando el tiempo y los recursos de quienes disfrutan
-                  de la actividad física.
+                  {misionText} 
                 </Typography>
               </motion.div>
             </Grid>
-
-            <Grid item xs={12} md={6}> 
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.8 }}
-              >
-                <Box
-                  component="img"
-                  src={AroImage} 
-                  alt="Aro de Baloncesto"
-                  sx={{ width: '100%', height: 'auto', objectFit: 'cover' }}
-                />
-              </motion.div>
-            </Grid>
+            {/* ... (Resto de Misión, Visión, Objetivos, etc.) ... */}
+            
+            {/* ... (Visión) ... */}
+            
+            {/* ... (Objetivos) ... */}
+            
           </Grid>
 
           {/* Visión */}
