@@ -1,12 +1,12 @@
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useContent } from '../hooks/useContent';
 
-import TeamImage from '../assets/team.jpeg';
-
-const sportyBlue = "#4dc0b5"; // Color turquesa/azul verdoso de tu diseño
+const sportyBlue = "#4dc0b5";
 
 export default function HeaderHome() {
   const navigate = useNavigate();
+  const { content, loading, error } = useContent();
 
   const handleLoginClick = () => {
     navigate('/login'); 
@@ -16,19 +16,51 @@ export default function HeaderHome() {
     navigate('/register');
   };
 
+  // Valores por defecto en caso de error o carga
+  const logoUrl = content.header_logo || '/static/uploads/team.jpg';
+  const siteName = content.site_name || 'OLYMPIAHUB';
+
+  if (loading) {
+    return (
+      <AppBar position="static" elevation={0} sx={{ backgroundColor: sportyBlue }}>
+        <Toolbar>
+          <Typography variant="h6">Cargando...</Typography>
+        </Toolbar>
+      </AppBar>
+    );
+  }
+
   return (
     <AppBar position="static" elevation={0} sx={{ backgroundColor: sportyBlue }}>
       <Toolbar sx={{ display: "flex", alignItems: "center" }}>
         {/* Logo + Texto juntos */}
-        <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1, cursor: "pointer" }} onClick={() => navigate('/')}>
+        <Box 
+          sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            flexGrow: 1, 
+            cursor: "pointer" 
+          }} 
+          onClick={() => navigate('/')}
+        >
           <Box
             component="img"
-            src={TeamImage}
-            alt="Nuestro equipo"
-            sx={{ width: 80, borderRadius: "8px", mr: 1 }}
+            src={logoUrl}
+            alt="Logo del sitio"
+            sx={{ 
+              width: 80, 
+              height: 80,
+              borderRadius: "8px", 
+              mr: 1,
+              objectFit: 'cover'
+            }}
+            onError={(e) => {
+              // Fallback si la imagen no carga
+              e.target.src = '/static/uploads/team.jpg';
+            }}
           />
           <Typography variant="h6" fontWeight="bold">
-            OLYMPIAHUB
+            {siteName}
           </Typography>
         </Box>
 

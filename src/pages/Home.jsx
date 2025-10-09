@@ -1,15 +1,34 @@
 import { Box, Typography, Container, Grid } from "@mui/material";
 import { motion } from "framer-motion";
 import HeaderHome from '../components/HeaderHome'; 
-
-// Importa las imágenes desde assets
-import TenisImage from '../assets/bannercancha.jpg'; 
-import BalonImage from '../assets/balon2.jpg'; 
-import AroImage from '../assets/baloncesto.jpg';  
+import { useContent } from '../hooks/useContent';
 
 const sportyBlue = "#4dc0b5"; 
 
 export default function Home() {
+  const { content, loading, error } = useContent();
+
+  // Valores por defecto
+  const aboutImageTenis = content.about_image_tenis || '/static/uploads/bannercancha.jpg';
+  const aboutImageBalon = content.about_image_balon || '/static/uploads/balon2.jpg';
+  const aboutImageAro = content.about_image_aro || '/static/uploads/baloncesto.jpg';
+  const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas con espacios deportivos de forma rápida, segura y accesible. Promovemos el deporte, la vida activa, el bienestar y la creación de comunidades saludables y mejor conectadas.';
+  const servicesText = content.services || 'Ofrecemos productos y servicios de calidad en todo el mundo.';
+  const missionText = content.mission || 'Brindar una solución tecnológica confiable y sencilla que conecte a los usuarios con los centros deportivos, facilitando el acceso a espacios recreativos y optimizando el tiempo y los recursos de quienes disfrutan de la actividad física.';
+  const visionText = content.vision || 'Transformar la manera en que las personas acceden al deporte, consolidándonos como una plataforma de referencia que fomente comunidades activas, saludables y mejor conectadas.';
+  const objectivesText = content.objectives || '• Promover la vida activa y el bienestar en la comunidad.\n• Facilitar el acceso a instalaciones deportivas de forma práctica y segura.\n• Fomentar el trabajo en equipo y la creación de comunidades deportivas.\n• Impulsar la innovación tecnológica aplicada al deporte.\n• Convertirnos en un referente regional en la gestión de espacios deportivos.';
+
+  if (loading) {
+    return (
+      <Box>
+        <HeaderHome />
+        <Box className="h-screen flex items-center justify-center">
+          <Typography variant="h6">Cargando contenido...</Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <HeaderHome /> 
@@ -18,7 +37,7 @@ export default function Home() {
       <Box
         className="h-[70vh] flex items-center justify-center text-center text-white"
         sx={{
-          backgroundImage: `url(${TenisImage})`, 
+          backgroundImage: `url(${aboutImageTenis})`, 
           backgroundSize: "cover",
           backgroundPosition: "center",
           position: 'relative',
@@ -63,24 +82,12 @@ export default function Home() {
                 Quiénes somos
               </Typography>
               <Typography variant="body1" sx={{ maxWidth: '400px', lineHeight: 1.8 }}>
-                Somos una plataforma que conecta personas con espacios deportivos de forma rápida,
-                segura y accesible. Promovemos el deporte, la vida activa, el bienestar y la
-                creación de comunidades saludables y mejor conectadas.
+                {aboutUsText}
               </Typography>
             </motion.div>
           </Grid>
 
-          {/* Imagen al lado del texto */}
-          <Grid item xs={12} md={6}>
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.8 }}
-            >
-              
-            </motion.div>
-          </Grid>
+          
         </Grid>
       </Container>
       
@@ -99,7 +106,7 @@ export default function Home() {
               SERVICIOS
             </Typography>
             <Typography variant="h4" fontWeight="regular" sx={{ mb: 8 }}>
-              Ofrecemos productos y servicios de calidad en todo el mundo
+              {servicesText}
             </Typography>
           </motion.div>
 
@@ -116,10 +123,7 @@ export default function Home() {
                   MISIÓN
                 </Typography>
                 <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                  Brindar una solución tecnológica confiable y sencilla que conecte a los
-                  usuarios con los centros deportivos, facilitando el acceso a espacios
-                  recreativos y optimizando el tiempo y los recursos de quienes disfrutan
-                  de la actividad física.
+                  {missionText}
                 </Typography>
               </motion.div>
             </Grid>
@@ -133,9 +137,17 @@ export default function Home() {
               >
                 <Box
                   component="img"
-                  src={AroImage} 
+                  src={aboutImageAro}
                   alt="Aro de Baloncesto"
-                  sx={{ width: '100%', height: 'auto', objectFit: 'cover' }}
+                  sx={{ 
+                    width: '100%', 
+                    height: 'auto', 
+                    objectFit: 'cover',
+                    borderRadius: '8px'
+                  }}
+                  onError={(e) => {
+                    e.target.src = '/static/uploads/baloncesto.jpg';
+                  }}
                 />
               </motion.div>
             </Grid>
@@ -153,9 +165,18 @@ export default function Home() {
               >
                 <Box
                   component="img"
-                  src={BalonImage} 
+                  src={aboutImageBalon}
                   alt="Balón de Fútbol"
-                  sx={{ width: '100%', maxWidth: '300px', height: 'auto', borderRadius: '50%' }}
+                  sx={{ 
+                    width: '100%', 
+                    maxWidth: '300px', 
+                    height: 'auto', 
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                  onError={(e) => {
+                    e.target.src = '/static/uploads/balon2.jpg';
+                  }}
                 />
               </motion.div>
             </Grid>
@@ -171,9 +192,7 @@ export default function Home() {
                   VISIÓN
                 </Typography>
                 <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                  Transformar la manera en que las personas acceden al deporte, consolidándonos
-                  como una plataforma de referencia que fomente comunidades activas,
-                  saludables y mejor conectadas.
+                  {visionText}
                 </Typography>
               </motion.div>
             </Grid>
@@ -189,12 +208,16 @@ export default function Home() {
             <Typography variant="h4" fontWeight="bold" sx={{ mb: 2 }}>
               OBJETIVOS
             </Typography>
-            <Typography variant="body1" sx={{ lineHeight: 1.8, maxWidth: '800px', margin: '0 auto' }}>
-              • Promover la vida activa y el bienestar en la comunidad. <br/>
-              • Facilitar el acceso a instalaciones deportivas de forma práctica y segura. <br/>
-              • Fomentar el trabajo en equipo y la creación de comunidades deportivas. <br/>
-              • Impulsar la innovación tecnológica aplicada al deporte. <br/>
-              • Convertirnos en un referente regional en la gestión de espacios deportivos.
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                lineHeight: 1.8, 
+                maxWidth: '800px', 
+                margin: '0 auto',
+                whiteSpace: 'pre-line' // Esto respeta los saltos de línea
+              }}
+            >
+              {objectivesText}
             </Typography>
           </motion.div>
         </Container>
