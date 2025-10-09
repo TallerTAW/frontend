@@ -71,8 +71,29 @@ export default function HeaderHome() {
           <Button color="inherit" sx={{ textTransform: 'none' }}>Deportes</Button>
         </Box>
 
+        
+
         {/* Botones de Inicio de Sesión y Registro */}
         <Box sx={{ display: 'flex', gap: 1 }}>
+  {/* Botón NUEVO: Explora nuestra App */}
+  <Button 
+    variant="outlined" 
+    onClick={() => navigate('/dashboard')}
+    sx={{ 
+      borderColor: 'white',
+      color: 'white',
+      fontWeight: 'bold',
+      borderRadius: '20px',
+      textTransform: 'none',
+      px: 2,
+      '&:hover': {
+        borderColor: 'white',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+      }
+    }}
+  >
+    Explora Nuestra App
+  </Button>
           <Button 
             variant="outlined" 
             onClick={handleRegisterClick}

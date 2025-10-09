@@ -33,12 +33,16 @@ function AppRoutes() {
       {/* Rutas protegidas con Layout */}
       <Route
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowGuest={true}>
             <Layout />
           </ProtectedRoute>
         }
       >
+        {/* Dashboard - Accesible para invitados */}
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Reservar - Accesible para invitados */}
+        <Route path="/reservar" element={<Reservar />} />
 
         {/* Rutas para Admin */}
         <Route
@@ -74,15 +78,7 @@ function AppRoutes() {
           }
         />
 
-        {/* Cliente */}
-        <Route
-          path="/reservar"
-          element={
-            <ProtectedRoute allowedRoles={['cliente']}>
-              <Reservar />
-            </ProtectedRoute>
-          }
-        />
+        {/* Cliente - Solo autenticados */}
         <Route
           path="/mis-reservas"
           element={

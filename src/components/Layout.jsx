@@ -18,6 +18,7 @@ import {
   Divider,
   useMediaQuery,
   useTheme,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -33,12 +34,14 @@ import {
   QrCodeScanner,
   Assessment,
   Payment,
+  Login,
+  PersonAdd,
 } from '@mui/icons-material';
 
 export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const { profile, signOut } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -49,49 +52,163 @@ export default function Layout() {
     setAnchorEl(null);
   };
 
-  // Menú basado en los roles REALES de tu backend
+  // Menú basado en los roles REALES de tu backend + modo invitado
   const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'gestor', 'control_acceso', 'cliente'] },
-  
-  // Admin y Gestor
-  { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
-  { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
-  { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },
-  
-  // Cliente
-  { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente'] },
-  { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
-  { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente'] },
-  { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
-  
-  // Gestor y Admin para reservas generales
-  { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
-  
-  // Control de acceso
-  { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
-  
-  // Reportes (Admin)
-  { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
-  
-  // Usuarios (Solo admin)
-  { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
-  
-  // Cupones (Admin)
-  { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
-];
+    // Dashboard - Accesible para todos (incluidos invitados)
+    { 
+      text: 'Dashboard', 
+      icon: <Dashboard />, 
+      path: '/dashboard', 
+      roles: ['admin', 'gestor', 'control_acceso', 'cliente'],
+      guest: true 
+    },
+    
+    // Reservar - Accesible para clientes e invitados
+    { 
+      text: 'Reservar Cancha', 
+      icon: <CalendarMonth />, 
+      path: '/reservar', 
+      roles: ['cliente'],
+      guest: true 
+    },
+    
+    // Admin y Gestor
+    { 
+      text: 'Espacios Deportivos', 
+      icon: <Stadium />, 
+      path: '/espacios', 
+      roles: ['admin', 'gestor'] 
+    },
+    { 
+      text: 'Canchas', 
+      icon: <SportsSoccer />, 
+      path: '/canchas', 
+      roles: ['admin', 'gestor'] 
+    },
+    { 
+      text: 'Disciplinas', 
+      icon: <Category />, 
+      path: '/disciplinas', 
+      roles: ['admin', 'gestor'] 
+    },
+    
+    // Cliente (solo autenticados)
+    { 
+      text: 'Mis Reservas', 
+      icon: <CalendarMonth />, 
+      path: '/mis-reservas', 
+      roles: ['cliente'] 
+    },
+    { 
+      text: 'Calificaciones', 
+      icon: <Star />, 
+      path: '/calificaciones', 
+      roles: ['cliente'] 
+    },
+    { 
+      text: 'Mi Billetera', 
+      icon: <AccountBalanceWallet />, 
+      path: '/wallet', 
+      roles: ['cliente'] 
+    },
+    
+    // Gestor y Admin para reservas generales
+    { 
+      text: 'Reservas', 
+      icon: <CalendarMonth />, 
+      path: '/reservas', 
+      roles: ['admin', 'gestor', 'control_acceso'] 
+    },
+    
+    // Control de acceso
+    { 
+      text: 'Control Acceso', 
+      icon: <QrCodeScanner />, 
+      path: '/control-acceso', 
+      roles: ['control_acceso'] 
+    },
+    
+    // Reportes (Admin)
+    { 
+      text: 'Reportes', 
+      icon: <Assessment />, 
+      path: '/reportes', 
+      roles: ['admin'] 
+    },
+    
+    // Usuarios (Solo admin)
+    { 
+      text: 'Usuarios', 
+      icon: <People />, 
+      path: '/usuarios', 
+      roles: ['admin'] 
+    },
+    
+    // Cupones (Admin)
+    { 
+      text: 'Cupones', 
+      icon: <Star />, 
+      path: '/cupones', 
+      roles: ['admin'] 
+    },
+  ];
 
+  // Filtrar menú basado en si es invitado o tiene rol
   const filteredMenuItems = menuItems.filter(item =>
-    item.roles.includes(profile?.rol)
+    (!user && item.guest) || // Si es invitado, solo mostrar items con guest: true
+    (user && item.roles.includes(profile?.rol)) // Si está autenticado, mostrar según rol
   );
 
   const drawer = (
     <Box className="h-full bg-gradient-to-b from-primary/10 to-secondary/10">
       <Box className="p-4 bg-gradient-to-r from-primary to-secondary">
         <Typography variant="h6" className="text-white font-title text-center">
-          ReservaDeportiva
+          OlympiaHub
+        </Typography>
+        <Typography variant="caption" className="text-white/80 text-center block mt-1">
+          {user ? getRolDisplayName(profile?.rol) : 'Modo Invitado'}
         </Typography>
       </Box>
-      <List className="px-2 mt-4">
+
+      {/* Mensaje para invitados */}
+      {!user && (
+        <Box className="p-3 bg-yellow-50 border-l-4 border-yellow-400 m-2 rounded">
+          <Typography variant="caption" className="text-yellow-800 font-body">
+            <strong>Modo Invitado</strong><br/>
+            Regístrate para acceder a todas las funciones
+          </Typography>
+          <Box className="flex flex-col gap-1 mt-2">
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<PersonAdd />}
+              onClick={() => navigate('/register')}
+              sx={{
+                backgroundColor: '#0f9fe1',
+                '&:hover': { backgroundColor: '#0d8dc7' },
+                textTransform: 'none'
+              }}
+            >
+              Registrarse
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Login />}
+              onClick={() => navigate('/login')}
+              sx={{
+                borderColor: '#0f9fe1',
+                color: '#0f9fe1',
+                textTransform: 'none'
+              }}
+            >
+              Iniciar Sesión
+            </Button>
+          </Box>
+        </Box>
+      )}
+
+      <List className="px-2 mt-2">
         {filteredMenuItems.map((item) => (
           <ListItem
             key={item.text}
@@ -115,6 +232,11 @@ export default function Layout() {
                 className: "font-medium"
               }}
             />
+            {!user && item.guest && (
+              <Typography variant="caption" className="text-gray-400">
+                Demo
+              </Typography>
+            )}
           </ListItem>
         ))}
       </List>
@@ -152,46 +274,78 @@ export default function Layout() {
           </IconButton>
 
           <Typography variant="h6" className="flex-grow font-title">
-            Sistema de Reservas
+            OlympiaHub
           </Typography>
 
           <Box className="flex items-center gap-2">
             <Typography className="hidden sm:block text-white font-body">
-              {profile?.nombre || 'Usuario'}
+              {profile?.nombre || 'Invitado'}
             </Typography>
-            <IconButton
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              className="text-white"
-            >
-              <Avatar className="bg-accent">
-                {profile?.nombre?.charAt(0) || 'U'}
-              </Avatar>
-            </IconButton>
+            
+            {/* Botones de login/register para invitados */}
+            {!user && (
+              <Box className="flex gap-1">
+                <Button
+                  color="inherit"
+                  onClick={() => navigate('/login')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Iniciar Sesión
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={() => navigate('/register')}
+                  sx={{ 
+                    textTransform: 'none',
+                    borderColor: 'white',
+                    color: 'white'
+                  }}
+                >
+                  Registrarse
+                </Button>
+              </Box>
+            )}
+
+            {/* Avatar para usuarios autenticados */}
+            {user && (
+              <IconButton
+                onClick={(e) => setAnchorEl(e.currentTarget)}
+                className="text-white"
+              >
+                <Avatar className="bg-accent">
+                  {profile?.nombre?.charAt(0) || 'U'}
+                </Avatar>
+              </IconButton>
+            )}
           </Box>
 
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem disabled>
-              <Typography className="font-body">{profile?.email}</Typography>
-            </MenuItem>
-            <MenuItem disabled>
-              <Typography className="text-sm text-gray-500">
-                {getRolDisplayName(profile?.rol)}
-              </Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <Logout fontSize="small" />
-              </ListItemIcon>
-              Cerrar Sesión
-            </MenuItem>
-          </Menu>
+          {/* Menú de usuario (solo para autenticados) */}
+          {user && (
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <MenuItem disabled>
+                <Typography className="font-body">{profile?.email}</Typography>
+              </MenuItem>
+              <MenuItem disabled>
+                <Typography className="text-sm text-gray-500">
+                  {getRolDisplayName(profile?.rol)}
+                </Typography>
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleLogout}>
+                <ListItemIcon>
+                  <Logout fontSize="small" />
+                </ListItemIcon>
+                Cerrar Sesión
+              </MenuItem>
+            </Menu>
+          )}
         </Toolbar>
       </AppBar>
 

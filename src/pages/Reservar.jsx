@@ -176,16 +176,33 @@ export default function Reservar() {
   };
 
   const handleConfirmReservation = async () => {
-    try {
-      const costoTotal = calcularCostoTotal();
-      
-      const reservaData = {
-        ...reservationData,
-        costo_total: costoTotal,
-        id_usuario: profile.id
-      };
+  // Si es invitado, redirigir a login
+  if (!profile) {
+    toast.info('Por favor, inicia sesión o regístrate para completar tu reserva');
+    navigate('/login', { 
+      state: { 
+        from: '/reservar',
+        reservationData: {
+          ...reservationData,
+          selectedEspacio,
+          selectedDisciplina, 
+          selectedCancha
+        }
+      } 
+    });
+    return;
+  }
 
-      const nuevaReserva = await reservasApi.create(reservaData);
+  try {
+    const costoTotal = calcularCostoTotal();
+    
+    const reservaData = {
+      ...reservationData,
+      costo_total: costoTotal,
+      id_usuario: profile.id
+    };
+
+    const nuevaReserva = await reservasApi.create(reservaData);
 
       // Aplicar cupón si se seleccionó
       if (selectedCoupon) {
@@ -525,23 +542,23 @@ export default function Reservar() {
                   </Typography>
                 </Box>
                 <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={!reservationData.fecha_reserva || !reservationData.hora_inicio || !reservationData.hora_fin}
-                  className="mt-4"
-                  sx={{
-                    textTransform: 'none',
-                    background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
-                    '&:hover': {
-                      background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
-                    },
-                    fontSize: '1.1rem',
-                    py: 1.5,
-                  }}
-                >
-                  Confirmar Reserva
-                </Button>
+  fullWidth
+  variant="contained"
+  onClick={() => setConfirmOpen(true)}
+  disabled={!reservationData.fecha_reserva || !reservationData.hora_inicio || !reservationData.hora_fin}
+  className="mt-4"
+  sx={{
+    textTransform: 'none',
+    background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+    '&:hover': {
+      background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+    },
+    fontSize: '1.1rem',
+    py: 1.5,
+  }}
+>
+  {profile ? 'Confirmar Reserva' : 'Iniciar Sesión para Reservar'}
+</Button>
               </Card>
             </Grid>
           </Grid>

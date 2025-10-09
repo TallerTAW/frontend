@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CircularProgress, Box } from '@mui/material';
 
-export default function ProtectedRoute({ children, allowedRoles }) {
+export default function ProtectedRoute({ children, allowedRoles, allowGuest = false }) {
   const { user, profile, loading } = useAuth();
 
   if (loading) {
@@ -13,6 +13,12 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     );
   }
 
+  // Si allowGuest es true, permitir acceso incluso sin usuario
+  if (allowGuest) {
+    return children;
+  }
+
+  // Para rutas que requieren autenticación
   if (!user) {
     return <Navigate to="/login" replace />;
   }
