@@ -38,6 +38,17 @@ import {
   PersonAdd,
 } from '@mui/icons-material';
 
+// ✅ MOVER la función getRolDisplayName AL INICIO para que tenga hoisting
+const getRolDisplayName = (rol) => {
+  const roles = {
+    'admin': 'Administrador',
+    'gestor': 'Gestor de Espacios',
+    'control_acceso': 'Control de Acceso',
+    'cliente': 'Cliente'
+  };
+  return roles[rol] || rol;
+};
+
 export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -242,16 +253,6 @@ export default function Layout() {
       </List>
     </Box>
   );
-
-  const getRolDisplayName = (rol) => {
-    const roles = {
-      'admin': 'Administrador',
-      'gestor': 'Gestor de Espacios',
-      'control_acceso': 'Control de Acceso',
-      'cliente': 'Cliente'
-    };
-    return roles[rol] || rol;
-  };
 
   return (
     <Box className="flex min-h-screen bg-gray-50">
