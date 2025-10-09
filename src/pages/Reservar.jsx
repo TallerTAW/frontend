@@ -316,7 +316,7 @@ export default function Reservar() {
             </Typography>
           </Box>
           <Grid container spacing={3}>
-            {disciplinas.filter(d => d.estado === 'activo').map((disciplina, index) => (
+            {disciplinas.map((disciplina, index) => (
               <Grid item xs={12} sm={6} md={3} key={disciplina.id_disciplina}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}

@@ -17,6 +17,7 @@ import Ratings from './pages/Ratings';
 import Wallet from './pages/Wallet';
 import Usuarios from './pages/Usuarios';
 import Unauthorized from './pages/No';
+import Register from './pages/Register';
 
 function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ function AppRoutes() {
 
       {/* Login */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Rutas protegidas con Layout */}
