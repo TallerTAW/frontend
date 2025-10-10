@@ -14,6 +14,11 @@ const EDITABLE_KEYS = [
     { key: 'hero_image_url', label: 'URL Imagen Principal', type: 'url' },
     // Agrega aquí todas las claves que desees editar
     { key: 'mision_text', label: 'Texto de Misión', type: 'textarea' },
+    { key: 'services_text', label: 'Título de la Sección Servicios', type: 'text' },
+    { key: 'vision_text', label: 'Texto de Visión', type: 'textarea' },
+    { key: 'objectives_list', label: 'Lista de Objetivos (Separar por nueva línea)', type: 'textarea' },
+    { key: 'ball_graphic_url', label: 'URL Imagen Gráfico (Pelota)', type: 'url' },
+
 ];
 
 export default function AdminContent() {
