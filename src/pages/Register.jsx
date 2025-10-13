@@ -38,7 +38,6 @@ export default function Register() {
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Limpiar error cuando el usuario empiece a escribir
     if (error) setError('');
   };
 
@@ -67,48 +66,71 @@ export default function Register() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!validateForm()) return;
+
+  setLoading(true);
+  setError('');
+
+  try {
+    console.log('Enviando datos de registro:', { 
+      ...formData, 
+      contrasenia: '***',
+      confirmarContrasenia: '***' 
+    });
     
-    if (!validateForm()) return;
+    const { confirmarContrasenia, ...registerData } = formData;
+    
+    console.log('Datos que se envían al servidor:', registerData);
+    
+    const response = await authApi.register(registerData);
+    
+    console.log('Respuesta del registro:', response);
+    
+    toast.success('¡Registro exitoso! Ahora puedes iniciar sesión');
+    
+    setTimeout(() => {
+      navigate('/login');
+    }, 2000);
 
-    setLoading(true);
-    setError('');
-
-    try {
-      console.log('Enviando datos de registro:', { ...formData, contrasenia: '***' });
+  } catch (error) {
+    console.error('Error completo en registro:', error);
+    
+    let errorMessage = 'Error al registrar usuario';
+    
+    if (error.response) {
+      const serverError = error.response.data;
       
-      // Preparar datos para enviar (sin confirmarContrasenia)
-      const { confirmarContrasenia, ...registerData } = formData;
-      
-      const response = await authApi.register(registerData);
-      
-      console.log('Respuesta del registro:', response);
-      
-      toast.success('¡Registro exitoso! Ahora puedes iniciar sesión');
-      
-      // Redirigir al login después de 2 segundos
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-
-    } catch (error) {
-      console.error('Error completo en registro:', error);
-      
-      let errorMessage = 'Error al registrar usuario';
-      
-      if (error.response) {
-        errorMessage = error.response.data?.detail || `Error ${error.response.status}`;
-      } else if (error.request) {
-        errorMessage = 'No se pudo conectar con el servidor';
+      if (typeof serverError === 'string') {
+        errorMessage = serverError;
+      } else if (serverError?.detail) {
+        errorMessage = typeof serverError.detail === 'string' 
+          ? serverError.detail 
+          : JSON.stringify(serverError.detail);
+      } else if (serverError?.message) {
+        errorMessage = serverError.message;
       } else {
-        errorMessage = error.message || 'Error de configuración';
+        errorMessage = `Error del servidor: ${error.response.status}`;
       }
       
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+      if (error.response.status === 422) {
+        errorMessage = 'Datos de formulario inválidos';
+      } else if (error.response.status === 400) {
+        errorMessage = 'Datos incorrectos o usuario ya existe';
+      }
+    } else if (error.request) {
+      errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+    } else {
+      errorMessage = error.message || 'Error de configuración';
     }
-  };
+    
+    setError(errorMessage);
+    toast.error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-secondary to-accent p-4">

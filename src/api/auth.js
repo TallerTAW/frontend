@@ -2,9 +2,8 @@ import api from './index';
 
 export const authApi = {
   login: async (email, password) => {
-    // Usar FormData para compatibilidad con OAuth2
     const formData = new URLSearchParams();
-    formData.append('username', email); // FastAPI OAuth2 espera 'username'
+    formData.append('username', email); 
     formData.append('password', password);
     
     const response = await api.post('/auth/login', formData, {
@@ -16,8 +15,20 @@ export const authApi = {
   },
 
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
+    try {
+      console.log('Datos enviados al servidor:', userData);
+      const response = await api.post('/auth/register', userData);
+      console.log('Respuesta del servidor:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error en authApi.register:', error);
+      console.error('Detalles del error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      throw error;
+    }
   },
 
   getProfile: async () => {
