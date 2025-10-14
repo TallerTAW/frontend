@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useRef } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -17,33 +19,52 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
   const { signIn, error, clearError } = useAuth();
   const navigate = useNavigate();
+  const recaptchaRef = useRef(null);
+
+  const handleRecaptchaChange = (token) => {
+    setRecaptchaVerified(!!token);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
+      alert('Por favor, completa email y contraseña');
+      return;
+    }
+
+    if (!recaptchaVerified) {
+      alert('Por favor, verifica que no eres un robot');
       return;
     }
 
     setIsLoading(true);
-    clearError(); // Limpiar errores anteriores
+    clearError();
 
-    console.log('Enviando formulario de login...');
-    
-    const { error: authError } = await signIn(email, password);
-    
-    console.log('Resultado del login:', { authError });
-    
-    if (!authError) {
-      console.log('Login exitoso, redirigiendo...');
-      navigate('/dashboard');
-    } else {
-      console.log('Error en login:', authError);
+    try {
+      const token = recaptchaRef.current.getValue();
+      
+      if (!token) {
+        throw new Error('No se pudo obtener el token reCAPTCHA');
+      }
+
+      console.log('Token de reCAPTCHA:', token);
+
+      const { error: authError } = await signIn(email, password, token);
+
+      if (!authError) {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      console.error('Error en el login:', err);
+      recaptchaRef.current.reset();
+      setRecaptchaVerified(false);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -119,11 +140,20 @@ export default function Login() {
                 }}
               />
 
+              {/* ReCAPTCHA Visible - tamaño normal */}
+              <Box className="flex justify-center">
+                <ReCAPTCHA
+                  sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                  ref={recaptchaRef}
+                  onChange={handleRecaptchaChange}
+                />
+              </Box>
+
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={isLoading}
+                disabled={isLoading || !recaptchaVerified}
                 className="py-3 rounded-xl font-title text-white shadow-lg transition-all duration-300 transform hover:scale-105"
                 sx={{
                   textTransform: 'none',
@@ -134,6 +164,7 @@ export default function Login() {
                   },
                   '&:disabled': {
                     background: '#ccc',
+                    transform: 'none',
                   },
                 }}
               >
@@ -162,7 +193,8 @@ export default function Login() {
               <Box className="mt-4 p-3 bg-gray-100 rounded-lg">
                 <Typography variant="caption" className="text-gray-600">
                   <strong>Debug:</strong> {email ? `Email: ${email}` : 'Sin email'} | 
-                  {password ? ` Contraseña: ${'*'.repeat(password.length)}` : ' Sin contraseña'}
+                  {password ? ` Contraseña: ${'*'.repeat(password.length)}` : ' Sin contraseña'} |
+                  reCAPTCHA: {recaptchaVerified ? 'Verificado' : 'No verificado'}
                 </Typography>
               </Box>
             )}

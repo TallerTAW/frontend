@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useRef } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { toast } from 'react-toastify';
@@ -27,11 +29,13 @@ export default function Register() {
     contrasenia: '',
     confirmarContrasenia: '',
     telefono: '',
-    rol: 'cliente' // Por defecto cliente
+    rol: 'cliente'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
   const navigate = useNavigate();
+  const recaptchaRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -39,6 +43,23 @@ export default function Register() {
       [e.target.name]: e.target.value
     });
     if (error) setError('');
+  };
+
+  const handleRecaptchaChange = (token) => {
+    console.log('reCAPTCHA token:', token ? '✅ Verificado' : '❌ No verificado');
+    setRecaptchaVerified(!!token);
+  };
+
+  const handleRecaptchaExpire = () => {
+    console.log('reCAPTCHA expirado');
+    setRecaptchaVerified(false);
+    setError('El reCAPTCHA ha expirado. Por favor, verifica nuevamente.');
+  };
+
+  const handleRecaptchaError = () => {
+    console.error('Error en reCAPTCHA');
+    setRecaptchaVerified(false);
+    setError('Error en la verificación reCAPTCHA. Intenta nuevamente.');
   };
 
   const validateForm = () => {
@@ -62,75 +83,97 @@ export default function Register() {
       return false;
     }
 
+    if (!recaptchaVerified) {
+      setError('Por favor, verifica que no eres un robot');
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!validateForm()) return;
+    e.preventDefault();
+    
+    if (!validateForm()) return;
 
-  setLoading(true);
-  setError('');
+    setLoading(true);
+    setError('');
 
-  try {
-    console.log('Enviando datos de registro:', { 
-      ...formData, 
-      contrasenia: '***',
-      confirmarContrasenia: '***' 
-    });
-    
-    const { confirmarContrasenia, ...registerData } = formData;
-    
-    console.log('Datos que se envían al servidor:', registerData);
-    
-    const response = await authApi.register(registerData);
-    
-    console.log('Respuesta del registro:', response);
-    
-    toast.success('¡Registro exitoso! Ahora puedes iniciar sesión');
-    
-    setTimeout(() => {
-      navigate('/login');
-    }, 2000);
-
-  } catch (error) {
-    console.error('Error completo en registro:', error);
-    
-    let errorMessage = 'Error al registrar usuario';
-    
-    if (error.response) {
-      const serverError = error.response.data;
+    try {
+      const token = recaptchaRef.current.getValue();
       
-      if (typeof serverError === 'string') {
-        errorMessage = serverError;
-      } else if (serverError?.detail) {
-        errorMessage = typeof serverError.detail === 'string' 
-          ? serverError.detail 
-          : JSON.stringify(serverError.detail);
-      } else if (serverError?.message) {
-        errorMessage = serverError.message;
+      if (!token) {
+        throw new Error('No se pudo obtener el token reCAPTCHA');
+      }
+
+      console.log("Token reCAPTCHA obtenido:", token);
+
+      console.log('Enviando datos de registro:', { 
+        ...formData, 
+        contrasenia: '***',
+        confirmarContrasenia: '***',
+        captcha_token: token
+      });
+
+      const { confirmarContrasenia, ...registerData } = formData;
+
+      const response = await authApi.register({
+        ...registerData,
+        captcha_token: token  
+      });
+
+      console.log('Respuesta del registro:', response);
+
+      toast.success('¡Registro exitoso! Ahora puedes iniciar sesión');
+
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error completo en registro:', error);
+
+      let errorMessage = 'Error al registrar usuario';
+
+      if (error.response) {
+        const serverError = error.response.data;
+
+        if (typeof serverError === 'string') {
+          errorMessage = serverError;
+        } else if (serverError?.detail) {
+          errorMessage = typeof serverError.detail === 'string' 
+            ? serverError.detail 
+            : JSON.stringify(serverError.detail);
+        } else if (serverError?.message) {
+          errorMessage = serverError.message;
+        } else {
+          errorMessage = `Error del servidor: ${error.response.status}`;
+        }
+
+        if (error.response.status === 422) {
+          errorMessage = 'Datos de formulario inválidos';
+        } else if (error.response.status === 400) {
+          if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
+            errorMessage = 'Error de verificación reCAPTCHA. Por favor, verifica el reCAPTCHA nuevamente.';
+          } else {
+            errorMessage = 'Datos incorrectos o usuario ya existe';
+          }
+        }
+      } else if (error.request) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
       } else {
-        errorMessage = `Error del servidor: ${error.response.status}`;
+        errorMessage = error.message || 'Error de configuración';
       }
       
-      if (error.response.status === 422) {
-        errorMessage = 'Datos de formulario inválidos';
-      } else if (error.response.status === 400) {
-        errorMessage = 'Datos incorrectos o usuario ya existe';
-      }
-    } else if (error.request) {
-      errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-    } else {
-      errorMessage = error.message || 'Error de configuración';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      
+      recaptchaRef.current.reset();
+      setRecaptchaVerified(false);
+    } finally {
+      setLoading(false);
     }
-    
-    setError(errorMessage);
-    toast.error(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-secondary to-accent p-4">
@@ -306,13 +349,31 @@ export default function Register() {
                     }}
                   />
                 </Grid>
+                
+                {/* ReCAPTCHA Visible */}
+                <Grid item xs={12}>
+                  <Box className="flex justify-center my-4">
+                    <ReCAPTCHA
+                      sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                      ref={recaptchaRef}
+                      onChange={handleRecaptchaChange}
+                      onExpired={handleRecaptchaExpire}
+                      onErrored={handleRecaptchaError}
+                    />
+                  </Box>
+                  {recaptchaVerified && (
+                    <Alert severity="success" className="mb-2">
+                      reCAPTCHA verificado correctamente
+                    </Alert>
+                  )}
+                </Grid>
               </Grid>
 
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                disabled={loading}
+                disabled={loading || !recaptchaVerified}
                 className="mt-6 py-3 rounded-xl font-title text-white shadow-lg transition-all duration-300 transform hover:scale-105"
                 sx={{
                   textTransform: 'none',
@@ -323,6 +384,7 @@ export default function Register() {
                   },
                   '&:disabled': {
                     background: '#ccc',
+                    transform: 'none',
                   },
                 }}
               >

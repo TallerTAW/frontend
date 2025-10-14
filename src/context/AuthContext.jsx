@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
           nombre: parsedUser.nombre,
           email: parsedUser.email,
           rol: parsedUser.rol,
-          full_name: parsedUser.nombre // Tu backend no envía apellido en el login
+          full_name: parsedUser.nombre
         });
       }
     } catch (error) {
@@ -47,14 +47,20 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signIn = async (email, password) => {
+  const signIn = async (email, password, captchaToken) => {
     try {
       setLoading(true);
       setError(null);
       
       console.log('Intentando login con:', { email, password });
+      console.log('Token reCAPTCHA:', captchaToken);
       
-      const response = await authApi.login(email, password);
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+      formData.append('captcha_token', captchaToken);
+      
+      const response = await authApi.login(formData);
       
       console.log('Respuesta del login:', response);
       
@@ -64,11 +70,9 @@ export function AuthProvider({ children }) {
         throw new Error('Respuesta inválida del servidor');
       }
       
-      // Guardar en localStorage
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('user', JSON.stringify(usuario));
       
-      // Actualizar estado
       setUser(usuario);
       setProfile({
         id: usuario.id,
@@ -85,13 +89,22 @@ export function AuthProvider({ children }) {
       let errorMessage = 'Error al iniciar sesión';
       
       if (error.response) {
-        // El servidor respondió con un error
         errorMessage = error.response.data?.detail || `Error ${error.response.status}: ${error.response.statusText}`;
+        
+        if (error.response.status === 400) {
+          if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
+            errorMessage = 'Error de verificación reCAPTCHA. Por favor, intenta nuevamente.';
+          } else if (errorMessage.includes('Credenciales')) {
+            errorMessage = 'Email o contraseña incorrectos.';
+          }
+        } else if (error.response.status === 403) {
+          errorMessage = 'Acceso denegado. Verifica tus credenciales.';
+        } else if (error.response.status === 422) {
+          errorMessage = 'Datos de entrada inválidos.';
+        }
       } else if (error.request) {
-        // La request fue hecha pero no hubo respuesta
         errorMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.';
       } else {
-        // Algo pasó al configurar la request
         errorMessage = error.message || 'Error de configuración';
       }
       
