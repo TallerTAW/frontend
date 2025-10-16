@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useRef } from 'react';
+import { useState, useRef } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
@@ -93,7 +92,6 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
 
     setLoading(true);
@@ -101,43 +99,35 @@ export default function Register() {
 
     try {
       const token = recaptchaRef.current.getValue();
-      
       if (!token) {
         throw new Error('No se pudo obtener el token reCAPTCHA');
       }
 
       console.log("Token reCAPTCHA obtenido:", token);
-
       console.log('Enviando datos de registro:', { 
         ...formData, 
         contrasenia: '***',
         confirmarContrasenia: '***',
         captcha_token: token
       });
-
       const { confirmarContrasenia, ...registerData } = formData;
 
       const response = await authApi.register({
         ...registerData,
         captcha_token: token  
       });
-
       console.log('Respuesta del registro:', response);
 
       toast.success('¡Registro exitoso! Ahora puedes iniciar sesión');
-
       setTimeout(() => {
         navigate('/login');
       }, 2000);
-
     } catch (error) {
       console.error('Error completo en registro:', error);
-
       let errorMessage = 'Error al registrar usuario';
 
       if (error.response) {
         const serverError = error.response.data;
-
         if (typeof serverError === 'string') {
           errorMessage = serverError;
         } else if (serverError?.detail) {
@@ -175,23 +165,151 @@ export default function Register() {
     }
   };
 
+  // ----------------------------------------------------------------------
+  // CAMBIOS DE DISEÑO INICIAN AQUÍ
+  // ----------------------------------------------------------------------
+  
+  // Estilo para los campos de texto oscuros
+  const darkInputStyle = {
+    // Estilo base para el contenedor del input
+    '& .MuiInputBase-root': {
+      backgroundColor: '#1c364f', // Fondo azul oscuro
+      color: 'white', // Texto blanco
+      borderRadius: '4px',
+      // Estilo para el input en sí (texto)
+      '& input': {
+          color: 'white',
+      },
+      '& fieldset': {
+        borderColor: 'transparent', // Sin borde visible
+      },
+      '&:hover fieldset': {
+        borderColor: '#00BFFF !important', // Borde azul claro al pasar el ratón
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#00BFFF !important', // Borde azul claro al estar enfocado
+      },
+    },
+    // Estilo para la etiqueta (Label)
+    '& .MuiInputLabel-root': {
+      color: 'white', // Etiqueta blanca
+      fontWeight: 'bold',
+      '&.Mui-focused': {
+        color: '#00BFFF', // Etiqueta azul claro al enfocar
+      }
+    },
+    // Estilo para el helper text
+    '& .MuiFormHelperText-root': {
+        color: 'white !important', // Texto de ayuda blanco
+    },
+  };
+
+  // Estilo para el Select (Tipo de Cuenta)
+  const darkSelectStyle = {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: '#1c364f', // Fondo azul oscuro
+      color: 'white', // Texto blanco
+      '& .MuiSelect-select': {
+        color: 'white',
+      },
+      '& fieldset': {
+        borderColor: 'transparent',
+      },
+      '&:hover fieldset': {
+        borderColor: '#00BFFF !important',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#00BFFF !important',
+      },
+    },
+    '& .MuiInputLabel-root': {
+      color: '#1d5a73',
+      fontWeight: 'bold',
+      '&.Mui-focused': {
+        color: '#00BFFF',
+      }
+    },
+    '& .MuiSvgIcon-root': { // Icono de flecha del Select
+        color: 'white',
+    }
+  };
+  
+  // Estilo para el campo de Email, que es blanco en la imagen
+  const lightInputStyle = {
+    // Estilo base para el contenedor del input
+    '& .MuiInputBase-root': {
+      backgroundColor: 'white', // Fondo blanco
+      color: 'black', // Texto negro
+      borderRadius: '4px',
+      '& input': {
+          color: 'black',
+      },
+      '& fieldset': {
+        borderColor: '#ccc', // Borde gris suave
+      },
+      '&:hover fieldset': {
+        borderColor: '#00BFFF !important', 
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#00BFFF !important', 
+      },
+    },
+    // Estilo para la etiqueta (Label)
+    '& .MuiInputLabel-root': {
+      color: 'black', // Etiqueta negra
+      fontWeight: 'normal',
+      '&.Mui-focused': {
+        color: '#00BFFF', // Etiqueta azul claro al enfocar
+      }
+    },
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-secondary to-accent p-4">
+    // CAMBIO: Fondo con imagen de estadio (simulado)
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        backgroundImage: 'url("https://images.pexels.com/photos/15476801/pexels-photo-15476801.jpeg")', // Placeholder para la imagen de estadio
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: '#1C3144', // Color de fallback
+      }}
+    >
       <Container maxWidth="md">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Paper elevation={8} className="p-8 rounded-2xl backdrop-blur-lg bg-white/95">
-            <Box className="text-center mb-8">
-              <Typography variant="h3" className="font-title text-primary mb-2">
+          {/* CAMBIO: Contenedor principal blanco con borde azul claro */}
+          <Paper 
+            elevation={8} 
+            sx={{
+                padding: '30px 40px', // Aumentar padding
+                borderRadius: '8px',
+                backgroundColor: '#226079d4', // Fondo blanco
+                border: '3px solid #00BFFF' // Borde azul brillante
+            }}
+          >
+     
+            {/* CABECERA */}
+            <Box className="text-center mb-6">
+              <Typography 
+                variant="h3" 
+                sx={{ color: '#00BFFF', fontWeight: 'bold' }} // Azul brillante
+              >
                 OLYMPIAHUB
               </Typography>
-              <Typography variant="h5" className="font-title text-secondary mb-2">
+              <Typography 
+                variant="h5" 
+                sx={{ color: '#333', fontWeight: 'normal' }} // Color de texto normal
+              >
                 Crear Cuenta
               </Typography>
-              <Typography variant="body1" className="text-gray-600 font-body">
+              <Typography 
+                variant="body1" 
+                sx={{ color: '#666' }}
+              >
                 Únete a nuestra comunidad deportiva
               </Typography>
             </Box>
@@ -203,72 +321,60 @@ export default function Register() {
             )}
 
             <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+              <Grid container spacing={2}> {/* Espaciado más reducido */}
+                {/* Nombre */}
+                <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
-                    label="Nombre *"
+                    label="Nombre **" // Doble asterisco para coincidir con la imagen
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleChange}
                     required
                     disabled={loading}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                      },
+                    sx={darkInputStyle} // Estilo oscuro
+                    InputProps={{
+                        endAdornment: (
+                            <Box component="span" sx={{ color: 'white' }}>👤</Box> // Icono
+                        ),
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                {/* Apellido */}
+                <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
-                    label="Apellido *"
+                    label="Apellido **" // Doble asterisco
                     name="apellido"
                     value={formData.apellido}
                     onChange={handleChange}
                     required
                     disabled={loading}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                      },
+                    sx={darkInputStyle} // Estilo oscuro
+                    InputProps={{
+                        endAdornment: (
+                            <Box component="span" sx={{ color: 'white' }}>👥</Box> // Icono
+                        ),
                     }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                {/* Email (Campo Blanco en la imagen) */}
+                <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
-                    label="Email *"
+                    label="Email **" // Doble asterisco
                     name="email"
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
                     required
                     disabled={loading}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                      },
-                    }}
+                    sx={lightInputStyle} // Estilo claro
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                
+                {/* Teléfono */}
+                <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
                     label="Teléfono"
@@ -276,20 +382,18 @@ export default function Register() {
                     value={formData.telefono}
                     onChange={handleChange}
                     disabled={loading}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                      },
+                    sx={darkInputStyle} // Estilo oscuro
+                    InputProps={{
+                        endAdornment: (
+                            <Box component="span" sx={{ color: 'white' }}>📞</Box> // Icono
+                        ),
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
+                
+                {/* Tipo de Cuenta (Select) */}
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth sx={darkSelectStyle}> {/* Estilo oscuro */}
                     <InputLabel>Tipo de Cuenta</InputLabel>
                     <Select
                       name="rol"
@@ -304,10 +408,12 @@ export default function Register() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+
+                {/* Contraseña */}
+                <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
-                    label="Contraseña *"
+                    label="Contraseña **" // Doble asterisco
                     name="contrasenia"
                     type="password"
                     value={formData.contrasenia}
@@ -315,42 +421,31 @@ export default function Register() {
                     required
                     disabled={loading}
                     helperText="Mínimo 6 caracteres"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                      },
+                    sx={darkInputStyle} // Estilo oscuro
+                    InputProps={{
+                        endAdornment: (
+                            <Box component="span" sx={{ color: 'white' }}>$</Box> // Icono
+                        ),
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+
+                {/* Confirmar Contraseña (Ancho completo para seguir el flujo visual de la imagen) */}
+                <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
-                    label="Confirmar Contraseña *"
+                    label="Confirmar Contraseña **" // Doble asterisco
                     name="confirmarContrasenia"
                     type="password"
                     value={formData.confirmarContrasenia}
                     onChange={handleChange}
                     required
                     disabled={loading}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#0f9fe1',
-                        },
-                      },
-                    }}
+                    sx={darkInputStyle} // Estilo oscuro
                   />
                 </Grid>
                 
-                {/* ReCAPTCHA Visible */}
+                {/* ReCAPTCHA Visible (Centrado) */}
                 <Grid item xs={12}>
                   <Box className="flex justify-center my-4">
                     <ReCAPTCHA
@@ -359,6 +454,8 @@ export default function Register() {
                       onChange={handleRecaptchaChange}
                       onExpired={handleRecaptchaExpire}
                       onErrored={handleRecaptchaError}
+                      // CAMBIO: Agregar estilo para simular el 'No soy un robot' con fondo verde claro
+                      sx={{ '& > div': { border: '2px solid #9eca3f', backgroundColor: '#e6ffe6' } }}
                     />
                   </Box>
                   {recaptchaVerified && (
@@ -369,22 +466,25 @@ export default function Register() {
                 </Grid>
               </Grid>
 
+              {/* Botón */}
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 disabled={loading || !recaptchaVerified}
-                className="mt-6 py-3 rounded-xl font-title text-white shadow-lg transition-all duration-300 transform hover:scale-105"
+                // CAMBIO: Color y estilo del botón (Azul sólido en la imagen)
                 sx={{
+                  mt: 3, // Margen superior para separarlo del ReCAPTCHA
                   textTransform: 'none',
                   fontSize: '1.1rem',
-                  background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                  padding: '12px 20px',
+                  backgroundColor: '#1c364f', // Azul sólido
                   '&:hover': {
-                    background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                    backgroundColor: '#102436', // Azul más oscuro al hover
                   },
                   '&:disabled': {
-                    background: '#ccc',
-                    transform: 'none',
+                    backgroundColor: '#ccc',
+                    color: '#666',
                   },
                 }}
               >
@@ -399,24 +499,38 @@ export default function Register() {
               </Button>
             </form>
 
-            <Box className="mt-6 text-center">
+            {/* SECCIÓN DE PIE DE PÁGINA */}
+            <Box className="mt-4 text-center">
               <Typography variant="body2" className="text-gray-600 font-body">
                 ¿Ya tienes una cuenta?{' '}
                 <Link 
                   to="/login" 
-                  className="text-primary hover:text-secondary font-bold transition-colors"
-                  style={{ textDecoration: 'none' }}
+                  // CAMBIO: Color del link (Azul oscuro principal)
+                  style={{ 
+                    textDecoration: 'none', 
+                    color: '#1c364f', 
+                    fontWeight: 'bold',
+                    transition: 'color 0.3s' 
+                  }}
                 >
                   Inicia sesión aquí
                 </Link>
               </Typography>
             </Box>
 
-            <Box className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <Typography variant="caption" className="text-gray-500 block text-center">
-                * Campos obligatorios
+            <Box className="mt-2 p-2 rounded-lg">
+              <Typography 
+                variant="caption" 
+                className="text-gray-500 block text-center"
+                sx={{ color: '#1c364f', fontWeight: 'bold' }} // Color azul
+              >
+                ** Campos obligatorios
               </Typography>
-              <Typography variant="caption" className="text-gray-500 block text-center mt-1">
+              <Typography 
+                variant="caption" 
+                className="text-gray-500 block text-center mt-1"
+                sx={{ color: '#666' }} // Color más suave para el texto legal
+              >
                 Al registrarte, aceptas nuestros términos y condiciones
               </Typography>
             </Box>
