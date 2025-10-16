@@ -2,7 +2,17 @@ import api from './index';
 
 export const canchasApi = {
   getAll: async () => {
-    const response = await api.get('/canchas');
+    const response = await api.get('/canchas/');
+    return response.data;
+  },
+
+  getMisCanchas: async () => {
+    const response = await api.get('/canchas/gestor/mis-canchas');
+    return response.data;
+  },
+
+  getAllAdmin: async () => {
+    const response = await api.get('/canchas/');
     return response.data;
   },
 
@@ -31,13 +41,28 @@ export const canchasApi = {
     return response.data;
   },
 
+  desactivar: async (id) => {
+    const response = await api.put(`/canchas/${id}/desactivar`);
+    return response.data;
+  },
+
   activar: async (id) => {
     const response = await api.put(`/canchas/${id}/activar`);
     return response.data;
   },
 
-  desactivar: async (id) => {
-    const response = await api.put(`/canchas/${id}/desactivar`);
+  getDisponibles: async () => {
+    const response = await api.get('/canchas/public/disponibles');
+    return response.data;
+  },
+
+  getByEspacioPublic: async (espacioId) => {
+    const response = await api.get(`/canchas/public/espacio/${espacioId}`);
+    return response.data;
+  },
+
+  getByIdPublic: async (id) => {
+    const response = await api.get(`/canchas/public/${id}`);
     return response.data;
   }
 };

@@ -161,16 +161,6 @@ export default function Disciplinas() {
                       {disciplina.descripcion}
                     </Typography>
                   )}
-                  <Box className="mt-2">
-                    <Typography 
-                      variant="caption" 
-                      className={`font-bold ${
-                        disciplina.estado === 'activo' ? 'text-green-600' : 'text-gray-500'
-                      }`}
-                    >
-                      {disciplina.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
-                    </Typography>
-                  </Box>
                 </CardContent>
                 <CardActions className="justify-center pb-4">
                   <IconButton

@@ -66,7 +66,8 @@ export default function Reservar() {
 
   const fetchEspacios = async () => {
     try {
-      const data = await espaciosApi.getAll();
+      // Usar endpoint público para reservas
+      const data = await espaciosApi.getDisponibles();
       setEspacios(data);
     } catch (error) {
       toast.error('Error al cargar espacios deportivos');
@@ -85,10 +86,12 @@ export default function Reservar() {
   const fetchCanchas = async () => {
     if (selectedEspacio && selectedDisciplina) {
       try {
-        const data = await canchasApi.getAll();
-        // Filtrar canchas por espacio y disciplina (en un sistema real habría relación)
+        // Usar endpoint público para reservas
+        const data = await canchasApi.getByEspacioPublic(selectedEspacio.id_espacio_deportivo);
+        
+        // Filtrar por disciplina si es necesario (depende de tu modelo de datos)
         const canchasFiltradas = data.filter(cancha => 
-          cancha.id_espacio_deportivo === selectedEspacio.id_espacio_deportivo
+          cancha.estado === 'disponible'
         );
         setCanchas(canchasFiltradas);
       } catch (error) {

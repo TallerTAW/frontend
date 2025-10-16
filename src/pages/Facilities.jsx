@@ -36,7 +36,7 @@ export default function Facilities() {
 
   const fetchEspacios = async () => {
     try {
-      const data = await espaciosApi.getAll();
+      const data = await espaciosApi.getMisEspacios();
       setEspacios(data);
     } catch (error) {
       toast.error('Error al cargar espacios deportivos');

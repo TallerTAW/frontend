@@ -51,8 +51,8 @@ export default function Courts() {
   const fetchData = async () => {
     try {
       const [canchasData, espaciosData] = await Promise.all([
-        canchasApi.getAll(),
-        espaciosApi.getAll()
+        canchasApi.getMisCanchas(),
+        espaciosApi.getMisEspacios()
       ]);
 
       setCanchas(canchasData);

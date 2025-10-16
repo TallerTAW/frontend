@@ -74,12 +74,12 @@ export default function Layout() {
       guest: true 
     },
     
-    // Reservar - Accesible para clientes e invitados
+    // Reservar - Accesible para clientes, gestores de espacios deportivos e invitados
     { 
       text: 'Reservar Cancha', 
       icon: <CalendarMonth />, 
       path: '/reservar', 
-      roles: ['cliente'],
+      roles: ['cliente', 'gestor'],
       guest: true 
     },
     
