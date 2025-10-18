@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, SportsSoccer, Block, CheckCircle } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { image } from 'framer-motion/client';
 
 export default function Courts() {
   const { profile } = useAuth();
@@ -41,8 +42,11 @@ export default function Courts() {
     hora_cierre: '22:00',
     precio_por_hora: '',
     id_espacio_deportivo: '',
-    estado: 'disponible'
+    estado: 'disponible',
+    imagen: ''
   });
+
+  const api_url = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     fetchData();
@@ -95,7 +99,8 @@ export default function Courts() {
       hora_cierre: cancha.hora_cierre.slice(0, 5),
       precio_por_hora: cancha.precio_por_hora,
       id_espacio_deportivo: cancha.id_espacio_deportivo.toString(),
-      estado: cancha.estado
+      estado: cancha.estado,
+      imagen: cancha.imagen || ''
     });
     setOpen(true);
   };
@@ -142,7 +147,8 @@ export default function Courts() {
       hora_cierre: '22:00',
       precio_por_hora: '',
       id_espacio_deportivo: '',
-      estado: 'disponible'
+      estado: 'disponible',
+      imagen: ''
     });
   };
 
@@ -188,7 +194,7 @@ export default function Courts() {
   };
 
   return (
-    <Box>
+    <Box sx={{ mt: 12, pr: 2}}>
       <Box className="flex justify-between items-center mb-6">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -230,22 +236,40 @@ export default function Courts() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
+              <Card sx={{ mt: 2 }} className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
                 cancha.estado !== 'disponible' ? 'opacity-70' : ''
               }`}>
-                <Box
-                  className="h-48 bg-gradient-to-br from-accent to-highlight flex items-center justify-center rounded-t-2xl relative"
-                >
-                  <Box className="text-8xl opacity-50">
-                    {getSportIcon(cancha.tipo)}
-                  </Box>
+                {/* Contenedor principal de la imagen */}
+                <Box sx={{ height: 200 }} className="relative rounded-t-2xl overflow-hidden">
+                  {cancha.imagen ? (
+                    <img 
+                      src={`${api_url}${cancha.imagen}`} 
+                      alt={cancha.nombre} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Error loading image:', e);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Box className="w-full h-full bg-gradient-to-br from-accent to-highlight flex items-center justify-center">
+                      <Box className="text-8xl opacity-50">
+                        {getSportIcon(cancha.tipo)}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Estado centrado debajo de la imagen */}
+                <Box className="flex justify-center" sx={{ mt: 2 }}>
                   <Chip
                     label={getEstadoText(cancha.estado)}
                     color={getEstadoColor(cancha.estado)}
-                    className="absolute top-2 right-2 text-white font-bold"
+                    className="text-white font-bold"
                     size="small"
                   />
                 </Box>
+
                 <CardContent>
                   <Box className="flex items-center gap-2 mb-2">
                     <Typography className="text-3xl">{getSportIcon(cancha.tipo)}</Typography>
@@ -268,6 +292,7 @@ export default function Courts() {
                     ${cancha.precio_por_hora}/hora
                   </Typography>
                 </CardContent>
+
                 <CardActions className="justify-end p-4">
                   <IconButton
                     onClick={() => handleEdit(cancha)}
