@@ -28,7 +28,9 @@ export default function Facilities() {
     ubicacion: '',
     capacidad: '',
     descripcion: '',
+    imagen: '',
   });
+  const api_url = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     fetchEspacios();
@@ -38,6 +40,7 @@ export default function Facilities() {
     try {
       const data = await espaciosApi.getMisEspacios();
       setEspacios(data);
+      console.log('Espacios deportivos cargados:', data);
     } catch (error) {
       toast.error('Error al cargar espacios deportivos');
     }
@@ -67,6 +70,7 @@ export default function Facilities() {
       ubicacion: espacio.ubicacion || '',
       capacidad: espacio.capacidad || '',
       descripcion: espacio.descripcion || '',
+      imagen: espacio.imagen || '',
     });
     setOpen(true);
   };
@@ -101,11 +105,12 @@ export default function Facilities() {
       ubicacion: '',
       capacidad: '',
       descripcion: '',
+      imagen: '',
     });
   };
 
   return (
-    <Box>
+    <Box sx={{ mt: 12 }}>
       <Box className="flex justify-between items-center mb-6">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -139,7 +144,7 @@ export default function Facilities() {
         </motion.div>
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={3} className="m">
         {espacios.map((espacio, index) => (
           <Grid item xs={12} sm={6} md={4} key={espacio.id_espacio_deportivo}>
             <motion.div
@@ -147,13 +152,30 @@ export default function Facilities() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
+              <Card sx={{mt: 4}} className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
                 espacio.estado === 'inactivo' ? 'opacity-60' : ''
               }`}>
-                <Box
-                  className="h-48 bg-gradient-to-br from-primary to-secondary flex items-center justify-center rounded-t-2xl"
-                >
-                  <Stadium sx={{ fontSize: 80, color: 'white', opacity: 0.5 }} />
+                <Box className="h-48 relative rounded-t-2xl overflow-hidden" sx={{ height: 200 }}>
+                  {espacio.imagen ? (
+                    <img 
+                      src={`${api_url}${espacio.imagen}`} 
+                      alt={espacio.nombre} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Error loading image:', e);
+                        e.target.style.display = 'none';
+                      }}
+                      onLoad={() => console.log('Image loaded successfully')}
+                    />
+                  ) : null}
+                  
+                  <Box 
+                    className={`absolute inset-0 bg-gradient-to-br from-primary to-secondary flex items-center justify-center ${
+                      espacio.imagen ? 'bg-opacity-50' : ''
+                    }`}
+                  >
+                    <Stadium sx={{ fontSize: 80, color: 'white', opacity: espacio.imagen ? 0.3 : 0.5 }} />
+                  </Box>
                 </Box>
                 <CardContent>
                   <Typography variant="h6" className="font-title mb-2">
