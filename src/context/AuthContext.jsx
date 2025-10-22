@@ -32,9 +32,10 @@ export function AuthProvider({ children }) {
         setProfile({
           id: parsedUser.id,
           nombre: parsedUser.nombre,
+          apellido: parsedUser.apellido,
           email: parsedUser.email,
           rol: parsedUser.rol,
-          full_name: parsedUser.nombre
+          full_name: `${parsedUser.nombre} ${parsedUser.apellido}`
         });
       }
     } catch (error) {
@@ -77,9 +78,10 @@ export function AuthProvider({ children }) {
       setProfile({
         id: usuario.id,
         nombre: usuario.nombre,
+        apellido: usuario.apellido,
         email: usuario.email,
         rol: usuario.rol,
-        full_name: usuario.nombre
+        full_name: `${usuario.nombre} ${usuario.apellido}`
       });
       
       return { error: null };

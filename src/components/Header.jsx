@@ -10,6 +10,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Si usas AuthContext para el perfil del usuario
+import { useContent } from '../hooks/useContent';
 
 // === PALETA DE COLORES Y TIPOGRAFÍA ===
 const COLOR_AZUL_ELECTRICO = '#00BFFF'; // Primary
@@ -21,6 +22,8 @@ const COLOR_BLANCO = '#FFFFFF';        // Text Light
 export default function Header({ onMenuClick }) {
     const navigate = useNavigate();
     const { profile } = useAuth(); // Obtener el perfil del usuario
+    const { content, loading, error } = useContent();
+    const logoUrl = content.header_logo || '/static/uploads/team.jpg';
 
     // Función para obtener la inicial del nombre de usuario
     const getInitials = (name) => {
@@ -60,7 +63,21 @@ export default function Header({ onMenuClick }) {
                     <MenuIcon />
                 </IconButton>
 
-                {/* Título de la Aplicación */}
+                {/* Título y Logo de la Aplicación */}
+                <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
+                    <Typography
+                        variant="h4"
+                        component="div"
+                        sx={{
+                            mr: 1,
+                            color: COLOR_BLANCO,
+                            fontWeight: 'bold',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.4)', // Sombra de texto para el logo
+                        }}
+                    >
+                        <img src={logoUrl} alt="Logo" style={{ width: '80px', height: 'auto', padding: '2px', borderRadius: '15px' }} />
+                    </Typography>
+                </Box>
                 <Typography
                     variant="h6"
                     noWrap
@@ -78,6 +95,11 @@ export default function Header({ onMenuClick }) {
                 >
                     OlympiaHub
                 </Typography>
+                {profile && profile.nombre && (
+                    <Typography variant="body2" sx={{ color: COLOR_BLANCO, mr: 2, fontSize: '2rem ' }}>
+                        {profile.nombre} {profile.apellido}
+                    </Typography>
+                )}
 
                 {/* Avatar del Usuario */}
                 <IconButton onClick={handleAvatarClick} sx={{ p: 0 }}>

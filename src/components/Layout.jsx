@@ -120,10 +120,7 @@ export default function Layout() {
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
         >
-            <Typography variant="h6" className="text-white font-title text-center">
-                OlympiaHub
-            </Typography>
-            <Typography variant="caption" className="text-white/80 text-center block mt-1">
+            <Typography variant="caption" className="text-white/80 text-center block mt-1" sx={{ fontWeight: 'bold', fontSize: '1.2rem', pb: 0.5, pt: 1 }}>
                 {user ? getRolDisplayName(profile?.rol) : 'Modo Invitado'}
             </Typography>
         </Box>
