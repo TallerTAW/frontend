@@ -1,305 +1,357 @@
-import { useState, useRef } from 'react';
-import ReCAPTCHA from 'react-google-recaptcha';
+import React, { useState, useRef } from 'react';
+// Asegúrate de que estos módulos estén instalados:
+import ReCAPTCHA from 'react-google-recaptcha'; 
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'; 
 import { 
-  TextField, 
-  Button, 
-  Container, 
-  Box, 
-  Typography, 
-  Paper, // Se puede cambiar por Box para mayor control del estilo
-  Alert,
-  CircularProgress
+    Box, 
+    Typography, 
+    TextField, 
+    Button, 
+    // Eliminamos 'Checkbox' y 'FormControlLabel'
+    Container,
+    IconButton,
+    InputAdornment,
+    Snackbar,
+    Alert,
+    CircularProgress 
 } from '@mui/material';
-import { motion } from 'framer-motion';
+
+// Importamos los iconos necesarios
+import LockIcon from '@mui/icons-material/Lock';
+import EmailIcon from '@mui/icons-material/Email';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+
+// === COLORES DE LA PALETA DEFINIDA ===
+const COLOR_PRIMARY = '#00BFFF';     // Azul Eléctrico
+const COLOR_DARK = '#333333';        // Gris Oscuro 
+const COLOR_LIGHT = '#FFFFFF';       // Blanco
+const COLOR_ACCENT_RED = '#FD7E14';  // Naranja/Rojo
+const COLOR_LIME = '#A2E831';        // Verde Lima
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
-  const { signIn, error, clearError } = useAuth();
-  const navigate = useNavigate();
-  const recaptchaRef = useRef(null);
+    const [email, setEmail] = useState(''); 
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-  const handleRecaptchaChange = (token) => {
-    setRecaptchaVerified(!!token);
-  };
+    // --- LÓGICA DE AUTENTICACIÓN Y RECAPTCHA ---
+    const [recaptchaVerified, setRecaptchaVerified] = useState(false);
+    // Eliminamos isRobotChecked
+    const { signIn, error: authError, clearError } = useAuth();
+    const navigate = useNavigate();
+    const recaptchaRef = useRef(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      alert('Por favor, completa email y contraseña');
-      return;
-    }
+    // --- ESTADOS DE NOTIFICACIÓN ---
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('error');
+    // -------------------------------
 
-    if (!recaptchaVerified) {
-      alert('Por favor, verifica que no eres un robot');
-      return;
-    }
+    // Lógica para cerrar la notificación
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setOpenSnackbar(false);
+    };
 
-    setIsLoading(true);
-    clearError();
+    // Lógica para el reCAPTCHA (VISIBLE)
+    const handleRecaptchaChange = (token) => {
+        // Se activa cuando el usuario marca el checkbox de Google
+        setRecaptchaVerified(!!token);
+    };
 
-    try {
-      const token = recaptchaRef.current.getValue();
-      if (!token) {
-        throw new Error('No se pudo obtener el token reCAPTCHA');
-      }
+    // Lógica para mostrar/ocultar contraseña
+    const handleClickShowPassword = () => setShowPassword((show) => !show);
+    const handleMouseDownPassword = (event) => {
+        event.preventDefault();
+    };
 
-      console.log('Token de reCAPTCHA:', token);
+    // FUNCIÓN PRINCIPAL DE INICIO DE SESIÓN
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSnackbarMessage('');
+        clearError(); 
 
-      const { error: authError } = await signIn(email, password, token);
-      if (!authError) {
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      console.error('Error en el login:', err);
-      recaptchaRef.current.reset();
-      setRecaptchaVerified(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        if (!email || !password) {
+            setSnackbarMessage('Por favor, ingresa tu email y contraseña.');
+            setSnackbarSeverity('warning');
+            setOpenSnackbar(true);
+            return;
+        }
 
-  // ----------------------------------------------------------------------
-  // CAMBIOS DE DISEÑO INICIAN AQUÍ
-  // ----------------------------------------------------------------------
-  
-  // Estilo del input según la imagen (color de fondo, sin borde visible)
-  const inputStyle = {
-    // Estilo base para el contenedor del input y el texto
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)', // Fondo semi-transparente
-      color: 'white', // Texto blanco
-      '& fieldset': {
-        borderColor: 'transparent', // Sin borde visible
-      },
-      '&:hover fieldset': {
-        borderColor: 'transparent !important', // Sin borde al pasar el ratón
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: 'transparent !important', // Sin borde al estar enfocado
-      },
-    },
-    // Estilo para la etiqueta (Label)
-    '& .MuiInputLabel-root': {
-      color: 'white', // Etiqueta blanca
-      '&.Mui-focused': {
-        color: 'white', // Etiqueta blanca al enfocar
-      }
-    },
-    // Icono (para simular el diseño de la imagen)
-    '& .MuiInputAdornment-root': {
-      color: 'white'
-    }
-  };
+        if (!recaptchaVerified) {
+            setSnackbarMessage('Por favor, verifica que no eres un robot marcando el CAPTCHA.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            return;
+        }
 
+        setIsLoading(true);
 
-  return (
-    // CAMBIO: Fondo con imagen de estadio (simulado con color y gradiente/imagen real en CSS si fuera necesario)
-    // El fondo de la imagen original parece ser un estadio desenfocado.
-    <div 
-      className="min-h-screen flex items-center justify-center p-4"
-      // CAMBIO DE ESTILO PRINCIPAL: Usamos un fondo que simula el estadio desenfocado
-      style={{
-        backgroundImage: 'url("https://images.pexels.com/photos/15476801/pexels-photo-15476801.jpeg")', // Aquí iría la URL de la imagen de estadio
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundColor: '#1C3144', // Color de fallback
-      }}
-    >
-      <Container maxWidth="xs"> {/* CAMBIO: Usamos 'xs' para un contenedor más estrecho */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* CAMBIO: Usamos Box en lugar de Paper para un control de estilo más libre, 
-             simulando la "caja" central del login */}
-          <Box 
-            elevation={0} // Sin elevación ya que no es un Paper
-            // Estilos para el contenedor principal azul/turquesa de la imagen
+        try {
+            const token = recaptchaRef.current.getValue();
+            if (!token) {
+                // Esto debería ser imposible si recaptchaVerified es true, pero es una buena práctica
+                throw new Error('No se pudo obtener el token reCAPTCHA.');
+            }
+
+            const { error: contextError } = await signIn(email, password, token);
+            
+            if (contextError) {
+                setSnackbarMessage(`Error de Autenticación: ${contextError}`);
+                setSnackbarSeverity('error');
+                setOpenSnackbar(true);
+            } else {
+                setSnackbarMessage('¡Inicio de sesión exitoso! Redirigiendo...');
+                setSnackbarSeverity('success');
+                setOpenSnackbar(true);
+                
+                // Redirige a la página correspondiente (dashboard)
+                navigate('/dashboard'); 
+            }
+
+        } catch (err) {
+            console.error('Error durante el proceso de login:', err);
+            setSnackbarMessage(`Error inesperado: ${err.message}`);
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            
+            // Siempre reseteamos el captcha después de un fallo
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+                setRecaptchaVerified(false);
+            }
+
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    // Función para volver a la página principal
+    const handleGoHome = () => {
+        navigate('/'); // Redirige a la ruta raíz
+    };
+    // --------------------------------------------------------------------------
+
+    // Estilos compartidos para los campos de texto
+    const inputStyles = {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderRadius: 1,
+        
+        '& .MuiOutlinedInput-root': {
+            color: COLOR_LIGHT, 
+            '& fieldset': { borderColor: COLOR_PRIMARY },
+            '&:hover fieldset': { borderColor: COLOR_LIME },
+            '&.Mui-focused fieldset': { 
+                borderColor: COLOR_LIME,
+                borderWidth: '2px',
+            },
+        },
+        '& .MuiInputLabel-root': {
+             color: COLOR_LIGHT,
+             '&.Mui-focused': {
+                 color: COLOR_LIME,
+             },
+        },
+    };
+
+    return (
+        <Box
             sx={{
-              backgroundColor: '#1d5a73', // Fondo del contenedor principal
-              borderRadius: '8px',
-              overflow: 'hidden', // Para contener bien las secciones
-              border: '2px solid #00BFFF', // Borde más claro simulado del diseño
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundImage: 'url(/static/uploads/cancha-login.jpg)', 
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                padding: 4,
+                position: 'relative',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                }
             }}
-          >
-            {/* 1. SECCIÓN DE CABECERA (Azul Oscuro) */}
-            <Box sx={{
-              backgroundColor: '#103949', // Azul más oscuro para la cabecera
-              padding: '20px 30px',
-              textAlign: 'center',
-            }}>
-              <Typography 
-                variant="h4" 
-                sx={{
-                  color: '#00BFFF', // Color azul brillante
-                  fontWeight: 'bold',
-                  marginBottom: '4px',
-                }}
-              >
-                ReservaDeportiva
-              </Typography>
-              <Typography 
-                variant="body1" 
-                sx={{
-                  color: 'white', // Texto blanco
-                  fontWeight: '500'
-                }}
-              >
-                Inicia sesión en el sistema
-              </Typography>
-            </Box>
-
-            {/* 2. SECCIÓN DEL FORMULARIO Y ALERTA (Azul principal) */}
-            <Box className="p-4" sx={{ padding: '20px 30px' }}>
-              {error && (
-                <Alert 
-                  severity="error" 
-                  className="mb-4"
-                  onClose={clearError}
-                >
-                  {error}
-                </Alert>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4"> {/* Reducimos el espaciado */}
-                {/* Email Field */}
-                <TextField
-                  fullWidth
-                  label="Email *" // Etiqueta con asterisco
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  variant="outlined"
-                  disabled={isLoading}
-                  error={!!error}
-                  sx={inputStyle} // Aplicamos el nuevo estilo
-                  InputProps={{
-                    // Simula el icono de la imagen
-                    startAdornment: (
-                      <Box component="span" sx={{ marginRight: 1, color: 'white' }}>📧</Box> 
-                    ),
-                  }}
-                />
-
-                {/* Password Field */}
-                <TextField
-                  fullWidth
-                  label="Contraseña *" // Etiqueta con asterisco
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  variant="outlined"
-                  disabled={isLoading}
-                  error={!!error}
-                  sx={inputStyle} // Aplicamos el nuevo estilo
-                  InputProps={{
-                    // Simula el icono de la imagen
-                    startAdornment: (
-                      <Box component="span" sx={{ marginRight: 1, color: 'white' }}>🔒</Box> 
-                    ),
-                  }}
-                />
-                
-                {/* ReCAPTCHA */}
-                {/* NOTA: El componente ReCAPTCHA tiene un estilo fijo. 
-                   La imagen lo muestra con fondo verde. Dejamos el componente
-                   pero lo centramos. */}
-                <Box className="flex justify-center pt-2 pb-2"> {/* Espaciado para centrar */}
-                  <ReCAPTCHA
-                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-                    ref={recaptchaRef}
-                    onChange={handleRecaptchaChange}
-                  />
-                </Box>
-                
-                {/* Button - Se movió para que esté en una sección distinta en la imagen */}
-                {/* El botón de la imagen es de color naranja. */}
-              
-              </form>
-            </Box>
-            
-            {/* 3. SECCIÓN DEL BOTÓN (Naranja) */}
-            <Box sx={{ 
-                backgroundColor: '#FF6F00', // Naranja/anaranjado del botón
-                padding: '0px 0px 0px 0px', // Quitamos padding para que ocupe todo el ancho de la caja
-              }}
-            >
-                <Button
-                    type="submit" // El submit handler está en el Box que contiene el botón
-                    fullWidth
-                    variant="contained"
-                    disabled={isLoading || !recaptchaVerified}
-                    // Estilos para simular el diseño del botón naranja
+        >
+            <Container maxWidth="xs" sx={{ zIndex: 10 }}>
+                <Box
+                    component="form"
+                    onSubmit={handleSubmit}
                     sx={{
-                        backgroundColor: '#FF6F00',
-                        color: 'white',
-                        padding: '12px 20px',
-                        fontSize: '1.2rem',
-                        fontWeight: 'bold',
-                        borderRadius: '0', // Borde plano para que se mezcle con el Box
-                        '&:hover': {
-                          backgroundColor: '#E65100', // Naranja más oscuro al pasar el ratón
-                        },
-                        '&:disabled': {
-                            backgroundColor: '#ccc',
-                            color: '#666',
-                        },
+                        p: 4,
+                        borderRadius: 2,
+                        backgroundColor: COLOR_DARK, 
+                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.8)',
+                        textAlign: 'center',
+                        color: COLOR_LIGHT
                     }}
-                    // Se aplica la acción del formulario en este botón/sección.
-                    onClick={handleSubmit} 
                 >
-                    {isLoading ? (
-                        <Box className="flex items-center gap-2">
-                            <CircularProgress size={20} color="inherit" />
-                            Iniciando sesión...
-                        </Box>
-                    ) : (
-                        'Iniciar Sesión'
-                    )}
-                </Button>
-            </Box>
+                    {/* TÍTULO */}
+                    <Typography 
+                        variant="h3" 
+                        fontWeight="bold" 
+                        gutterBottom
+                        sx={{ 
+                            color: COLOR_LIME, 
+                            fontFamily: 'Montserrat, sans-serif',
+                            mb: 1,
+                        }}
+                    >
+                        ¡BIENVENIDO!
+                    </Typography>
 
-            {/* 4. SECCIÓN DE PIE DE PÁGINA (Azul Oscuro/Verde) */}
-            <Box sx={{
-                backgroundColor: '#103949', // Azul oscuro
-                padding: '10px 30px',
-                textAlign: 'center',
-              }}
+                    {/* SUBTÍTULO */}
+                    <Typography 
+                        variant="subtitle1" 
+                        sx={{ 
+                            mb: 3, 
+                            opacity: 0.8,
+                            fontFamily: 'Roboto, sans-serif' 
+                        }}
+                    >
+                        Accede y conecta con tu deporte favorito
+                    </Typography>
+
+                    {/* CAMPO EMAIL */}
+                    <TextField
+                        label="Email"
+                        type="email"
+                        fullWidth
+                        required
+                        variant="outlined"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        margin="normal"
+                        disabled={isLoading}
+                        InputProps={{
+                            startAdornment: <EmailIcon sx={{ color: COLOR_LIME, mr: 1 }} />,
+                        }}
+                        sx={inputStyles}
+                    />
+
+                    {/* CAMPO CONTRASEÑA */}
+                    <TextField
+                        label="Contraseña"
+                        type={showPassword ? 'text' : 'password'} 
+                        fullWidth
+                        required
+                        variant="outlined"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        margin="normal"
+                        disabled={isLoading}
+                        InputProps={{
+                            startAdornment: <LockIcon sx={{ color: COLOR_LIME, mr: 1 }} />,
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        aria-label="toggle password visibility"
+                                        onClick={handleClickShowPassword}
+                                        onMouseDown={handleMouseDownPassword}
+                                        edge="end"
+                                        disabled={isLoading}
+                                    >
+                                        {showPassword ? <VisibilityOff sx={{ color: COLOR_LIME }} /> : <Visibility sx={{ color: COLOR_LIME }} />}
+                                    </IconButton>
+                                </InputAdornment>
+                            ),
+                        }}
+                        sx={{
+                            ...inputStyles,
+                            mb: 2
+                        }}
+                    />
+
+                    {/* RECAPTCHA VISIBLE (WIDGET DE GOOGLE) */}
+                    <Box sx={{ my: 2, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
+                         <Box sx={{ mt: 1 }}>
+                             <ReCAPTCHA
+                                 sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "TU_SITEKEY_DE_EJEMPLO"}
+                                 ref={recaptchaRef}
+                                 onChange={handleRecaptchaChange}
+                             />
+                         </Box>
+                    </Box>
+
+                    {/* BOTÓN 1: INICIAR SESIÓN */}
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        disabled={isLoading || !recaptchaVerified} // Deshabilitado si no está cargando O si no está verificado
+                        sx={{
+                            mt: 3,
+                            mb: 1.5,
+                            py: 1.8,
+                            backgroundColor: COLOR_ACCENT_RED,
+                            color: COLOR_LIGHT,
+                            fontWeight: 'bold',
+                            fontSize: '1.2em',
+                            fontFamily: 'Montserrat, sans-serif',
+                            '&:hover': {
+                                backgroundColor: COLOR_LIME,
+                                color: COLOR_DARK,
+                                transform: 'translateY(-2px)',
+                                boxShadow: `0 5px 15px rgba(162, 232, 49, 0.5)`,
+                            },
+                            transition: 'all 0.3s ease-in-out',
+                        }}
+                    >
+                        {isLoading ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={24} color="inherit" />
+                                Iniciando Sesión...
+                            </Box>
+                        ) : (
+                            'INICIAR SESIÓN'
+                        )}
+                    </Button>
+                    
+                    {/* BOTÓN 2: VOLVER A INICIO */}
+                    <Button
+                        onClick={handleGoHome}
+                        fullWidth
+                        variant="outlined" 
+                        disabled={isLoading}
+                        sx={{
+                            py: 1.2,
+                            borderColor: COLOR_PRIMARY, 
+                            color: COLOR_PRIMARY, 
+                            fontWeight: 'bold',
+                            fontFamily: 'Roboto, sans-serif',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 191, 255, 0.1)',
+                                borderColor: COLOR_PRIMARY,
+                            },
+                        }}
+                    >
+                        VOLVER A INICIO
+                    </Button>
+
+                </Box>
+            </Container>
+
+            {/* --- SNACKBAR (NOTIFICACIÓN) --- */}
+            <Snackbar 
+                open={openSnackbar} 
+                autoHideDuration={6000} 
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
-              <Typography variant="body2" sx={{ color: '#90EE90', fontWeight: 'bold' }}> {/* Verde claro para el texto */}
-                Sistema de gestión de reservas deportivas
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#90EE90', display: 'block', marginTop: '2px' }}>
-                Backend: http://127.0.0.1:8000
-              </Typography>
-            </Box>
-            
-            {/* 5. SECCIÓN DE DEBUG (Azul Oscuro/Verde) */}
-            {process.env.NODE_ENV === 'development' && (
-              <Box sx={{
-                backgroundColor: '#103949', // Mismo azul oscuro para el debug
-                padding: '5px 30px',
-                borderTop: '1px dashed #00BFFF' // Separador
-              }}>
-                <Typography variant="caption" sx={{ color: '#90EE90' }}>
-                  <strong>Debug:</strong> {email ? `Email: ${email}` : 'Sin email'} | 
-                  {password ? ` Contraseña: ${'*'.repeat(password.length)}` : ' Sin contraseña'} |
-                  reCAPTCHA: {recaptchaVerified ? 'Verificado' : 'No verificado'}
-                </Typography>
-              </Box>
-            )}
-
-          </Box>
-        </motion.div>
-      </Container>
-    </div>
-  );
+                <Alert 
+                    onClose={handleCloseSnackbar} 
+                    severity={snackbarSeverity} 
+                    variant="filled" 
+                    sx={{ width: '100%', fontFamily: 'Roboto, sans-serif' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
+        </Box>
+    );
 }

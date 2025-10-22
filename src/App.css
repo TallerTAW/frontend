@@ -1,42 +1,246 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
+/* ========================================= */
+/* 1. LIMPIEZA / RESETS GENERALES */
+/* ========================================= */
+/* El #root original de React/Vite no se necesita para un diseño full-width */
+/* #root {
+     max-width: 1280px;
+     margin: 0 auto;
+     padding: 2rem;
+     text-align: center;
+} */
 .logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+  /* Mantener si tu logo sigue usando estas propiedades */
+  height: 3em; 
+  padding: 0;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: none; /* Limpiamos los efectos de sombra */
 }
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Quitar o comentar estilos de animación y `.card` si no se usarán */
+
+/* ========================================= */
+/* 2. VARIABLES - PALETA DE COLORES Y TIPOGRAFÍA */
+/* ========================================= */
+:root {
+    /* Colores Principales (Según tu paleta) */
+    --color-primary: #00bfff; /* Azul Eléctrico */
+    --color-accent-lime: #a2e831; /* Verde Lima */
+    --color-accent-orange: #ffa500; /* Naranja Vibrante */
+    --color-accent-red: #fd7e14; /* Naranja/Rojo de Botón */
+    --color-light: #ffffff; /* Blanco */
+    --color-dark: #333333; /* Gris muy oscuro (fácilmente legible) */
+
+    /* Tipografía (Según tu paleta) */
+    --font-title: 'Montserrat', sans-serif;
+    --font-body: 'Roboto', sans-serif;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Importar Tipografías (Asegúrate de que esto funciona en tu entorno, si no, ponlo en index.css o main.jsx) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;500&display=swap');
+
+/* Resets y Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+body {
+    font-family: var(--font-body);
+    line-height: 1.6;
+    color: var(--color-dark);
 }
 
-.card {
-  padding: 2em;
+/* Títulos */
+h1, h2, h3, h4 {
+    font-family: var(--font-title);
+    font-weight: 700; /* Montserrat Bold */
 }
 
-.read-the-docs {
-  color: #888;
+
+/* ========================================= */
+/* 3. ESTILOS PARA HEADERHOME.JSX */
+/* ========================================= */
+.header {
+    background-color: var(--color-dark);
+    color: var(--color-light);
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+.header .logo { /* Se aplica al div.logo dentro del header */
+    font-size: 1.5em;
+    font-weight: 700;
+    color: var(--color-light);
+}
+
+.navbar a {
+    color: var(--color-light);
+    text-decoration: none;
+    margin-left: 25px;
+    font-size: 0.95em;
+    transition: color 0.3s;
+}
+
+.navbar a:hover {
+    color: var(--color-primary);
+}
+
+.btn-primary {
+    background-color: var(--color-accent-red);
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: 500;
+    font-family: var(--font-body); /* Cuerpo de texto para botones */
+}
+
+.btn-outline {
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary) !important;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-family: var(--font-body);
+}
+
+/* ========================================= */
+/* 4. ESTILOS PARA HOME.JSX */
+/* ========================================= */
+
+/* SECCIÓN HERO */
+.hero {
+    /* IMPORTANTE: Cambia la ruta de la imagen */
+    background: url('/public/images/tu-imagen-cancha.jpg') no-repeat center center/cover; 
+    height: 80vh; 
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-top: 70px; 
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4); 
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+    padding-left: 40px; 
+}
+
+.hero-content h1 {
+    color: var(--color-light);
+    font-size: 3.5em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* SECCIÓN QUIÉNES SOMOS */
+.quienes-somos {
+    background-color: var(--color-dark);
+    color: var(--color-light);
+    padding: 60px 40px;
+}
+
+.quienes-somos h2 {
+    color: var(--color-primary);
+    font-size: 2.2em;
+    margin-bottom: 10px;
+}
+
+.quienes-somos .quienes-texto {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 1.1em;
+    max-width: 800px;
+    margin-top: 15px;
+}
+
+/* SECCIÓN MISIÓN Y SERVICIOS */
+.mision-servicios {
+    background-color: var(--color-primary);
+    color: var(--color-light);
+    padding: 60px 40px;
+}
+
+.mision-servicios h3 {
+    font-size: 1.3em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.mision-servicios .subtitle {
+    font-size: 1.8em;
+    font-family: var(--font-title);
+    margin-bottom: 30px;
+}
+
+.mision-box h4 {
+    font-size: 1.5em;
+    margin-bottom: 15px;
+}
+
+/* SECCIÓN VISIÓN Y OBJETIVOS */
+.vision-objetivos {
+    padding: 80px 40px;
+    background-color: var(--color-light);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 50px;
+}
+
+.vision h3, .objetivos h3 {
+    font-size: 2em;
+    color: var(--color-primary);
+    margin-bottom: 25px;
+}
+
+.objetivos ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.objetivos ul li {
+    font-family: var(--font-body);
+    margin-bottom: 15px;
+    position: relative;
+    padding-left: 25px;
+}
+
+.objetivos ul li::before {
+    content: "•"; 
+    color: var(--color-accent-lime); 
+    font-size: 1.5em;
+    position: absolute;
+    left: 0;
+    line-height: 1;
+}
+
+.icon-list {
+    margin-top: 30px;
+    display: flex;
+    gap: 20px;
+}
+
+.icon {
+    font-size: 1.8em;
+}
+.icon-blue { color: var(--color-primary); }
+.icon-lime { color: var(--color-accent-lime); }
+.icon-orange { color: var(--color-accent-orange); }
+.icon-red { color: var(--color-accent-red); }
+
+/* FOOTER */
+.footer {
+    background-color: var(--color-dark);
+    color: var(--color-light);
+    text-align: center;
+    padding: 20px 0;
+    font-size: 0.9em;
 }
