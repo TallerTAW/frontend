@@ -89,7 +89,7 @@ export default function HeaderHome() {
         <Box sx={{ display: 'flex', gap: 1 }}>
           
           {/* 1. Botón EXPLORAR NUESTRA APP (Outlined con borde Azul Eléctrico) */}
-          <Button 
+          {/*<Button 
             variant="outlined" 
             onClick={handleAppExploreClick}
             sx={{ 
@@ -106,7 +106,7 @@ export default function HeaderHome() {
             }}
           >
             Explora Nuestra App
-          </Button>
+          </Button>*/}
 
           {/* 2. Botón REGÍSTRATE (Outlined con borde Naranja/Rojo) */}
           <Button 
