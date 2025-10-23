@@ -118,7 +118,8 @@ export default function Register() {
       });
       console.log('Respuesta del registro:', response);
 
-      toast.success('¡Registro exitoso! Ahora puedes iniciar sesión');
+      // En handleSubmit, después del registro exitoso:
+      toast.success('¡Registro exitoso! Tu cuenta está pendiente de aprobación por un administrador. Te notificaremos por email cuando sea activada.');
       setTimeout(() => {
         navigate('/login');
       }, 2000);

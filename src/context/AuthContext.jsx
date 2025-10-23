@@ -59,7 +59,6 @@ export function AuthProvider({ children }) {
       const formData = new URLSearchParams();
       formData.append('username', email);
       formData.append('password', password);
-      formData.append('captcha_token', captchaToken);
       
       const response = await authApi.login(formData);
       
@@ -89,29 +88,56 @@ export function AuthProvider({ children }) {
       console.error('Error completo en login:', error);
       
       let errorMessage = 'Error al iniciar sesión';
+      let errorType = 'general'; // 'general', 'credentials', 'inactive'
       
       if (error.response) {
         errorMessage = error.response.data?.detail || `Error ${error.response.status}: ${error.response.statusText}`;
         
-        if (error.response.status === 400) {
-          if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
-            errorMessage = 'Error de verificación reCAPTCHA. Por favor, intenta nuevamente.';
-          } else if (errorMessage.includes('Credenciales')) {
+        // Manejo específico de diferentes tipos de errores
+        if (error.response.status === 401) {
+          if (errorMessage.includes('Credenciales')) {
             errorMessage = 'Email o contraseña incorrectos.';
+            errorType = 'credentials';
+          } else {
+            errorMessage = 'Credenciales inválidas.';
+            errorType = 'credentials';
           }
         } else if (error.response.status === 403) {
-          errorMessage = 'Acceso denegado. Verifica tus credenciales.';
+          if (errorMessage.includes('inactivo') || errorMessage.includes('inactiva')) {
+            errorMessage = 'Usuario inactivo. Le llegará un correo para activar su cuenta.';
+            errorType = 'inactive';
+          } else {
+            errorMessage = 'Acceso denegado. No tiene permisos para acceder.';
+            errorType = 'general';
+          }
+        } else if (error.response.status === 400) {
+          if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
+            errorMessage = 'Error de verificación reCAPTCHA. Por favor, intenta nuevamente.';
+            errorType = 'captcha';
+          } else {
+            errorMessage = 'Datos de entrada incorrectos.';
+            errorType = 'general';
+          }
         } else if (error.response.status === 422) {
           errorMessage = 'Datos de entrada inválidos.';
+          errorType = 'general';
+        } else if (error.response.status >= 500) {
+          errorMessage = 'Error del servidor. Por favor, intente más tarde.';
+          errorType = 'general';
         }
       } else if (error.request) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.';
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet y que el backend esté ejecutándose.';
+        errorType = 'connection';
       } else {
         errorMessage = error.message || 'Error de configuración';
+        errorType = 'general';
       }
       
       setError(errorMessage);
-      return { error: errorMessage };
+      return { 
+        error: errorMessage,
+        type: errorType // Retornamos el tipo de error para manejo específico
+      };
     } finally {
       setLoading(false);
     }

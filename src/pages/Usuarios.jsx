@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { usuariosApi } from '../api/usuarios';
+import { notificationsApi } from '../api/notifications';
 import { toast } from 'react-toastify';
 import {
   Box,
@@ -23,8 +24,19 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Card,
+  CardContent,
+  Grid,
 } from '@mui/material';
-import { Edit, Visibility, Add, Block, CheckCircle } from '@mui/icons-material';
+import { 
+  Edit, 
+  Add, 
+  Block, 
+  CheckCircle, 
+  Email,
+  PersonAdd,
+  Refresh 
+} from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function Usuarios() {
@@ -97,10 +109,19 @@ export default function Usuarios() {
     }
   };
 
-  const handleActivar = async (id) => {
+  const handleActivar = async (user) => {
     try {
-      await usuariosApi.activar(id);
-      toast.success('Usuario activado correctamente');
+      await usuariosApi.activar(user.id_usuario);
+      
+      // Crear notificación para el usuario aprobado
+      await notificationsApi.create({
+        titulo: "Cuenta Aprobada",
+        mensaje: `Tu cuenta ha sido aprobada. Ahora tienes acceso al sistema como ${getRoleText(user.rol)}.`,
+        tipo: "usuario_aprobado",
+        usuario_id: user.id_usuario
+      });
+      
+      toast.success('Usuario activado correctamente. Se ha enviado una notificación al usuario.');
       fetchUsers();
     } catch (error) {
       toast.error('Error al activar usuario');
@@ -141,6 +162,17 @@ export default function Usuarios() {
     return texts[role] || role;
   };
 
+  const getStatusColor = (estado) => {
+    return estado === 'activo' ? 'success' : 'default';
+  };
+
+  const getStatusIcon = (estado) => {
+    return estado === 'activo' ? <CheckCircle /> : <Block />;
+  };
+
+  // Contar usuarios pendientes
+  const pendingUsersCount = users.filter(user => user.estado === 'inactivo').length;
+
   return (
     <Box>
       <Box className="flex justify-between items-center mb-6">
@@ -152,46 +184,97 @@ export default function Usuarios() {
           <Typography variant="h4" className="font-title text-primary">
             Gestión de Usuarios
           </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Administra los usuarios del sistema
+          </Typography>
         </motion.div>
+        
+        <Box className="flex gap-2">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={fetchUsers}
+              sx={{ textTransform: 'none' }}
+            >
+              Actualizar
+            </Button>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setOpen(true)}
+              className="bg-gradient-to-r from-primary to-secondary text-white rounded-xl shadow-lg"
+              sx={{
+                textTransform: 'none',
+                background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                '&:hover': {
+                  background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                },
+              }}
+            >
+              Nuevo Usuario
+            </Button>
+          </motion.div>
+        </Box>
+      </Box>
+
+      {/* Tarjeta de resumen */}
+      {pendingUsersCount > 0 && (
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setOpen(true)}
-            className="bg-gradient-to-r from-primary to-secondary text-white rounded-xl shadow-lg"
-            sx={{
-              textTransform: 'none',
-              background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
-              '&:hover': {
-                background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
-              },
+          <Card 
+            sx={{ 
+              mb: 3, 
+              border: '2px solid',
+              borderColor: 'warning.main',
+              background: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)'
             }}
           >
-            Nuevo Usuario
-          </Button>
+            <CardContent>
+              <Box className="flex items-center gap-3">
+                <PersonAdd color="warning" sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant="h6" color="warning.dark" fontWeight="bold">
+                    {pendingUsersCount} usuario(s) pendiente(s) de aprobación
+                  </Typography>
+                  <Typography variant="body2" color="warning.dark">
+                    Revisa y activa las cuentas de nuevos usuarios registrados
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </motion.div>
-      </Box>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
       >
         <TableContainer component={Paper} className="rounded-2xl shadow-lg">
           <Table>
             <TableHead>
               <TableRow className="bg-gradient-to-r from-primary to-secondary">
-                <TableCell className="text-white font-title">Nombre</TableCell>
-                <TableCell className="text-white font-title">Email</TableCell>
-                <TableCell className="text-white font-title">Teléfono</TableCell>
-                <TableCell className="text-white font-title">Rol</TableCell>
+                <TableCell className="text-white font-title">Usuario</TableCell>
+                <TableCell className="text-white font-title">Contacto</TableCell>
+                <TableCell className="text-white font-title">Rol Solicitado</TableCell>
                 <TableCell className="text-white font-title">Estado</TableCell>
                 <TableCell className="text-white font-title">Fecha Registro</TableCell>
-                <TableCell className="text-white font-title">Acciones</TableCell>
+                <TableCell className="text-white font-title text-center">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -203,12 +286,33 @@ export default function Usuarios() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
+                  sx={{
+                    backgroundColor: user.estado === 'inactivo' ? '#fff3cd' : 'inherit'
+                  }}
                 >
-                  <TableCell className="font-body">
-                    {user.nombre} {user.apellido}
+                  <TableCell>
+                    <Box>
+                      <Typography fontWeight="bold" className="font-body">
+                        {user.nombre} {user.apellido}
+                      </Typography>
+                      {user.estado === 'inactivo' && (
+                        <Chip 
+                          label="Pendiente" 
+                          color="warning" 
+                          size="small" 
+                          sx={{ mt: 0.5 }}
+                        />
+                      )}
+                    </Box>
                   </TableCell>
-                  <TableCell className="font-body">{user.email}</TableCell>
-                  <TableCell className="font-body">{user.telefono || '-'}</TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography className="font-body">{user.email}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {user.telefono || 'Sin teléfono'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={getRoleText(user.rol)}
@@ -218,40 +322,57 @@ export default function Usuarios() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={user.estado}
-                      color={user.estado === 'activo' ? 'success' : 'default'}
-                      size="small"
-                    />
+                    <Box className="flex items-center gap-2">
+                      <Chip
+                        label={user.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                        color={getStatusColor(user.estado)}
+                        size="small"
+                        icon={getStatusIcon(user.estado)}
+                      />
+                    </Box>
                   </TableCell>
                   <TableCell className="font-body">
                     {new Date(user.fecha_creacion).toLocaleDateString('es-ES')}
                   </TableCell>
                   <TableCell>
-                    <IconButton 
-                      size="small" 
-                      className="text-primary"
-                      onClick={() => handleEdit(user)}
-                    >
-                      <Edit />
-                    </IconButton>
-                    {user.estado === 'activo' ? (
+                    <Box className="flex justify-center gap-1">
                       <IconButton 
                         size="small" 
-                        className="text-error"
-                        onClick={() => handleDesactivar(user.id_usuario)}
+                        className="text-primary"
+                        onClick={() => handleEdit(user)}
+                        title="Editar usuario"
                       >
-                        <Block />
+                        <Edit />
                       </IconButton>
-                    ) : (
-                      <IconButton 
-                        size="small" 
-                        className="text-success"
-                        onClick={() => handleActivar(user.id_usuario)}
-                      >
-                        <CheckCircle />
-                      </IconButton>
-                    )}
+                      
+                      {user.estado === 'activo' ? (
+                        <IconButton 
+                          size="small" 
+                          className="text-error"
+                          onClick={() => handleDesactivar(user.id_usuario)}
+                          title="Desactivar usuario"
+                        >
+                          <Block />
+                        </IconButton>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<CheckCircle />}
+                          onClick={() => handleActivar(user)}
+                          sx={{
+                            textTransform: 'none',
+                            backgroundColor: '#4caf50',
+                            '&:hover': {
+                              backgroundColor: '#388e3c',
+                            },
+                          }}
+                          title="Aprobar y activar usuario"
+                        >
+                          Aprobar
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -268,6 +389,7 @@ export default function Usuarios() {
         </Box>
       )}
 
+      {/* Diálogo para crear/editar usuario */}
       <Dialog
         open={open}
         onClose={handleClose}
@@ -282,22 +404,29 @@ export default function Usuarios() {
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent className="mt-4">
-            <TextField
-              fullWidth
-              label="Nombre"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              required
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Apellido"
-              value={formData.apellido}
-              onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-              required
-              margin="normal"
-            />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Nombre"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  required
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Apellido"
+                  value={formData.apellido}
+                  onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                  required
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+            
             <TextField
               fullWidth
               label="Email"
@@ -307,6 +436,7 @@ export default function Usuarios() {
               required
               margin="normal"
             />
+            
             <TextField
               fullWidth
               label="Contraseña"
@@ -315,8 +445,9 @@ export default function Usuarios() {
               onChange={(e) => setFormData({ ...formData, contrasenia: e.target.value })}
               required={!editing}
               margin="normal"
-              helperText={editing ? "Dejar vacío para mantener la contraseña actual" : ""}
+              helperText={editing ? "Dejar vacío para mantener la contraseña actual" : "Mínimo 6 caracteres"}
             />
+            
             <TextField
               fullWidth
               label="Teléfono"
@@ -324,29 +455,36 @@ export default function Usuarios() {
               onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
               margin="normal"
             />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Rol</InputLabel>
-              <Select
-                value={formData.rol}
-                onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
-                required
-              >
-                <MenuItem value="admin">Administrador</MenuItem>
-                <MenuItem value="gestor">Gestor</MenuItem>
-                <MenuItem value="control_acceso">Control de Acceso</MenuItem>
-                <MenuItem value="cliente">Cliente</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Estado</InputLabel>
-              <Select
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-              >
-                <MenuItem value="activo">Activo</MenuItem>
-                <MenuItem value="inactivo">Inactivo</MenuItem>
-              </Select>
-            </FormControl>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Rol</InputLabel>
+                  <Select
+                    value={formData.rol}
+                    onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
+                    required
+                  >
+                    <MenuItem value="admin">Administrador</MenuItem>
+                    <MenuItem value="gestor">Gestor</MenuItem>
+                    <MenuItem value="control_acceso">Control de Acceso</MenuItem>
+                    <MenuItem value="cliente">Cliente</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Estado</InputLabel>
+                  <Select
+                    value={formData.estado}
+                    onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                  >
+                    <MenuItem value="activo">Activo</MenuItem>
+                    <MenuItem value="inactivo">Inactivo</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
           </DialogContent>
           <DialogActions className="p-4">
             <Button onClick={handleClose} className="text-gray-600">

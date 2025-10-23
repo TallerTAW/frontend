@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-// Asegúrate de que estos módulos estén instalados:
 import ReCAPTCHA from 'react-google-recaptcha'; 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; 
@@ -8,7 +7,6 @@ import {
     Typography, 
     TextField, 
     Button, 
-    // Eliminamos 'Checkbox' y 'FormControlLabel'
     Container,
     IconButton,
     InputAdornment,
@@ -16,8 +14,6 @@ import {
     Alert,
     CircularProgress 
 } from '@mui/material';
-
-// Importamos los iconos necesarios
 import LockIcon from '@mui/icons-material/Lock';
 import EmailIcon from '@mui/icons-material/Email';
 import Visibility from '@mui/icons-material/Visibility';
@@ -38,7 +34,6 @@ export default function Login() {
 
     // --- LÓGICA DE AUTENTICACIÓN Y RECAPTCHA ---
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
-    // Eliminamos isRobotChecked
     const { signIn, error: authError, clearError } = useAuth();
     const navigate = useNavigate();
     const recaptchaRef = useRef(null);
@@ -57,9 +52,8 @@ export default function Login() {
         setOpenSnackbar(false);
     };
 
-    // Lógica para el reCAPTCHA (VISIBLE)
+    // Lógica para el reCAPTCHA
     const handleRecaptchaChange = (token) => {
-        // Se activa cuando el usuario marca el checkbox de Google
         setRecaptchaVerified(!!token);
     };
 
@@ -75,6 +69,7 @@ export default function Login() {
         setSnackbarMessage('');
         clearError(); 
 
+        // Validaciones básicas
         if (!email || !password) {
             setSnackbarMessage('Por favor, ingresa tu email y contraseña.');
             setSnackbarSeverity('warning');
@@ -94,23 +89,46 @@ export default function Login() {
         try {
             const token = recaptchaRef.current.getValue();
             if (!token) {
-                // Esto debería ser imposible si recaptchaVerified es true, pero es una buena práctica
                 throw new Error('No se pudo obtener el token reCAPTCHA.');
             }
 
-            const { error: contextError } = await signIn(email, password, token);
+            const result = await signIn(email, password, token);
             
-            if (contextError) {
-                setSnackbarMessage(`Error de Autenticación: ${contextError}`);
-                setSnackbarSeverity('error');
+            if (result.error) {
+                // Manejo específico de diferentes tipos de errores
+                if (result.type === 'inactive') {
+                    // Usuario inactivo - mostramos mensaje especial
+                    setSnackbarMessage(result.error);
+                    setSnackbarSeverity('warning'); // Cambiamos a warning para usuario inactivo
+                } else if (result.type === 'credentials') {
+                    // Credenciales incorrectas
+                    setSnackbarMessage(result.error);
+                    setSnackbarSeverity('error');
+                } else if (result.type === 'captcha') {
+                    // Error de captcha
+                    setSnackbarMessage(result.error);
+                    setSnackbarSeverity('error');
+                    // Reseteamos el captcha
+                    if (recaptchaRef.current) {
+                        recaptchaRef.current.reset();
+                        setRecaptchaVerified(false);
+                    }
+                } else {
+                    // Error general
+                    setSnackbarMessage(result.error);
+                    setSnackbarSeverity('error');
+                }
                 setOpenSnackbar(true);
             } else {
+                // Login exitoso
                 setSnackbarMessage('¡Inicio de sesión exitoso! Redirigiendo...');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
                 
-                // Redirige a la página correspondiente (dashboard)
-                navigate('/dashboard'); 
+                // Redirige después de un breve delay para mostrar el mensaje
+                setTimeout(() => {
+                    navigate('/dashboard'); 
+                }, 1500);
             }
 
         } catch (err) {
@@ -119,7 +137,7 @@ export default function Login() {
             setSnackbarSeverity('error');
             setOpenSnackbar(true);
             
-            // Siempre reseteamos el captcha después de un fallo
+            // Reseteamos el captcha en caso de error inesperado
             if (recaptchaRef.current) {
                 recaptchaRef.current.reset();
                 setRecaptchaVerified(false);
@@ -132,9 +150,8 @@ export default function Login() {
     
     // Función para volver a la página principal
     const handleGoHome = () => {
-        navigate('/'); // Redirige a la ruta raíz
+        navigate('/');
     };
-    // --------------------------------------------------------------------------
 
     // Estilos compartidos para los campos de texto
     const inputStyles = {
@@ -267,7 +284,7 @@ export default function Login() {
                         }}
                     />
 
-                    {/* RECAPTCHA VISIBLE (WIDGET DE GOOGLE) */}
+                    {/* RECAPTCHA VISIBLE */}
                     <Box sx={{ my: 2, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
                          <Box sx={{ mt: 1 }}>
                              <ReCAPTCHA
@@ -283,7 +300,7 @@ export default function Login() {
                         type="submit"
                         fullWidth
                         variant="contained"
-                        disabled={isLoading || !recaptchaVerified} // Deshabilitado si no está cargando O si no está verificado
+                        disabled={isLoading || !recaptchaVerified}
                         sx={{
                             mt: 3,
                             mb: 1.5,
