@@ -2,6 +2,7 @@ import { Box, Typography, Container, Grid, List, ListItem, ListItemIcon, ListIte
 import { motion } from "framer-motion";
 import HeaderHome from '../components/HeaderHome'; 
 import { useContent } from '../hooks/useContent';
+import Bannerizq from '../components/Bannerizq';
 
 // Importar iconos de redes sociales
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -16,6 +17,34 @@ const COLOR_DARK = '#333333';        // Gris Oscuro
 const COLOR_LIGHT = '#FFFFFF';       // Blanco
 const COLOR_ACCENT_LIME = '#A2E831'; // Verde Lima
 const COLOR_ACCENT_RED = '#FD7E14';  // Naranja/Rojo 
+
+
+const IMAGEN_BALON = 'https://cdn.pixabay.com/photo/2013/07/13/10/51/football-157930_1280.png'; // Cambia esto por la URL real de tu imagen en tu proyecto
+
+const MISION_TEXTO = `
+  Brindar una solución tecnológica confiable y sencilla que conecte a los
+  usuarios con los centros deportivos, facilitando el acceso a espacios de
+  recreación y optimizando el tiempo y los recursos de quienes disfrutan de la
+  actividad física.
+`;
+
+const IMAGEN_BALON1 = 'https://cdn.pixabay.com/photo/2013/07/13/09/46/basketball-155997_1280.png'; // Cambia esto por la URL real de tu imagen en tu proyecto
+
+const VISION_TEXTO1 = `
+  Transformar la manera en que las personas acceden al deporte, consolidándonos 
+  como una plataforma de referencia que fomente comunidades activas, saludables 
+  y mejor conectadas.
+`;
+
+
+const IMAGEN_BALON2 = 'https://cdn.pixabay.com/photo/2013/07/12/13/21/baseball-146883_1280.png'; // Cambia esto por la URL real de tu imagen en tu proyecto
+
+const OBJETIVO_TEXTO1 = `
+  Promover la vida activa y el bienestar en la comunidad. Facilitar el acceso 
+  a instalaciones deportivas de forma práctica y segura. Fomentar el trabajo en 
+  equipo y la creación de comunidades deportivas. Impulsar la innovación tecnológica 
+  aplicada al deporte. Convertirnos en un referente regional en la gestión de espacios deportivos.
+`;
 
 
 // Helper para renderizar los objetivos como una lista de MUI
@@ -159,62 +188,32 @@ export default function Home() {
             </Typography>
           </motion.div>
 
-          {/* Misión */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, fontFamily: 'Montserrat, sans-serif' }}>
-              MISIÓN
-            </Typography>
-            <Typography variant="body1" sx={{ lineHeight: 1.8, maxWidth: '900px', fontFamily: 'Roboto, sans-serif' }}>
-              {missionText}
-            </Typography>
-          </motion.div>
+      {/* Misión */}
+        
         </Container>
       </Box>
+        <Bannerizq 
+            titulo={"MISION"}
+            texto={MISION_TEXTO.trim()} 
+            imagenURL={IMAGEN_BALON} 
+        />
+
+      {/* Visión */}
+        <Bannerizq 
+            titulo={"VISION"}
+            texto={VISION_TEXTO1.trim()} 
+            imagenURL={IMAGEN_BALON1} 
+        />
+
+      {/* Objetivos */}
+        <Bannerizq 
+            titulo={"OBJETIVOS"}
+            texto={OBJETIVO_TEXTO1.trim()} 
+            imagenURL={IMAGEN_BALON2} 
+        />
         
       {/* 4. SECCIÓN VISIÓN Y OBJETIVOS (Fondo Blanco, Dividida) */}
-      <Box sx={{ backgroundColor: COLOR_LIGHT, color: COLOR_DARK }}>
-        <Container maxWidth="xl" sx={{ py: 10 }}>
-            <Grid container spacing={8}>
-                
-                {/* Visión */}
-                <Grid item xs={12} md={6}> 
-                  <motion.div
-                    initial={{ opacity: 0, x: -50 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ duration: 0.8 }}
-                  >
-                    <Typography variant="h4" fontWeight="bold" sx={{ mb: 2, color: COLOR_PRIMARY, fontFamily: 'Montserrat, sans-serif' }}>
-                      VISIÓN
-                    </Typography>
-                    <Typography variant="body1" sx={{ lineHeight: 1.8, fontFamily: 'Roboto, sans-serif' }}>
-                      {visionText}
-                    </Typography>
-                  </motion.div>
-                </Grid>
-
-                {/* Objetivos */}
-                <Grid item xs={12} md={6}> 
-                  <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ duration: 0.8 }}
-                  >
-                    <Typography variant="h4" fontWeight="bold" sx={{ mb: 2, color: COLOR_PRIMARY, fontFamily: 'Montserrat, sans-serif' }}>
-                      OBJETIVOS
-                    </Typography>
-                    {renderObjectives(objectivesText)}
-                  </motion.div>
-                </Grid>
-            </Grid>
-        </Container>
-      </Box>
+      
 
       {/* 5. FOOTER */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT, py: 3, textAlign: 'center' }}>
