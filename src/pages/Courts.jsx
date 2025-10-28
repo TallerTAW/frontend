@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { canchasApi } from '../api/canchas';
 import { espaciosApi } from '../api/espacios';
@@ -22,18 +22,199 @@ import {
   FormControl,
   InputLabel,
   Chip,
-  Switch,
-  FormControlLabel,
+  Avatar,
 } from '@mui/material';
-import { Add, Edit, Delete, SportsSoccer, Block, CheckCircle } from '@mui/icons-material';
+import { 
+  Add, 
+  Edit, 
+  Delete, 
+  SportsSoccer, 
+  Block, 
+  CheckCircle,
+  CloudUpload,
+  Delete as DeleteIcon,
+  ZoomIn
+} from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { image } from 'framer-motion/client';
+
+// Componente para subir imágenes con drag & drop (similar al de espacios)
+const ImageUploader = ({ onImageChange, currentImage }) => {
+  const [preview, setPreview] = useState(currentImage);
+  const [dragOver, setDragOver] = useState(false);
+  const api_url = import.meta.env.VITE_API_URL;
+
+  const handleFileChange = (file) => {
+    if (file) {
+      // Validar tipo de archivo
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Solo se permiten imágenes JPG, PNG o GIF');
+        return;
+      }
+
+      // Validar tamaño (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('La imagen no debe superar los 5MB');
+        return;
+      }
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreview(e.target.result);
+        onImageChange(file);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    handleFileChange(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragOver(false);
+  };
+
+  const handleInputChange = (e) => {
+    const file = e.target.files[0];
+    handleFileChange(file);
+  };
+
+  const removeImage = () => {
+    setPreview(null);
+    onImageChange(null);
+  };
+
+  return (
+    <Box
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      sx={{
+        border: dragOver ? '2px dashed #fbab22' : '2px dashed #ccc',
+        borderRadius: 2,
+        padding: 3,
+        textAlign: 'center',
+        backgroundColor: dragOver ? 'rgba(251, 171, 34, 0.1)' : 'transparent',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+        minHeight: 200,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+      }}
+    >
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleInputChange}
+        style={{ display: 'none' }}
+        id="image-upload-cancha"
+      />
+      
+      {preview ? (
+        <Box sx={{ position: 'relative', width: '100%' }}>
+          <img 
+            src={preview.startsWith('data:') ? preview : `${api_url}${preview}`}
+            alt="Preview" 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: 200, 
+              borderRadius: 8,
+              objectFit: 'cover'
+            }}
+          />
+          <IconButton
+            onClick={removeImage}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: 'rgba(255,255,255,0.8)',
+              '&:hover': { backgroundColor: 'white' }
+            }}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ) : (
+        <label htmlFor="image-upload-cancha" style={{ cursor: 'pointer' }}>
+          <CloudUpload sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+          <Typography variant="body1" color="textSecondary">
+            Arrastra una imagen aquí o haz click para seleccionar
+          </Typography>
+          <Typography variant="caption" color="textSecondary">
+            PNG, JPG, GIF hasta 5MB
+          </Typography>
+        </label>
+      )}
+    </Box>
+  );
+};
+
+// Modal para ver imagen en zoom
+const ImageZoomModal = ({ image, open, onClose }) => {
+  if (!open) return null;
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      PaperProps={{
+        sx: {
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          overflow: 'hidden'
+        }
+      }}
+    >
+      <Box sx={{ position: 'relative' }}>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            color: 'white',
+            '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+          }}
+        >
+          <DeleteIcon />
+        </IconButton>
+        <img 
+          src={image} 
+          alt="Zoom" 
+          style={{ 
+            maxWidth: '90vw', 
+            maxHeight: '90vh',
+            borderRadius: 8
+          }}
+        />
+      </Box>
+    </Dialog>
+  );
+};
 
 export default function Courts() {
   const { profile } = useAuth();
   const [canchas, setCanchas] = useState([]);
   const [espacios, setEspacios] = useState([]);
   const [open, setOpen] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -43,9 +224,8 @@ export default function Courts() {
     precio_por_hora: '',
     id_espacio_deportivo: '',
     estado: 'disponible',
-    imagen: ''
   });
-
+  const [imageFile, setImageFile] = useState(null);
   const api_url = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -69,17 +249,24 @@ export default function Courts() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const dataToSave = {
-        ...formData,
-        precio_por_hora: parseFloat(formData.precio_por_hora),
-        id_espacio_deportivo: parseInt(formData.id_espacio_deportivo)
-      };
+      const submitData = new FormData();
+      submitData.append('nombre', formData.nombre);
+      submitData.append('tipo', formData.tipo);
+      submitData.append('hora_apertura', formData.hora_apertura);
+      submitData.append('hora_cierre', formData.hora_cierre);
+      submitData.append('precio_por_hora', formData.precio_por_hora);
+      submitData.append('id_espacio_deportivo', formData.id_espacio_deportivo);
+      submitData.append('estado', formData.estado);
+      
+      if (imageFile) {
+        submitData.append('imagen', imageFile);
+      }
 
       if (editing) {
-        await canchasApi.update(editing.id_cancha, dataToSave);
+        await canchasApi.update(editing.id_cancha, submitData);
         toast.success('Cancha actualizada correctamente');
       } else {
-        await canchasApi.create(dataToSave);
+        await canchasApi.create(submitData);
         toast.success('Cancha creada correctamente');
       }
 
@@ -100,8 +287,8 @@ export default function Courts() {
       precio_por_hora: cancha.precio_por_hora,
       id_espacio_deportivo: cancha.id_espacio_deportivo.toString(),
       estado: cancha.estado,
-      imagen: cancha.imagen || ''
     });
+    setImageFile(null);
     setOpen(true);
   };
 
@@ -148,8 +335,13 @@ export default function Courts() {
       precio_por_hora: '',
       id_espacio_deportivo: '',
       estado: 'disponible',
-      imagen: ''
     });
+    setImageFile(null);
+  };
+
+  const handleImageZoom = (imageUrl) => {
+    setSelectedImage(`${api_url}${imageUrl}`);
+    setZoomOpen(true);
   };
 
   const getSportIcon = (tipo) => {
@@ -214,7 +406,6 @@ export default function Courts() {
             variant="contained"
             startIcon={<Add />}
             onClick={() => setOpen(true)}
-            className="bg-gradient-to-r from-accent to-highlight text-white rounded-xl shadow-lg"
             sx={{
               textTransform: 'none',
               background: 'linear-gradient(to right, #fbab22, #f87326)',
@@ -239,18 +430,23 @@ export default function Courts() {
               <Card sx={{ mt: 2 }} className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
                 cancha.estado !== 'disponible' ? 'opacity-70' : ''
               }`}>
-                {/* Contenedor principal de la imagen */}
-                <Box sx={{ height: 200 }} className="relative rounded-t-2xl overflow-hidden">
+                {/* Contenedor de imagen con zoom */}
+                <Box 
+                  sx={{ height: 200 }} 
+                  className="relative rounded-t-2xl overflow-hidden cursor-pointer"
+                  onClick={() => cancha.imagen && handleImageZoom(cancha.imagen)}
+                >
                   {cancha.imagen ? (
-                    <img 
-                      src={`${api_url}${cancha.imagen}`} 
-                      alt={cancha.nombre} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        console.error('Error loading image:', e);
-                        e.target.style.display = 'none';
-                      }}
-                    />
+                    <>
+                      <img 
+                        src={`${api_url}${cancha.imagen}`} 
+                        alt={cancha.nombre} 
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                      <Box className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                        <ZoomIn sx={{ color: 'white', opacity: 0, transition: 'opacity 0.3s' }} className="hover:opacity-100" />
+                      </Box>
+                    </>
                   ) : (
                     <Box className="w-full h-full bg-gradient-to-br from-accent to-highlight flex items-center justify-center">
                       <Box className="text-8xl opacity-50">
@@ -340,7 +536,7 @@ export default function Courts() {
       <Dialog
         open={open}
         onClose={handleClose}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
           className: 'rounded-2xl',
@@ -350,7 +546,13 @@ export default function Courts() {
           {editing ? 'Editar Cancha' : 'Nueva Cancha'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent className="mt-4">
+          <DialogContent className="mt-4 space-y-4">
+            {/* Uploader de imagen */}
+            <ImageUploader 
+              onImageChange={setImageFile}
+              currentImage={editing?.imagen}
+            />
+
             <FormControl fullWidth margin="normal">
               <InputLabel>Espacio Deportivo *</InputLabel>
               <Select
@@ -443,6 +645,13 @@ export default function Courts() {
           </DialogActions>
         </form>
       </Dialog>
+
+      {/* Modal para zoom de imagen */}
+      <ImageZoomModal 
+        image={selectedImage}
+        open={zoomOpen}
+        onClose={() => setZoomOpen(false)}
+      />
     </Box>
   );
 }

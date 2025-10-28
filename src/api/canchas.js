@@ -27,12 +27,20 @@ export const canchasApi = {
   },
 
   create: async (canchaData) => {
-    const response = await api.post('/canchas', canchaData);
+    const response = await api.post('/canchas', canchaData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   update: async (id, canchaData) => {
-    const response = await api.put(`/canchas/${id}`, canchaData);
+    const response = await api.put(`/canchas/${id}`, canchaData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
