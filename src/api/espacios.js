@@ -22,12 +22,20 @@ export const espaciosApi = {
   },
 
   create: async (espacioData) => {
-    const response = await api.post('/espacios', espacioData);
+    const response = await api.post('/espacios', espacioData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   update: async (id, espacioData) => {
-    const response = await api.put(`/espacios/${id}`, espacioData);
+    const response = await api.put(`/espacios/${id}`, espacioData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -49,5 +57,15 @@ export const espaciosApi = {
   getByIdPublic: async (id) => {
     const response = await api.get(`/espacios/public/${id}`);
     return response.data;
-  }
+  },
+
+  getGestoresDisponibles: async () => {
+    const response = await api.get('/espacios/gestores/disponibles');
+    return response.data;
+  },
+
+  getGestorAsignado: async (espacioId) => {
+    const response = await api.get(`/espacios/${espacioId}/gestor-asignado`);
+    return response.data;
+  },
 };
