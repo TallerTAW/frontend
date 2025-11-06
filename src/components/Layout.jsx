@@ -83,7 +83,7 @@ export default function Layout() {
   // Menú de navegación (se mantiene igual, es correcto)
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'gestor', 'control_acceso', 'cliente'], guest: true },
-    { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente', 'gestor'], guest: true },
+    { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente', 'gestor'], guest: false },
     { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
     { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
     { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },

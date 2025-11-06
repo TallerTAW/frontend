@@ -9,38 +9,42 @@ import { Stadium, SportsSoccer, CalendarMonth, People, Refresh } from '@mui/icon
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-// === PALETA DE COLORES Y TIPOGRAFÍA ===
-// Colores basados en tu paleta
-const COLOR_AZUL_ELECTRICO = '#00BFFF'; // Primary
-const COLOR_VERDE_LIMA = '#A2E831';    // Secondary
-const COLOR_NARANJA_VIBRANTE = '#FD7E14'; // Accent
-const COLOR_GRIS_OSCURO = '#333333';   // Background/Text Dark
+// === PALETA DE COLORES PERSONALIZADA (Basada en tu solicitud) ===
+const COLOR_NEGRO_OSCURO = '#040404'; // Texto Principal
+const COLOR_VERDE_LIMA_SUAVE = '#c1db8b'; // Secundario (Verde Claro)
+const COLOR_AZUL_CIELO = '#2d9fce'; // Primario (Azul Claro)
+const COLOR_AZUL_OSCURO = '#2d9fce '; // Contraste Azul (Darker Blue)
+const COLOR_VERDE_OLIVA = '#c1db8b '; // Fondo de Banner Invitado
+const COLOR_VERDE_BOSQUE = '#275042 '; // Contraste Verde (Dark Green)
 const COLOR_BLANCO = '#FFFFFF';        // Text Light
 
 // Función para mapear las clases de color a los códigos hexadecimales
 function getColorValue(colorClass) {
     const colors = {
-        'from-primary': COLOR_AZUL_ELECTRICO, 
-        'to-primary': COLOR_AZUL_ELECTRICO,
-        'from-secondary': COLOR_VERDE_LIMA,
-        'to-secondary': COLOR_VERDE_LIMA,
-        'from-accent': COLOR_NARANJA_VIBRANTE, 
-        'to-accent': COLOR_NARANJA_VIBRANTE,
-        'from-highlight': '#F06A3F', // Naranja más fuerte
-        'to-highlight': COLOR_NARANJA_VIBRANTE,
-        'bg-primary': COLOR_AZUL_ELECTRICO,
-        'bg-secondary': COLOR_VERDE_LIMA,
-        'bg-accent': COLOR_NARANJA_VIBRANTE,
-        'text-primary': COLOR_AZUL_ELECTRICO,
-        'text-secondary': COLOR_VERDE_LIMA,
-        'text-gray-600': '#555555',
-        'text-gray-700': '#444444',
+        // Mapeo directo a los colores de las 4 cards en la imagen
+        'from-primary': COLOR_AZUL_CIELO, // Espacios Deportivos (Azul Claro)
+        'to-primary': COLOR_AZUL_OSCURO,
+        'from-secondary': COLOR_VERDE_LIMA_SUAVE, // Canchas Disponibles (Verde Lima Suave)
+        'to-secondary': COLOR_VERDE_OLIVA, // Un poco de verde oscuro
+        'from-accent': COLOR_VERDE_BOSQUE, // Reservas Activas (Verde Oscuro)
+        'to-accent': COLOR_VERDE_BOSQUE,
+        'from-highlight': COLOR_AZUL_OSCURO, // Deportes/Usuarios (Azul Oscuro)
+        'to-highlight': COLOR_AZUL_OSCURO,
+        
+        // Colores de componentes usados en el código
+        'bg-primary': COLOR_AZUL_CIELO,
+        'bg-secondary': COLOR_VERDE_LIMA_SUAVE,
+        'bg-accent': COLOR_VERDE_BOSQUE,
+        'text-primary': COLOR_AZUL_CIELO,
+        'text-secondary': COLOR_VERDE_LIMA_SUAVE,
+        'text-gray-600': COLOR_VERDE_OLIVA, // Usamos Oliva para texto secundario
+        'text-gray-700': COLOR_NEGRO_OSCURO, // Usamos Negro para texto oscuro
     };
-    return colors[colorClass] || COLOR_AZUL_ELECTRICO;
+    return colors[colorClass] || COLOR_AZUL_CIELO;
 }
 
 export default function Dashboard() {
-    const { profile, user } = useAuth(); 
+    const { profile, user } = useAuth();
     const navigate = useNavigate();
     const isGuest = !user; 
     
@@ -59,15 +63,15 @@ export default function Dashboard() {
     };
     const [loading, setLoading] = useState(true);
     const displayStats = isGuest ? guestStats : stats;
-
+    
     useEffect(() => {
       if (!isGuest) {
         fetchStats();
       } else {
         setLoading(false); 
       }
-    }, [profile, isGuest]); 
-
+    }, [profile, isGuest]);
+    
     const fetchStats = async () => {
       try {
         setLoading(true);
@@ -78,7 +82,7 @@ export default function Dashboard() {
             canchasApi.getAll().catch(() => []),
             reservasApi.getAll().catch(() => []),
             usuariosApi.getAll().catch(() => [])
-          ]);
+         ]);
   
           setStats({
             espacios: espaciosData.length || 0,
@@ -91,7 +95,6 @@ export default function Dashboard() {
             canchasApi.getAll().catch(() => []),
             reservasApi.getAll().catch(() => [])
           ]);
-  
           setStats({
             canchas: canchasData.length || 0,
             reservas: reservasData.length || 0,
@@ -121,7 +124,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-
+    
     const handleCardClick = (section) => {
         // Lógica de handleCardClick: Se mantiene igual
         if (isGuest) {
@@ -152,7 +155,7 @@ export default function Dashboard() {
             break;
         }
       };
-
+      
     // Creación de tarjetas (se mantiene igual)
     const statCards = [];
     if (profile?.rol === 'admin') {
@@ -161,7 +164,7 @@ export default function Dashboard() {
         { title: 'Canchas', value: stats.canchas, icon: <SportsSoccer />, color: 'from-secondary to-secondary', section: 'canchas' },
         { title: 'Reservas', value: stats.reservas, icon: <CalendarMonth />, color: 'from-accent to-accent', section: 'reservas' },
         { title: 'Usuarios', value: stats.usuarios, icon: <People />, color: 'from-highlight to-highlight', section: 'usuarios' }
-      );
+     );
     } else if (profile?.rol === 'gestor') {
       statCards.push(
         { title: 'Canchas Gestionadas', value: stats.canchas, icon: <SportsSoccer />, color: 'from-primary to-primary', section: 'canchas' },
@@ -190,8 +193,9 @@ export default function Dashboard() {
     if (loading) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 256, p: 4 }}>
-          <CircularProgress sx={{ color: COLOR_VERDE_LIMA }} />
-          <Typography variant="h6" sx={{ ml: 2, fontFamily: 'Roboto, sans-serif', color: COLOR_GRIS_OSCURO }}>
+          {/* COLOR MODIFICADO */}
+          <CircularProgress sx={{ color: COLOR_VERDE_LIMA_SUAVE }} />
+          <Typography variant="h6" sx={{ ml: 2, fontFamily: 'Roboto, sans-serif', color: COLOR_NEGRO_OSCURO }}>
             Cargando estadísticas...
           </Typography>
         </Box>
@@ -202,10 +206,6 @@ export default function Dashboard() {
         <Box 
             sx={{ 
                 p: { xs: 2, sm: 4 },
-                // *** PADDING OPTIMIZADO ***
-                // El `pt` (padding-top) excesivo se ELIMINA 
-                // ya que ahora Layout.jsx maneja el espacio del Header con `theme.mixins.toolbar`.
-                // minHeight: '100vh', (se mantiene igual)
                 backgroundColor: COLOR_BLANCO 
             }}
         >
@@ -221,7 +221,8 @@ export default function Dashboard() {
                             fontFamily: 'Montserrat, sans-serif', 
                             fontWeight: 'bold', 
                             mb: 1, 
-                            color: COLOR_AZUL_ELECTRICO 
+                            // COLOR MODIFICADO
+                            color: COLOR_AZUL_CIELO 
                         }}
                     >
                         {isGuest ? 'Bienvenido a OlympiaHub' : `Bienvenido, ${profile?.nombre}`}
@@ -239,21 +240,23 @@ export default function Dashboard() {
                         }
                     </Typography>
 
-                    {/* Mensaje para invitados (se mantiene igual) */}
+                    {/* Mensaje para invitados (Estilizado para parecerse a la imagen) */}
                     {isGuest && (
                         <Box sx={{ 
                             mt: 3, 
                             p: 3, 
                             borderRadius: '12px', 
-                            background: `linear-gradient(90deg, ${COLOR_AZUL_ELECTRICO}1A 0%, ${COLOR_VERDE_LIMA}1A 100%)`, 
-                            border: `1px solid ${COLOR_AZUL_ELECTRICO}40`
-                        }}>
-                            <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', mb: 1.5 }}>
-                                <Box component="strong" sx={{ color: COLOR_GRIS_OSCURO }}>
+                            // NUEVO ESTILO: Fondo Verde Oliva, Borde Azul Cielo
+                            background: COLOR_VERDE_OLIVA, 
+                            border: `1px solid ${COLOR_AZUL_CIELO}`,
+                            color: COLOR_BLANCO // Texto en blanco para contraste
+                           }}>
+                            <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', mb: 1.5, color: COLOR_BLANCO }}>
+                                <Box component="strong" sx={{ color: '#000000ff' }}>
                                     💡 ¿Qué puedes hacer como invitado?
                                 </Box>
                             </Typography>
-                            <Typography variant="body2" sx={{ fontFamily: 'Roboto, sans-serif', color: COLOR_GRIS_OSCURO }}>
+                            <Typography variant="body2" sx={{ fontFamily: 'Roboto, sans-serif', color: '#000000ff' }}>
                                 • Explorar el dashboard y ver estadísticas generales<br/>
                                 • Navegar por el proceso de reserva hasta el último paso<br/>
                                 • Conocer nuestros espacios y disciplinas disponibles
@@ -264,8 +267,10 @@ export default function Dashboard() {
                                     onClick={() => navigate('/register')}
                                     size="small"
                                     sx={{ 
-                                        backgroundColor: COLOR_AZUL_ELECTRICO, 
-                                        '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 },
+                                        // BOTÓN DE REGISTRO EN AZUL CIELO (Primario)
+                                        backgroundColor: COLOR_AZUL_CIELO, 
+                                        color: COLOR_BLANCO,
+                                        '&:hover': { backgroundColor: COLOR_AZUL_CIELO, opacity: 0.9 },
                                         fontFamily: 'Montserrat, sans-serif',
                                         fontWeight: 'bold'
                                     }}
@@ -277,9 +282,10 @@ export default function Dashboard() {
                                     onClick={() => navigate('/login')}
                                     size="small"
                                     sx={{ 
-                                        color: COLOR_AZUL_ELECTRICO, 
-                                        borderColor: COLOR_AZUL_ELECTRICO,
-                                        '&:hover': { borderColor: COLOR_AZUL_ELECTRICO, backgroundColor: `${COLOR_AZUL_ELECTRICO}10` },
+                                        // BOTÓN DE LOGIN EN AZUL CIELO (Outlined)
+                                        color: COLOR_AZUL_CIELO, 
+                                        borderColor: COLOR_AZUL_CIELO,
+                                        '&:hover': { borderColor: COLOR_AZUL_CIELO, backgroundColor: `${COLOR_AZUL_CIELO}10` },
                                         fontFamily: 'Montserrat, sans-serif',
                                         fontWeight: 'bold'
                                     }}
@@ -297,11 +303,12 @@ export default function Dashboard() {
                         onClick={fetchStats}
                         variant="outlined"
                         sx={{ 
-                            color: COLOR_NARANJA_VIBRANTE, 
-                            borderColor: COLOR_NARANJA_VIBRANTE,
+                            // BOTÓN ACTUALIZAR EN VERDE LIMA SUAVE (Secundario)
+                            color: COLOR_VERDE_LIMA_SUAVE, 
+                            borderColor: COLOR_VERDE_LIMA_SUAVE,
                             '&:hover': { 
-                                borderColor: COLOR_NARANJA_VIBRANTE, 
-                                backgroundColor: `${COLOR_NARANJA_VIBRANTE}10` 
+                                borderColor: COLOR_VERDE_LIMA_SUAVE, 
+                                backgroundColor: `${COLOR_VERDE_LIMA_SUAVE}10` 
                             },
                             fontFamily: 'Montserrat, sans-serif',
                             fontWeight: 'bold'
@@ -312,7 +319,7 @@ export default function Dashboard() {
                 )}
             </Box>
 
-            {/* Grid de estadísticas (se mantiene igual) */}
+            {/* Grid de estadísticas (Card styles updated via getColorValue) */}
             <Grid container spacing={3}>
                 {(isGuest ? [
                     { title: 'Espacios Deportivos', value: displayStats.espacios, icon: <Stadium />, color: 'from-primary to-primary', section: 'espacios', guest: true },
@@ -336,6 +343,7 @@ export default function Dashboard() {
                                         transform: 'translateY(-4px)',
                                     },
                                     cursor: card.guest ? 'default' : 'pointer',
+                                    // El background ahora usa la nueva paleta y los colores de la card
                                     background: `linear-gradient(135deg, ${getColorValue(card.color.split(' ')[0])} 0%, ${getColorValue(card.color.split(' ')[1])} 100%)`,
                                 }}
                                 onClick={card.guest ? undefined : () => handleCardClick(card.section)}
@@ -364,7 +372,7 @@ export default function Dashboard() {
                 ))}
             </Grid>
 
-            {/* Información adicional - Solo para usuarios autenticados (se mantiene igual) */}
+            {/* Información adicional - Solo para usuarios autenticados */}
             {!isGuest && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -373,8 +381,10 @@ export default function Dashboard() {
                     style={{ marginTop: '32px' }}
                 >
                     <Card sx={{ borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                        <Box sx={{ p: 4 }}>
-                            <Typography variant="h5" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', color: COLOR_AZUL_ELECTRICO, mb: 3 }}>
+                       <Box sx={{ p: 4 }}>
+                            <Typography variant="h5" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', 
+                                // COLOR MODIFICADO
+                                color: COLOR_AZUL_CIELO, mb: 3 }}>
                                 Información del Sistema
                             </Typography>
                             <Grid container spacing={3}>
@@ -404,9 +414,11 @@ export default function Dashboard() {
                                 </Grid>
                             </Grid>
 
-                            {/* Acciones rápidas (se mantiene igual) */}
-                            <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${COLOR_GRIS_OSCURO}10` }}>
-                                <Typography variant="h6" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', color: COLOR_VERDE_LIMA, mb: 2 }}>
+                            {/* Acciones rápidas */}
+                            <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${COLOR_NEGRO_OSCURO}10` }}>
+                                <Typography variant="h6" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', 
+                                    // COLOR MODIFICADO
+                                    color: COLOR_VERDE_LIMA_SUAVE, mb: 2 }}>
                                     Acciones Rápidas
                                 </Typography>
                                 <Grid container spacing={2}>
@@ -417,10 +429,11 @@ export default function Dashboard() {
                                                     variant="contained" 
                                                     onClick={() => navigate('/espacios')}
                                                     sx={{ 
-                                                        backgroundColor: COLOR_AZUL_ELECTRICO,
+                                                        // BOTÓN EN AZUL CIELO
+                                                        backgroundColor: COLOR_AZUL_CIELO,
                                                         color: COLOR_BLANCO, 
                                                         fontFamily: 'Roboto, sans-serif',
-                                                        '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 } 
+                                                        '&:hover': { backgroundColor: COLOR_AZUL_CIELO, opacity: 0.9 } 
                                                     }}
                                                 >
                                                     Gestionar Espacios
@@ -431,11 +444,12 @@ export default function Dashboard() {
                                                     variant="contained" 
                                                     onClick={() => navigate('/usuarios')}
                                                     sx={{ 
-                                                        backgroundColor: COLOR_VERDE_LIMA,
-                                                        color: COLOR_GRIS_OSCURO, 
+                                                        // BOTÓN EN VERDE LIMA SUAVE
+                                                        backgroundColor: COLOR_VERDE_LIMA_SUAVE,
+                                                        color: COLOR_NEGRO_OSCURO, // Texto oscuro para contraste
                                                         fontFamily: 'Roboto, sans-serif',
                                                         fontWeight: 'bold',
-                                                        '&:hover': { backgroundColor: COLOR_VERDE_LIMA, opacity: 0.9 } 
+                                                        '&:hover': { backgroundColor: COLOR_VERDE_LIMA_SUAVE, opacity: 0.9 } 
                                                     }}
                                                 >
                                                     Gestionar Usuarios
@@ -449,11 +463,12 @@ export default function Dashboard() {
                                                 variant="contained" 
                                                 onClick={() => navigate('/reservar')}
                                                 sx={{ 
-                                                    backgroundColor: COLOR_NARANJA_VIBRANTE,
+                                                    // BOTÓN EN AZUL CIELO
+                                                    backgroundColor: COLOR_AZUL_CIELO,
                                                     color: COLOR_BLANCO, 
                                                     fontFamily: 'Roboto, sans-serif',
                                                     fontWeight: 'bold',
-                                                    '&:hover': { backgroundColor: COLOR_NARANJA_VIBRANTE, opacity: 0.9 } 
+                                                    '&:hover': { backgroundColor: COLOR_AZUL_CIELO, opacity: 0.9 } 
                                                 }}
                                             >
                                                 Nueva Reserva
@@ -466,10 +481,11 @@ export default function Dashboard() {
                                                 variant="contained" 
                                                 onClick={() => navigate('/control-acceso')}
                                                 sx={{ 
-                                                    backgroundColor: COLOR_AZUL_ELECTRICO,
+                                                    // BOTÓN EN AZUL OSCURO
+                                                    backgroundColor: COLOR_AZUL_OSCURO,
                                                     color: COLOR_BLANCO, 
                                                     fontFamily: 'Roboto, sans-serif',
-                                                    '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 } 
+                                                    '&:hover': { backgroundColor: COLOR_AZUL_OSCURO, opacity: 0.9 } 
                                                 }}
                                             >
                                                 Control de Acceso
