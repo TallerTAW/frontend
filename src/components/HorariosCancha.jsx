@@ -22,7 +22,11 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   ArrowBack,
@@ -32,13 +36,15 @@ import {
   Refresh,
   CheckCircle,
   Cancel,
-  Warning
+  Warning,
+  Person
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { es } from 'date-fns/locale';
 import { reservasApi } from '../api/reservas';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
 const HorariosCancha = ({ cancha, espacio, onBack }) => {
@@ -47,6 +53,9 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedHorario, setSelectedHorario] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [cantidadAsistentes, setCantidadAsistentes] = useState(1);
+  const { user, profile } = useAuth();
 
   const fetchHorariosDisponibles = async () => {
     if (!cancha) return;
@@ -55,8 +64,12 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
     try {
       const fechaFormateada = selectedDate.toISOString().split('T')[0];
       
+      console.log(`🔄 [FRONTEND] Consultando horarios para cancha ${cancha.id_cancha}, fecha ${fechaFormateada}`);
+      
       // Usar la función de BD para obtener horarios disponibles
       const horariosBD = await reservasApi.getHorariosDisponibles(cancha.id_cancha, fechaFormateada);
+      
+      console.log(`✅ [FRONTEND] Horarios recibidos:`, horariosBD);
       
       // Transformar los datos de la BD al formato que necesita el frontend
       const horariosTransformados = horariosBD.map(horario => ({
@@ -70,26 +83,36 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
       
       setHorarios(horariosTransformados);
       
-    } catch (error) {
-      console.error('Error al cargar horarios:', error);
+      // Log para debugging
+      const horariosOcupados = horariosTransformados.filter(h => !h.disponible);
+      console.log(`📊 [FRONTEND] Total horarios: ${horariosTransformados.length}, Ocupados: ${horariosOcupados.length}`);
       
-      // Si hay error con la función de BD, mostrar mensaje específico
+    } catch (error) {
+      console.error('❌ [FRONTEND] Error al cargar horarios:', error);
+      
       if (error.response?.status === 500) {
         toast.error('Error al consultar la disponibilidad. La función de BD puede no estar disponible.');
       } else {
         toast.error('Error al cargar los horarios disponibles');
       }
       
-      // En caso de error, mostrar horarios vacíos
       setHorarios([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  // Efecto para cargar horarios cuando cambia la fecha o la cancha
   useEffect(() => {
     fetchHorariosDisponibles();
   }, [selectedDate, cancha]);
+
+  // Función para forzar recarga manual
+  const handleForceRefresh = () => {
+    setRefreshing(true);
+    fetchHorariosDisponibles();
+  };
 
   const getEstadoColor = (estado, disponible) => {
     if (!disponible) return 'error';
@@ -133,20 +156,60 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
   };
 
   const handleReservar = async () => {
-    if (!selectedHorario) return;
+    if (!selectedHorario || !user || !profile) {
+      toast.error('Debes iniciar sesión para realizar una reserva');
+      return;
+    }
     
     try {
-      // Aquí puedes implementar la lógica para crear una reserva
-      toast.info('Funcionalidad de reserva en desarrollo');
+      setRefreshing(true);
+      
+      // Preparar datos para la reserva
+      const reservaData = {
+        fecha_reserva: selectedDate.toISOString().split('T')[0],
+        hora_inicio: selectedHorario.hora_inicio,
+        hora_fin: selectedHorario.hora_fin,
+        cantidad_asistentes: cantidadAsistentes,
+        id_cancha: cancha.id_cancha,
+        id_disciplina: cancha.id_disciplina || 1, // Valor por defecto si no hay disciplina
+        id_usuario: profile.id_usuario || user.id
+      };
+      
+      console.log('📤 [FRONTEND] Enviando reserva:', reservaData);
+      
+      // Crear reserva usando el endpoint completo
+      const nuevaReserva = await reservasApi.crearReservaCompleta(reservaData);
+      
+      console.log('✅ [FRONTEND] Reserva creada:', nuevaReserva);
+      
+      toast.success(`¡Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`);
+      
+      // Cerrar el diálogo y resetear
       setDialogOpen(false);
+      setSelectedHorario(null);
+      setCantidadAsistentes(1);
+      
+      // ✅ RECARGAR HORARIOS DESPUÉS DE LA RESERVA
+      setTimeout(() => {
+        console.log('🔄 [FRONTEND] Recargando horarios después de reserva...');
+        handleForceRefresh();
+      }, 1500);
+      
     } catch (error) {
-      toast.error('Error al crear la reserva');
+      console.error('❌ [FRONTEND] Error al crear reserva:', error);
+      
+      if (error.response?.data?.detail) {
+        toast.error(`Error: ${error.response.data.detail}`);
+      } else {
+        toast.error('Error al crear la reserva. Verifica la conexión.');
+      }
+    } finally {
+      setRefreshing(false);
     }
   };
 
   const formatHora = (horaString) => {
     if (!horaString) return '';
-    // Convertir "14:30:00" a "14:30"
     return horaString.slice(0, 5);
   };
 
@@ -168,7 +231,7 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
               Disponibilidad - {cancha.nombre}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              {espacio.nombre} • Horarios disponibles según configuración de BD
+              {espacio.nombre} • Los horarios se actualizan automáticamente después de cada reserva
             </Typography>
           </Box>
         </Box>
@@ -244,10 +307,10 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
                 <Button
                   variant="outlined"
                   startIcon={<Refresh />}
-                  onClick={fetchHorariosDisponibles}
-                  disabled={loading}
+                  onClick={handleForceRefresh}
+                  disabled={loading || refreshing}
                 >
-                  {loading ? 'Cargando...' : 'Actualizar'}
+                  {loading || refreshing ? 'Actualizando...' : 'Actualizar'}
                 </Button>
               </Box>
             </Box>
@@ -267,14 +330,23 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
         {/* Tabla de horarios */}
         <Card className="rounded-2xl shadow-lg">
           <CardContent>
-            <Typography variant="h6" className="font-title mb-3">
-              Disponibilidad para {selectedDate.toLocaleDateString('es-ES', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </Typography>
+            <Box className="flex justify-between items-center mb-3">
+              <Typography variant="h6" className="font-title">
+                Disponibilidad para {selectedDate.toLocaleDateString('es-ES', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </Typography>
+              
+              <Chip 
+                label={`${horarios.filter(h => !h.disponible).length} ocupados de ${horarios.length}`}
+                color="info"
+                variant="outlined"
+                size="small"
+              />
+            </Box>
 
             {loading ? (
               <Box className="text-center py-8">
@@ -304,9 +376,9 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
                       <TableRow 
                         key={index}
                         sx={{ 
-                          backgroundColor: horario.disponible ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                          backgroundColor: horario.disponible ? 'rgba(76, 175, 80, 0.08)' : 'rgba(244, 67, 54, 0.08)',
                           '&:hover': {
-                            backgroundColor: horario.disponible ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                            backgroundColor: horario.disponible ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)',
                           }
                         }}
                       >
@@ -339,8 +411,9 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
                               color="success"
                               onClick={() => handleHorarioClick(horario)}
                               startIcon={<CheckCircle />}
+                              disabled={!user}
                             >
-                              Reservar
+                              {user ? 'Reservar' : 'Inicia sesión'}
                             </Button>
                           ) : (
                             <Button 
@@ -364,8 +437,8 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
             {/* Información adicional */}
             <Box className="mt-4 p-3 bg-blue-50 rounded-lg">
               <Typography variant="body2" className="text-blue-800">
-                <strong>Información:</strong> Los horarios se calculan automáticamente usando la función de base de datos 
-                <code>listar_horarios_disponibles()</code> que considera las reservas existentes y el horario de apertura/cierre de la cancha.
+                <strong>💡 Información:</strong> Después de crear una reserva, los horarios se actualizan automáticamente. 
+                Si no ves los cambios, haz clic en &quot;Actualizar&quot; o espera unos segundos.
               </Typography>
             </Box>
           </CardContent>
@@ -374,7 +447,7 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
         {/* Dialog para reservar */}
         <Dialog
           open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          onClose={() => !refreshing && setDialogOpen(false)}
           maxWidth="sm"
           fullWidth
         >
@@ -383,27 +456,49 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
           </DialogTitle>
           <DialogContent>
             {selectedHorario && (
-              <Box className="space-y-3">
+              <Box className="space-y-4 mt-2">
                 <Typography><strong>Cancha:</strong> {cancha.nombre}</Typography>
                 <Typography><strong>Fecha:</strong> {selectedDate.toLocaleDateString('es-ES')}</Typography>
                 <Typography><strong>Horario:</strong> {formatHora(selectedHorario.hora_inicio)} - {formatHora(selectedHorario.hora_fin)}</Typography>
-                <Typography><strong>Precio:</strong> ${selectedHorario.precio_hora || cancha.precio_por_hora || cancha.precio_hora || '0'}</Typography>
+                <Typography><strong>Precio estimado:</strong> ${selectedHorario.precio_hora || cancha.precio_por_hora || cancha.precio_hora || '0'}</Typography>
+                
+                <FormControl fullWidth size="small">
+                  <InputLabel>Asistentes</InputLabel>
+                  <Select
+                    value={cantidadAsistentes}
+                    label="Asistentes"
+                    onChange={(e) => setCantidadAsistentes(e.target.value)}
+                    startAdornment={<Person sx={{ mr: 1, color: 'text.secondary' }} />}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <MenuItem key={num} value={num}>
+                        {num} {num === 1 ? 'persona' : 'personas'}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
                 <Alert severity="info">
-                  Esta acción creará una nueva reserva para el horario seleccionado.
+                  Al confirmar, se creará la reserva y los horarios se actualizarán automáticamente.
                 </Alert>
               </Box>
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>
+            <Button 
+              onClick={() => setDialogOpen(false)} 
+              disabled={refreshing}
+            >
               Cancelar
             </Button>
             <Button 
               variant="contained" 
               color="primary"
               onClick={handleReservar}
+              disabled={refreshing}
+              startIcon={refreshing ? <CircularProgress size={20} /> : <CheckCircle />}
             >
-              Confirmar Reserva
+              {refreshing ? 'Creando reserva...' : 'Confirmar Reserva'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -411,6 +506,7 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
     </LocalizationProvider>
   );
 };
+
 HorariosCancha.propTypes = {
   cancha: PropTypes.shape({
     id_cancha: PropTypes.number,
@@ -418,7 +514,8 @@ HorariosCancha.propTypes = {
     disciplina: PropTypes.string,
     precio_por_hora: PropTypes.number,
     precio_hora: PropTypes.number,
-    estado: PropTypes.string
+    estado: PropTypes.string,
+    id_disciplina: PropTypes.number
   }).isRequired,
   espacio: PropTypes.shape({
     nombre: PropTypes.string,
