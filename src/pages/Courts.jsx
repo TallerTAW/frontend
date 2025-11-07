@@ -23,6 +23,7 @@ import {
   InputLabel,
   Chip,
   Avatar,
+  OutlinedInput,
 } from '@mui/material';
 import { 
   Add, 
@@ -33,15 +34,35 @@ import {
   CheckCircle,
   CloudUpload,
   Delete as DeleteIcon,
-  ZoomIn
+  ZoomIn,
+  Close,
+  LocationOn,
+  Schedule,
+  AttachMoney
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
-// Componente para subir imágenes con drag & drop (similar al de espacios)
+
+// === PALETA DE COLORES (Tomada de Facilities.jsx para consistencia) ===
+const COLOR_AZUL_ELECTRICO = '#00BFFF'; // Primario: Títulos, iconos
+const COLOR_VERDE_LIMA = '#A2E831';     // Acento: Botones, estado ACTIVO
+const COLOR_NARANJA_VIBRANTE = '#FD7E14'; // Acento: Estado INACTIVO/MANTENIMIENTO
+const COLOR_GRIS_OSCURO = '#333333';
+const COLOR_BLANCO = '#FFFFFF';
+const COLOR_NEGRO_SUAVE = '#212121';
+
+
+// Componente para subir imágenes con drag & drop (Estilo moderno)
 const ImageUploader = ({ onImageChange, currentImage }) => {
   const [preview, setPreview] = useState(currentImage);
   const [dragOver, setDragOver] = useState(false);
   const api_url = import.meta.env.VITE_API_URL;
+
+  // Actualizar la vista previa si cambia la imagen inicial (al abrir la edición)
+  useEffect(() => {
+    setPreview(currentImage);
+  }, [currentImage]);
+
 
   const handleFileChange = (file) => {
     if (file) {
@@ -62,7 +83,7 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreview(e.target.result);
-        onImageChange(file);
+        onImageChange(file); // Pasar el archivo al componente padre
       };
       reader.readAsDataURL(file);
     }
@@ -91,7 +112,7 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
 
   const removeImage = () => {
     setPreview(null);
-    onImageChange(null);
+    onImageChange(null); // Notificar al padre que la imagen ha sido removida
   };
 
   return (
@@ -100,14 +121,15 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       sx={{
-        border: dragOver ? '2px dashed #fbab22' : '2px dashed #ccc',
-        borderRadius: 2,
+        // Estilo moderno: bordes suaves, colores de acento
+        border: dragOver ? `2px dashed ${COLOR_NARANJA_VIBRANTE}` : '2px dashed #D3D3D3',
+        borderRadius: 3, // Bordes más redondeados
         padding: 3,
         textAlign: 'center',
-        backgroundColor: dragOver ? 'rgba(251, 171, 34, 0.1)' : 'transparent',
+        backgroundColor: dragOver ? 'rgba(253, 126, 20, 0.1)' : '#f9f9f9', // Fondo gris claro
         transition: 'all 0.3s ease',
         cursor: 'pointer',
-        minHeight: 200,
+        minHeight: 180,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -117,7 +139,7 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
     >
       <input
         type="file"
-        accept="image/*"
+        accept="image/jpeg, image/jpg, image/png, image/gif"
         onChange={handleInputChange}
         style={{ display: 'none' }}
         id="image-upload-cancha"
@@ -126,11 +148,12 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
       {preview ? (
         <Box sx={{ position: 'relative', width: '100%' }}>
           <img 
-            src={preview.startsWith('data:') ? preview : `${api_url}${preview}`}
+            // Manejo de URL: si es blob/base64, usarlo; si no, concatenar API_URL
+            src={preview.startsWith('data:') || preview.startsWith('blob:') ? preview : `${api_url}${preview}`}
             alt="Preview" 
             style={{ 
               maxWidth: '100%', 
-              maxHeight: 200, 
+              maxHeight: 250, 
               borderRadius: 8,
               objectFit: 'cover'
             }}
@@ -141,8 +164,9 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
               position: 'absolute',
               top: 8,
               right: 8,
-              backgroundColor: 'rgba(255,255,255,0.8)',
-              '&:hover': { backgroundColor: 'white' }
+              backgroundColor: COLOR_NARANJA_VIBRANTE, // Botón de eliminar en color de acento
+              color: 'white',
+              '&:hover': { backgroundColor: '#CC6A11' }
             }}
           >
             <DeleteIcon />
@@ -150,11 +174,11 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
         </Box>
       ) : (
         <label htmlFor="image-upload-cancha" style={{ cursor: 'pointer' }}>
-          <CloudUpload sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
-          <Typography variant="body1" color="textSecondary">
+          <CloudUpload sx={{ fontSize: 50, color: COLOR_AZUL_ELECTRICO, mb: 1 }} />
+          <Typography variant="body1" color="textSecondary" sx={{ fontWeight: 'bold' }}>
             Arrastra una imagen aquí o haz click para seleccionar
           </Typography>
-          <Typography variant="caption" color="textSecondary">
+          <Typography variant="caption" color="textSecondary" sx={{ color: '#888' }}>
             PNG, JPG, GIF hasta 5MB
           </Typography>
         </label>
@@ -163,8 +187,10 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
   );
 };
 
-// Modal para ver imagen en zoom
+// Modal para ver imagen en zoom (Estilo moderno)
 const ImageZoomModal = ({ image, open, onClose }) => {
+  const api_url = import.meta.env.VITE_API_URL;
+
   if (!open) return null;
 
   return (
@@ -187,15 +213,16 @@ const ImageZoomModal = ({ image, open, onClose }) => {
             position: 'absolute',
             top: 16,
             right: 16,
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 10,
+            backgroundColor: COLOR_NARANJA_VIBRANTE,
             color: 'white',
-            '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+            '&:hover': { backgroundColor: '#CC6A11' }
           }}
         >
-          <DeleteIcon />
+          <Close /> 
         </IconButton>
         <img 
-          src={image} 
+          src={image.startsWith('data:') ? image : `${api_url}${image}`} 
           alt="Zoom" 
           style={{ 
             maxWidth: '90vw', 
@@ -258,9 +285,11 @@ export default function Courts() {
       submitData.append('id_espacio_deportivo', formData.id_espacio_deportivo);
       submitData.append('estado', formData.estado);
       
+      // Solo agregar la imagen si hay un nuevo archivo seleccionado
       if (imageFile) {
         submitData.append('imagen', imageFile);
-      }
+      } 
+
 
       if (editing) {
         await canchasApi.update(editing.id_cancha, submitData);
@@ -288,12 +317,13 @@ export default function Courts() {
       id_espacio_deportivo: cancha.id_espacio_deportivo.toString(),
       estado: cancha.estado,
     });
-    setImageFile(null);
+    // Si hay una imagen existente, la pasamos al ImageUploader
+    setImageFile(cancha.imagen || null);
     setOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar esta cancha?')) {
+    if (window.confirm('¿Estás seguro de eliminar esta cancha? Esta acción es permanente.')) {
       try {
         await canchasApi.delete(id);
         toast.success('Cancha eliminada correctamente');
@@ -305,12 +335,14 @@ export default function Courts() {
   };
 
   const handleDesactivar = async (id) => {
-    try {
-      await canchasApi.desactivar(id);
-      toast.success('Cancha desactivada correctamente');
-      fetchData();
-    } catch (error) {
-      toast.error('Error al desactivar la cancha');
+    if (window.confirm('¿Estás seguro de desactivar esta cancha y marcarla como inactiva?')) {
+        try {
+            await canchasApi.desactivar(id);
+            toast.success('Cancha desactivada/marcada como inactiva');
+            fetchData();
+        } catch (error) {
+            toast.error('Error al desactivar la cancha');
+        }
     }
   };
 
@@ -340,7 +372,7 @@ export default function Courts() {
   };
 
   const handleImageZoom = (imageUrl) => {
-    setSelectedImage(`${api_url}${imageUrl}`);
+    setSelectedImage(imageUrl); 
     setZoomOpen(true);
   };
 
@@ -363,40 +395,55 @@ export default function Courts() {
   };
 
   const getEstadoColor = (estado) => {
-    const colors = {
-      'disponible': 'success',
-      'mantenimiento': 'warning',
-      'inactiva': 'default'
-    };
-    return colors[estado] || 'default';
+    switch(estado) {
+      case 'disponible':
+        return COLOR_VERDE_LIMA;
+      case 'mantenimiento':
+        return COLOR_NARANJA_VIBRANTE;
+      case 'inactiva':
+        return COLOR_GRIS_OSCURO;
+      default:
+        return COLOR_GRIS_OSCURO;
+    }
   };
 
   const getEstadoText = (estado) => {
     const texts = {
-      'disponible': 'Disponible',
-      'mantenimiento': 'Mantenimiento',
-      'inactiva': 'Inactiva'
+      'disponible': 'DISPONIBLE',
+      'mantenimiento': 'MANTENIMIENTO',
+      'inactiva': 'INACTIVA'
     };
-    return texts[estado] || estado;
+    return texts[estado] || estado.toUpperCase();
   };
 
   const getEspacioNombre = (idEspacio) => {
-    const espacio = espacios.find(e => e.id_espacio_deportivo === idEspacio);
-    return espacio ? espacio.nombre : 'N/A';
+    const espacio = espacios.find(e => e.id_espacio_deportivo === parseInt(idEspacio));
+    return espacio ? espacio.nombre : 'Espacio no asignado';
   };
 
   return (
-    <Box sx={{ mt: 12, pr: 2}}>
-      <Box className="flex justify-between items-center mb-6">
+    <Box sx={{ mt: 0, p: 0 }}>
+      {/* --- Encabezado de la página (Gestión de Canchas) --- */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, px: 4, pt: 4 }}>
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Typography variant="h4" className="font-title text-primary">
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 'bold', 
+              color: COLOR_AZUL_ELECTRICO 
+            }}
+          >
             Gestión de Canchas
           </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Administra los campos de juego dentro de tus espacios.
+          </Typography>
         </motion.div>
+
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -408,9 +455,13 @@ export default function Courts() {
             onClick={() => setOpen(true)}
             sx={{
               textTransform: 'none',
-              background: 'linear-gradient(to right, #fbab22, #f87326)',
+              backgroundColor: COLOR_NARANJA_VIBRANTE,
+              color: COLOR_BLANCO,
+              fontWeight: 'bold',
               '&:hover': {
-                background: 'linear-gradient(to right, #e09a1e, #e06320)',
+                backgroundColor: COLOR_NARANJA_VIBRANTE,
+                opacity: 0.9,
+                boxShadow: '0 4px 8px rgba(253, 126, 20, 0.4)',
               },
             }}
           >
@@ -419,7 +470,8 @@ export default function Courts() {
         </motion.div>
       </Box>
 
-      <Grid container spacing={3}>
+      {/* --- Grilla de Canchas --- */}
+      <Grid container spacing={4} sx={{ p: 4 }}>
         {canchas.map((cancha, index) => (
           <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
             <motion.div
@@ -427,13 +479,22 @@ export default function Courts() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card sx={{ mt: 2 }} className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
-                cancha.estado !== 'disponible' ? 'opacity-70' : ''
-              }`}>
-                {/* Contenedor de imagen con zoom */}
+              <Card 
+                sx={{
+                  borderRadius: 3, 
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 24px rgba(0, 0, 0, 0.2)',
+                    transform: 'translateY(-4px)',
+                  },
+                  opacity: cancha.estado === 'inactiva' ? 0.6 : 1,
+                }}
+              >
+                {/* SECCIÓN DE IMAGEN Y CHIP DE ESTADO */}
                 <Box 
-                  sx={{ height: 200 }} 
-                  className="relative rounded-t-2xl overflow-hidden cursor-pointer"
+                  className="h-48 relative rounded-t-2xl overflow-hidden cursor-pointer" 
+                  sx={{ height: 200 }}
                   onClick={() => cancha.imagen && handleImageZoom(cancha.imagen)}
                 >
                   {cancha.imagen ? (
@@ -441,79 +502,122 @@ export default function Courts() {
                       <img 
                         src={`${api_url}${cancha.imagen}`} 
                         alt={cancha.nombre} 
-                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       />
                       <Box className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                         <ZoomIn sx={{ color: 'white', opacity: 0, transition: 'opacity 0.3s' }} className="hover:opacity-100" />
                       </Box>
                     </>
                   ) : (
-                    <Box className="w-full h-full bg-gradient-to-br from-accent to-highlight flex items-center justify-center">
-                      <Box className="text-8xl opacity-50">
+                    <Box 
+                      className="absolute inset-0 flex items-center justify-center"
+                      sx={{ backgroundColor: `${COLOR_AZUL_ELECTRICO}30` }} 
+                    >
+                      <Typography className="text-8xl text-white opacity-60">
                         {getSportIcon(cancha.tipo)}
-                      </Box>
+                      </Typography>
                     </Box>
                   )}
+                  
+                  <Box className="absolute top-3 right-3">
+                    <Chip
+                      label={getEstadoText(cancha.estado)}
+                      size="small"
+                      sx={{
+                        backgroundColor: getEstadoColor(cancha.estado),
+                        fontWeight: 'bold',
+                        color: cancha.estado === 'inactiva' ? COLOR_BLANCO : COLOR_NEGRO_SUAVE
+                      }}
+                    />
+                  </Box>
                 </Box>
 
-                {/* Estado centrado debajo de la imagen */}
-                <Box className="flex justify-center" sx={{ mt: 2 }}>
-                  <Chip
-                    label={getEstadoText(cancha.estado)}
-                    color={getEstadoColor(cancha.estado)}
-                    className="text-white font-bold"
-                    size="small"
-                  />
-                </Box>
-
-                <CardContent>
-                  <Box className="flex items-center gap-2 mb-2">
-                    <Typography className="text-3xl">{getSportIcon(cancha.tipo)}</Typography>
-                    <Box>
-                      <Typography variant="h6" className="font-title">
-                        {cancha.nombre}
+                <CardContent sx={{ pb: 1 }}>
+                  {/* TÍTULO Y PRECIO RE-ESTRUCTURADOS */}
+                  <Box className="flex flex-col mb-3">
+                    <Typography 
+                      variant="h6" 
+                      sx={{ fontWeight: 'bold', color: COLOR_NEGRO_SUAVE, lineHeight: 1.2 }}
+                    >
+                      {cancha.nombre}
+                    </Typography>
+                    
+                    {/* PRECIO AHORA DEBAJO DEL NOMBRE */}
+                    <Box className="flex items-baseline mt-0.5">
+                      <Typography 
+                        variant="h5" 
+                        sx={{ fontWeight: 'extrabold', color: COLOR_AZUL_ELECTRICO, lineHeight: 1 }}
+                      >
+                        ${parseFloat(cancha.precio_por_hora).toFixed(2)}
                       </Typography>
-                      <Typography variant="caption" className="text-gray-500">
-                        {getEspacioNombre(cancha.id_espacio_deportivo)}
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 'medium' }}>
+                        /hora
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="body2" className="text-gray-600 font-body mb-2">
-                    Tipo: {cancha.tipo || 'No especificado'}
-                  </Typography>
-                  <Typography variant="body2" className="text-gray-600 font-body mb-2">
-                    Horario: {cancha.hora_apertura.slice(0,5)} - {cancha.hora_cierre.slice(0,5)}
-                  </Typography>
-                  <Typography variant="h6" className="font-title text-accent">
-                    ${cancha.precio_por_hora}/hora
-                  </Typography>
+                  
+                  {/* DETALLES EN LISTA */}
+                  <Box sx={{ borderTop: '1px solid #eee', pt: 2, mt: 1 }}>
+                    {/* Espacio Deportivo */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                      <LocationOn sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
+                      <Typography 
+                        variant="body2" 
+                        color="text.primary"
+                        sx={{ fontWeight: 'bold' }}
+                      >
+                        {getEspacioNombre(cancha.id_espacio_deportivo)}
+                      </Typography>
+                    </Box>
+
+                    {/* Tipo y Horario */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                      <Avatar sx={{ width: 20, height: 20, bgcolor: COLOR_AZUL_ELECTRICO, color: COLOR_BLANCO, fontSize: 14, mr: 1 }}>
+                        {getSportIcon(cancha.tipo)}
+                      </Avatar>
+                      <Typography variant="body2" color="text.secondary">
+                        {cancha.tipo || 'Sin Tipo'}
+                      </Typography>
+                      <Schedule sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, ml: 2, mr: 1 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {cancha.hora_apertura.slice(0, 5)} - {cancha.hora_cierre.slice(0, 5)}
+                      </Typography>
+                    </Box>
+                  </Box>
                 </CardContent>
 
-                <CardActions className="justify-end p-4">
+                {/* ACCIONES */}
+                <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
                   <IconButton
                     onClick={() => handleEdit(cancha)}
-                    className="text-primary hover:bg-primary/10"
+                    sx={{ color: COLOR_AZUL_ELECTRICO, '&:hover': { backgroundColor: `${COLOR_AZUL_ELECTRICO}10` } }}
+                    title="Editar Cancha"
                   >
                     <Edit />
                   </IconButton>
-                  {cancha.estado === 'disponible' ? (
+                  
+                  {cancha.estado === 'disponible' || cancha.estado === 'mantenimiento' ? (
                     <IconButton
                       onClick={() => handleDesactivar(cancha.id_cancha)}
-                      className="text-warning hover:bg-warning/10"
+                      sx={{ color: COLOR_NARANJA_VIBRANTE, '&:hover': { backgroundColor: `${COLOR_NARANJA_VIBRANTE}10` } }}
+                      title="Desactivar / Poner en Mantenimiento"
                     >
                       <Block />
                     </IconButton>
                   ) : (
                     <IconButton
                       onClick={() => handleActivar(cancha.id_cancha)}
-                      className="text-success hover:bg-success/10"
+                      sx={{ color: COLOR_VERDE_LIMA, '&:hover': { backgroundColor: `${COLOR_VERDE_LIMA}10` } }}
+                      title="Activar Cancha"
                     >
                       <CheckCircle />
                     </IconButton>
                   )}
+                  
                   <IconButton
                     onClick={() => handleDelete(cancha.id_cancha)}
-                    className="text-error hover:bg-error/10"
+                    sx={{ color: '#E53935', '&:hover': { backgroundColor: `#E5393510` } }}
+                    title="Eliminar (Permanente)"
                   >
                     <Delete />
                   </IconButton>
@@ -526,47 +630,66 @@ export default function Courts() {
 
       {canchas.length === 0 && (
         <Box className="text-center py-12">
-          <SportsSoccer sx={{ fontSize: 100, color: '#fbab22', opacity: 0.3 }} />
-          <Typography variant="h6" className="text-gray-500 mt-4 font-body">
+          <SportsSoccer sx={{ fontSize: 80, color: COLOR_AZUL_ELECTRICO, opacity: 0.3, mb: 2 }} />
+          <Typography variant="h6" className="text-gray-500">
             No hay canchas registradas
+          </Typography>
+          <Typography variant="body2" className="text-gray-400 mt-2">
+            Crea tu primera cancha para comenzar a recibir reservas
           </Typography>
         </Box>
       )}
 
+      {/* --- DIALOG DE CREACIÓN/EDICIÓN (Formulario con colores planos) --- */}
       <Dialog
         open={open}
         onClose={handleClose}
         maxWidth="md"
         fullWidth
         PaperProps={{
-          className: 'rounded-2xl',
+          className: 'rounded-2xl shadow-2xl',
         }}
       >
-        <DialogTitle className="bg-gradient-to-r from-accent to-highlight text-white font-title">
+        <DialogTitle 
+          sx={{ 
+            // Color plano de Azul Eléctrico
+            backgroundColor: COLOR_AZUL_ELECTRICO, 
+            color: COLOR_BLANCO, 
+            fontWeight: 'bold',
+            fontSize: '1.5rem'
+          }}
+        >
           {editing ? 'Editar Cancha' : 'Nueva Cancha'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent className="mt-4 space-y-4">
-            {/* Uploader de imagen */}
+          <DialogContent className="mt-4 space-y-6">
+            
+            {/* 1. Uploader de imagen */}
             <ImageUploader 
               onImageChange={setImageFile}
               currentImage={editing?.imagen}
             />
 
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Espacio Deportivo *</InputLabel>
+            {/* 2. Espacio Deportivo */}
+            <FormControl fullWidth margin="normal" required variant="outlined">
+              <InputLabel sx={{ color: COLOR_GRIS_OSCURO }}>Espacio Deportivo *</InputLabel>
               <Select
                 value={formData.id_espacio_deportivo}
                 onChange={(e) => setFormData({ ...formData, id_espacio_deportivo: e.target.value })}
-                required
+                label="Espacio Deportivo *"
+                input={<OutlinedInput label="Espacio Deportivo *" />}
+                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ddd' } }}
               >
                 {espacios.map((espacio) => (
                   <MenuItem key={espacio.id_espacio_deportivo} value={espacio.id_espacio_deportivo}>
+                    <LocationOn sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
                     {espacio.nombre}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+
+            {/* 3. Nombre de la Cancha */}
             <TextField
               fullWidth
               label="Nombre *"
@@ -574,16 +697,24 @@ export default function Courts() {
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
               margin="normal"
+              variant="outlined"
+              sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
             />
+
+            {/* 4. Tipo de Deporte */}
             <TextField
               fullWidth
-              label="Tipo"
+              label="Tipo de Deporte"
               value={formData.tipo}
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
               margin="normal"
-              helperText="Ej: Fútbol, Básquetbol, Tenis, etc."
+              variant="outlined"
+              helperText="Ej: Fútbol 5, Básquetbol, Tenis, etc. (Usado para el ícono)"
+              sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
             />
-            <Box className="flex gap-2">
+            
+            {/* 5. Horario (en una fila) */}
+            <Box className="flex gap-4">
               <TextField
                 fullWidth
                 label="Hora Apertura *"
@@ -592,6 +723,10 @@ export default function Courts() {
                 onChange={(e) => setFormData({ ...formData, hora_apertura: e.target.value })}
                 required
                 margin="normal"
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <Schedule sx={{ color: COLOR_AZUL_ELECTRICO, mr: 1 }} /> }}
+                variant="outlined"
+                sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
               />
               <TextField
                 fullWidth
@@ -601,8 +736,14 @@ export default function Courts() {
                 onChange={(e) => setFormData({ ...formData, hora_cierre: e.target.value })}
                 required
                 margin="normal"
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <Schedule sx={{ color: COLOR_AZUL_ELECTRICO, mr: 1 }} /> }}
+                variant="outlined"
+                sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
               />
             </Box>
+
+            {/* 6. Precio por hora */}
             <TextField
               fullWidth
               label="Precio por hora *"
@@ -611,22 +752,41 @@ export default function Courts() {
               onChange={(e) => setFormData({ ...formData, precio_por_hora: e.target.value })}
               required
               margin="normal"
+              variant="outlined"
               inputProps={{ step: '0.01', min: '0' }}
+              InputProps={{ startAdornment: <AttachMoney sx={{ color: COLOR_NARANJA_VIBRANTE, mr: 0.5 }} /> }}
+              sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
             />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Estado</InputLabel>
-              <Select
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-              >
-                <MenuItem value="disponible">Disponible</MenuItem>
-                <MenuItem value="mantenimiento">En Mantenimiento</MenuItem>
-                <MenuItem value="inactiva">Inactiva</MenuItem>
-              </Select>
-            </FormControl>
+
+            {/* 7. Estado (Visible solo al editar) */}
+            {editing && (
+              <FormControl fullWidth margin="normal" variant="outlined">
+                <InputLabel sx={{ color: COLOR_GRIS_OSCURO }}>Estado</InputLabel>
+                <Select
+                  value={formData.estado}
+                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                  label="Estado"
+                  input={<OutlinedInput label="Estado" />}
+                  sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2, borderColor: '#ddd' } }}
+                >
+                  <MenuItem value="disponible">
+                    <CheckCircle sx={{ color: COLOR_VERDE_LIMA, mr: 1 }} /> Disponible
+                  </MenuItem>
+                  <MenuItem value="mantenimiento">
+                    <Block sx={{ color: COLOR_NARANJA_VIBRANTE, mr: 1 }} /> En Mantenimiento
+                  </MenuItem>
+                  <MenuItem value="inactiva">
+                    <Block sx={{ color: COLOR_GRIS_OSCURO, mr: 1 }} /> Inactiva
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            )}
+            
           </DialogContent>
-          <DialogActions className="p-4">
-            <Button onClick={handleClose} className="text-gray-600">
+
+          {/* Acciones del Modal */}
+          <DialogActions className="p-4 border-t border-gray-100">
+            <Button onClick={handleClose} className="text-gray-600 hover:bg-gray-100">
               Cancelar
             </Button>
             <Button
@@ -634,13 +794,17 @@ export default function Courts() {
               variant="contained"
               sx={{
                 textTransform: 'none',
-                background: 'linear-gradient(to right, #fbab22, #f87326)',
+                // Color plano de Naranja Vibrante
+                backgroundColor: COLOR_NARANJA_VIBRANTE,
+                color: COLOR_BLANCO,
+                fontWeight: 'bold',
                 '&:hover': {
-                  background: 'linear-gradient(to right, #e09a1e, #e06320)',
+                  backgroundColor: '#CC6A11',
+                  boxShadow: '0 4px 10px rgba(253, 126, 20, 0.5)',
                 },
               }}
             >
-              {editing ? 'Actualizar' : 'Crear'}
+              {editing ? 'Actualizar Cancha' : 'Crear Cancha'}
             </Button>
           </DialogActions>
         </form>
