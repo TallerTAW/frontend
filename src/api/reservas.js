@@ -44,5 +44,25 @@ export const reservasApi = {
   getProximas: async (dias = 7) => {
     const response = await api.get(`/reservas/proximas/${dias}`);
     return response.data;
+  },
+
+  // NUEVAS FUNCIONES PARA HORARIOS DISPONIBLES
+  getHorariosDisponibles: async (canchaId, fecha) => {
+    const response = await api.get(`/reservas/cancha/${canchaId}/horarios-disponibles`, {
+      params: { fecha }
+    });
+    return response.data;
+  },
+
+  verificarDisponibilidad: async (canchaId, fecha, horaInicio, horaFin) => {
+    const response = await api.get(`/reservas/verificar-disponibilidad`, {
+      params: { 
+        cancha_id: canchaId, 
+        fecha, 
+        hora_inicio: horaInicio, 
+        hora_fin: horaFin 
+      }
+    });
+    return response.data;
   }
 };
