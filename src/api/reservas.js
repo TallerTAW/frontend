@@ -1,6 +1,8 @@
+// 📍 ARCHIVO: src/api/reservas.js
 import api from './index';
 
 export const reservasApi = {
+  // RESERVAS BÁSICAS - usar /reservas/
   getAll: async (filters = {}) => {
     const params = new URLSearchParams();
     Object.keys(filters).forEach(key => {
@@ -46,7 +48,7 @@ export const reservasApi = {
     return response.data;
   },
 
-  // NUEVAS FUNCIONES PARA HORARIOS DISPONIBLES
+  // HORARIOS DISPONIBLES - usar /reservas/ en lugar de /reservas_opcion/
   getHorariosDisponibles: async (canchaId, fecha) => {
     const response = await api.get(`/reservas/cancha/${canchaId}/horarios-disponibles`, {
       params: { fecha }
@@ -61,8 +63,14 @@ export const reservasApi = {
         fecha, 
         hora_inicio: horaInicio, 
         hora_fin: horaFin 
-      }
+      } 
     });
+    return response.data;
+  },
+
+  // NUEVO: Crear reserva desde frontend
+  crearReservaCompleta: async (reservaData) => {
+    const response = await api.post('/reservas/', reservaData);
     return response.data;
   }
 };
