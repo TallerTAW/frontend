@@ -1,5 +1,15 @@
 import api from './index';
 
+
+// ejemplo usando axios
+export async function getNearbyEspacios(lat, lon, radius_km = 5) {
+  const res = await axios.get(`${API_URL}/espacios/nearby`, {
+    params: { lat, lon, radius_km }
+  });
+  return res.data;
+}
+
+
 export const espaciosApi = {
   getAll: async (includeInactive = false) => {
     const response = await api.get(`/espacios/?include_inactive=${includeInactive}`);

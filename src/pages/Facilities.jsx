@@ -218,6 +218,8 @@ export default function Facilities() {
     ubicacion: '',
     capacidad: '',
     descripcion: '',
+    latitud: '',    // NUEVO
+    longitud: '',   // NUEVO
     gestor_id: '',
   });
   const [imageFile, setImageFile] = useState(null);
@@ -271,6 +273,8 @@ export default function Facilities() {
       if (formData.descripcion) {
         submitData.append('descripcion', formData.descripcion);
       }
+      if (formData.latitud) submitData.append('latitud', formData.latitud);
+      if (formData.longitud) submitData.append('longitud', formData.longitud);
       if (formData.gestor_id && isAdmin) { // Solo incluir gestor_id si es admin
         submitData.append('gestor_id', formData.gestor_id);
       }
@@ -395,6 +399,25 @@ export default function Facilities() {
               }}
             >
               Nuevo Espacio
+            </Button>
+
+            <Button variant="contained"
+            onClick={async () => {
+              navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const nearby = await espaciosApi.getNearbyEspacios(lat, lon, 5);
+                setEspacios(nearby); // mostrar solo cercanos o abrir modal/mapa
+              }, (err) => toast.error('No se obtuvo ubicación'));
+            }}
+            sx={{
+                textTransform: 'none',
+                background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                '&:hover': {
+                  background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                },
+              }}>
+              Buscar canchas cerca de mí
             </Button>
           </motion.div>
         )}
@@ -540,6 +563,47 @@ export default function Facilities() {
               margin="normal"
               inputProps={{ min: '1' }}
             />
+
+
+            <TextField
+              label="Latitud"
+              value={formData.latitud}
+              onChange={(e) => setFormData({...formData, latitud: e.target.value})}
+              placeholder="-16.5000"
+              margin="normal"
+            />
+            <TextField
+              label="Longitud"
+              value={formData.longitud}
+              onChange={(e) => setFormData({...formData, longitud: e.target.value})}
+              placeholder="-68.1500"
+              margin="normal"
+            />
+
+            <Button
+              variant="outlined"
+              onClick={() => {
+                if (!navigator.geolocation) {
+                  alert('Geolocalización no soportada por este navegador');
+                  return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
+                    toast.success('Ubicación capturada');
+                  },
+                  (err) => {
+                    console.error(err);
+                    toast.error('No se pudo obtener la ubicación. Revisa permisos.');
+                  },
+                  { enableHighAccuracy: true, timeout: 10000 }
+                );
+              }}
+            >
+              Usar mi ubicación
+            </Button>
             
             {/* NUEVO: Selector de gestor */}
             { isAdmin && (
