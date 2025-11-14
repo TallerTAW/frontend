@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { espaciosApi } from '../api/espacios';
-import { usuariosApi } from '../api/usuarios';
+import { canchasApi } from '../api/canchas';
+import { reservasApi } from '../api/reservas';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import {
@@ -10,19 +11,11 @@ import {
   Grid,
   Card,
   CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   IconButton,
   CardActions,
   Chip,
-  Avatar,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Breadcrumbs,
+  Link
 } from '@mui/material';
 import { 
   Add, 
@@ -31,9 +24,24 @@ import {
   Stadium,
   CloudUpload,
   Delete as DeleteIcon,
-  ZoomIn
+  ZoomIn,
+  LocationOn, // 📍 NUEVO ÍCONO
+  People // 👥 NUEVO ÍCONO
+  SportsSoccer,
+  Schedule,
+  Home
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+
+
+// === PALETA DE COLORES (Definida para consistencia con Layout/Dashboard) ===
+const COLOR_AZUL_ELECTRICO = '#00BFFF'; // Primario: Títulos, iconos
+const COLOR_VERDE_LIMA = '#A2E831';     // Acento: Botones, estado ACTIVO
+const COLOR_NARANJA_VIBRANTE = '#FD7E14'; // Acento: Estado INACTIVO
+const COLOR_GRIS_OSCURO = '#333333';
+const COLOR_BLANCO = '#FFFFFF';
+const COLOR_NEGRO_SUAVE = '#212121';
+
 
 // Componente para subir imágenes con drag & drop
 const ImageUploader = ({ onImageChange, currentImage }) => {
@@ -98,7 +106,7 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       sx={{
-        border: dragOver ? '2px dashed #00BFFF' : '2px dashed #ccc',
+        border: dragOver ? `2px dashed ${COLOR_AZUL_ELECTRICO}` : '2px dashed #ccc',
         borderRadius: 2,
         padding: 3,
         textAlign: 'center',
@@ -139,8 +147,9 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
               position: 'absolute',
               top: 8,
               right: 8,
-              backgroundColor: 'rgba(255,255,255,0.8)',
-              '&:hover': { backgroundColor: 'white' }
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
             }}
           >
             <DeleteIcon />
@@ -163,6 +172,8 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
 
 // Modal para ver imagen en zoom
 const ImageZoomModal = ({ image, open, onClose }) => {
+  const api_url = import.meta.env.VITE_API_URL;
+  
   if (!open) return null;
 
   return (
@@ -185,6 +196,7 @@ const ImageZoomModal = ({ image, open, onClose }) => {
             position: 'absolute',
             top: 16,
             right: 16,
+            zIndex: 10, // Asegurar que el botón esté encima de la imagen
             backgroundColor: 'rgba(0,0,0,0.5)',
             color: 'white',
             '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
@@ -193,7 +205,7 @@ const ImageZoomModal = ({ image, open, onClose }) => {
           <DeleteIcon />
         </IconButton>
         <img 
-          src={image} 
+          src={image.startsWith('data:') ? image : `${api_url}${image}`} 
           alt="Zoom" 
           style={{ 
             maxWidth: '90vw', 
@@ -211,7 +223,8 @@ export default function Facilities() {
   const [open, setOpen] = useState(false);
   const [gestores, setGestores] = useState([]);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState('');
+  // Se usa el path de la imagen para el zoom
+  const [selectedImage, setSelectedImage] = useState(''); 
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -226,14 +239,14 @@ export default function Facilities() {
   const api_url = import.meta.env.VITE_API_URL;
 
   const { profile } = useAuth();
-   const isAdmin = profile?.rol === 'admin';
+    const isAdmin = profile?.rol === 'admin';
 
-   useEffect(() => {
+    useEffect(() => {
     fetchEspacios();
     if (isAdmin) {
       fetchGestores(); // Solo cargar gestores si es admin
     }
-  }, [isAdmin]);
+  }, [view]);
 
   const fetchEspacios = async () => {
     try {
@@ -244,23 +257,19 @@ export default function Facilities() {
     }
   };
 
-  const fetchGestores = async () => {
+  const fetchCanchasByEspacio = async (espacioId) => {
     try {
-      const data = await espaciosApi.getGestoresDisponibles();
-      setGestores(data);
+      const data = await canchasApi.getByEspacio(espacioId);
+      setCanchas(data);
     } catch (error) {
-      console.error('Error al cargar gestores:', error);
+      toast.error('Error al cargar las canchas');
     }
   };
 
-  const fetchGestorAsignado = async (espacioId) => {
-    try {
-      const data = await espaciosApi.getGestorAsignado(espacioId);
-      return data.gestor_asignado;
-    } catch (error) {
-      console.error('Error al cargar gestor asignado:', error);
-      return null;
-    }
+  const handleEspacioClick = (espacio) => {
+    setSelectedEspacio(espacio);
+    fetchCanchasByEspacio(espacio.id_espacio_deportivo);
+    setView('canchas');
   };
 
   const handleSubmit = async (e) => {
@@ -296,41 +305,15 @@ export default function Facilities() {
     }
   };
 
-  const handleEdit = async (espacio) => {
-    setEditing(espacio);
-
-    let gestorAsignadoId = '';
-    if (isAdmin) {
-      try {
-        const gestorAsignado = await fetchGestorAsignado(espacio.id_espacio_deportivo);
-        if (gestorAsignado) {
-          gestorAsignadoId = gestorAsignado.id_usuario;
-        }
-      } catch (err) {
-        console.error('Error al obtener gestor asignado:', err);
-      }
-    }
-    setFormData({
-      nombre: espacio.nombre,
-      ubicacion: espacio.ubicacion || '',
-      capacidad: espacio.capacidad || '',
-      descripcion: espacio.descripcion || '',
-      gestor_id: gestorAsignadoId,
-    });
-    setImageFile(null);
-    setOpen(true);
+  const handleBackToEspacios = () => {
+    setSelectedEspacio(null);
+    setSelectedCancha(null);
+    setView('espacios');
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de desactivar este espacio?')) {
-      try {
-        await espaciosApi.desactivar(id);
-        toast.success('Espacio desactivado correctamente');
-        fetchEspacios();
-      } catch (error) {
-        toast.error('Error al desactivar el espacio');
-      }
-    }
+  const handleBackToCanchas = () => {
+    setSelectedCancha(null);
+    setView('canchas');
   };
 
   const handleActivar = async (id) => {
@@ -356,28 +339,32 @@ export default function Facilities() {
     setImageFile(null);
   };
 
+  // Ahora pasamos solo el path al zoom
   const handleImageZoom = (imageUrl) => {
-    setSelectedImage(`${api_url}${imageUrl}`);
+    setSelectedImage(imageUrl);
     setZoomOpen(true);
   };
-
-  const getStatusColor = (estado) => {
-    return estado === 'activo' ? 'success' : 'default';
-  };
-
+  
   return (
-    <Box sx={{ mt: 12 }}>
-      <Box className="flex justify-between items-center mb-6">
+    <Box sx={{ mt: 0, p: 0 }}> 
+      {/* Título y Botón */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Typography variant="h4" className="font-title text-primary">
-            Espacios Deportivos
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 'bold', 
+              color: COLOR_AZUL_ELECTRICO 
+            }}
+          >
+            Gestión de Espacios Deportivos
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Gestiona tus espacios deportivos e instalaciones
+            Administra tus instalaciones y asigna gestores.
           </Typography>
         </motion.div>
         {isAdmin && (
@@ -392,9 +379,13 @@ export default function Facilities() {
               onClick={() => setOpen(true)}
               sx={{
                 textTransform: 'none',
-                background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                backgroundColor: COLOR_VERDE_LIMA,
+                color: COLOR_NEGRO_SUAVE,
+                fontWeight: 'bold',
                 '&:hover': {
-                  background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                  backgroundColor: COLOR_VERDE_LIMA,
+                  opacity: 0.9,
+                  boxShadow: '0 4px 8px rgba(162, 232, 49, 0.4)',
                 },
               }}
             >
@@ -423,7 +414,7 @@ export default function Facilities() {
         )}
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={4}> {/* Aumentado el spacing para mejor separación */}
         {espacios.map((espacio, index) => (
           <Grid item xs={12} sm={6} md={4} key={espacio.id_espacio_deportivo}>
             <motion.div
@@ -431,9 +422,18 @@ export default function Facilities() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className={`rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
-                espacio.estado === 'inactivo' ? 'opacity-60' : ''
-              }`}>
+              <Card 
+                sx={{
+                  borderRadius: 3, // Mayor redondeo
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)', // Sombra sutil pero visible
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 24px rgba(0, 0, 0, 0.2)',
+                    transform: 'translateY(-4px)', // Efecto de elevación
+                  },
+                  opacity: espacio.estado === 'inactivo' ? 0.6 : 1, // Desactivado
+                }}
+              >
                 <Box 
                   className="h-48 relative rounded-t-2xl overflow-hidden cursor-pointer" 
                   sx={{ height: 200 }}
@@ -444,68 +444,96 @@ export default function Facilities() {
                       <img 
                         src={`${api_url}${espacio.imagen}`} 
                         alt={espacio.nombre} 
-                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        // 👇 CAMBIO CLAVE: Se añaden las clases para forzar el llenado total del contenedor.
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       />
                       <Box className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                         <ZoomIn sx={{ color: 'white', opacity: 0, transition: 'opacity 0.3s' }} className="hover:opacity-100" />
                       </Box>
                     </>
                   ) : (
-                    <Box className="absolute inset-0 bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                      <Stadium sx={{ fontSize: 80, color: 'white', opacity: 0.5 }} />
+                    <Box 
+                      className="absolute inset-0 flex items-center justify-center"
+                      sx={{ backgroundColor: `${COLOR_AZUL_ELECTRICO}30` }} 
+                    >
+                      <Stadium sx={{ fontSize: 80, color: COLOR_BLANCO, opacity: 0.5 }} />
                     </Box>
                   )}
                   
                   <Box className="absolute top-3 right-3">
                     <Chip 
                       label={espacio.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
-                      color={getStatusColor(espacio.estado)}
                       size="small"
+                      sx={{
+                        // Estilo del Chip con colores de marca
+                        backgroundColor: espacio.estado === 'activo' ? COLOR_VERDE_LIMA : COLOR_NARANJA_VIBRANTE,
+                        color: COLOR_NEGRO_SUAVE, // Texto negro sobre fondo de color
+                        fontWeight: 'bold'
+                      }}
                     />
                   </Box>
                 </Box>
                 
-                <CardContent>
-                  <Typography variant="h6" className="font-title mb-2">
+                <CardContent sx={{ pb: 1 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ fontWeight: 'bold', color: COLOR_NEGRO_SUAVE, mb: 1 }}
+                  >
                     {espacio.nombre}
                   </Typography>
-                  <Typography variant="body2" className="text-gray-600 font-body mb-2">
-                    📍 {espacio.ubicacion}
-                  </Typography>
-                  <Typography variant="body2" className="text-gray-500 font-body mb-2">
-                    👥 Capacidad: {espacio.capacidad} personas
-                  </Typography>
-                  <Typography variant="body2" className="text-gray-500 font-body line-clamp-2">
-                    {espacio.descripcion || 'Sin descripción'}
+                  
+                  {/* Ubicación con Ícono */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <LocationOn sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {espacio.ubicacion}
+                    </Typography>
+                  </Box>
+
+                  {/* Capacidad con Ícono */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <People sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Capacidad: {espacio.capacidad} personas
+                    </Typography>
+                  </Box>
+
+                  {/* Descripción */}
+                  <Typography 
+                    variant="caption" 
+                    color="text.disabled" 
+                    sx={{ display: '-webkit-box', overflow: 'hidden', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, height: 'auto', minHeight: 30 }}
+                  >
+                    {espacio.descripcion || 'Sin descripción detallada.'}
                   </Typography>
 
                   {isAdmin && (
                     <Box className="mt-2">
-                      <Typography variant="caption" className="text-gray-500">
+                      <Typography variant="caption" color="text.primary" sx={{ fontWeight: 'medium' }}>
                         Gestor asignado: {espacio.gestor_asignado || 'Sin asignar'}
                       </Typography>
                     </Box>
                   )}
                 </CardContent>
                 
-                <CardActions className="justify-end p-4">
+                <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
                   <IconButton
                     onClick={() => handleEdit(espacio)}
-                    className="text-primary hover:bg-primary/10"
+                    sx={{ color: COLOR_AZUL_ELECTRICO, '&:hover': { backgroundColor: `${COLOR_AZUL_ELECTRICO}10` } }}
                   >
                     <Edit />
                   </IconButton>
                   {espacio.estado === 'activo' ? (
                     <IconButton
                       onClick={() => handleDelete(espacio.id_espacio_deportivo)}
-                      className="text-highlight hover:bg-highlight/10"
+                      sx={{ color: COLOR_NARANJA_VIBRANTE, '&:hover': { backgroundColor: `${COLOR_NARANJA_VIBRANTE}10` } }}
                     >
                       <Delete />
                     </IconButton>
                   ) : (
                     <IconButton
                       onClick={() => handleActivar(espacio.id_espacio_deportivo)}
-                      className="text-green-600 hover:bg-green-600/10"
+                      sx={{ color: COLOR_VERDE_LIMA, '&:hover': { backgroundColor: `${COLOR_VERDE_LIMA}10` } }}
                     >
                       <Add />
                     </IconButton>
@@ -527,7 +555,14 @@ export default function Facilities() {
           className: 'rounded-2xl',
         }}
       >
-        <DialogTitle className="bg-gradient-to-r from-primary to-secondary text-white font-title">
+        <DialogTitle 
+          sx={{ 
+            // ✅ CORREGIDO: Usando COLOR_AZUL_ELECTRICO plano en lugar de degradado
+            backgroundColor: COLOR_AZUL_ELECTRICO, 
+            color: COLOR_BLANCO, 
+            fontWeight: 'bold' 
+          }}
+        >
           {editing ? 'Editar Espacio Deportivo' : 'Nuevo Espacio Deportivo'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
@@ -658,9 +693,13 @@ export default function Facilities() {
               variant="contained"
               sx={{
                 textTransform: 'none',
-                background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                // ✅ CORREGIDO: Usando COLOR_NARANJA_VIBRANTE plano en lugar de degradado
+                backgroundColor: COLOR_NARANJA_VIBRANTE,
+                color: COLOR_BLANCO,
+                fontWeight: 'bold',
                 '&:hover': {
-                  background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                  backgroundColor: '#CC6A11', // Tono más oscuro de naranja para hover
+                  boxShadow: '0 4px 10px rgba(253, 126, 20, 0.5)',
                 },
               }}
             >
@@ -682,12 +721,32 @@ export default function Facilities() {
         <Box className="text-center py-12">
           <Stadium sx={{ fontSize: 80, color: 'gray', mb: 2 }} />
           <Typography variant="h6" className="text-gray-500">
-            No hay espacios deportivos registrados
-          </Typography>
-          <Typography variant="body2" className="text-gray-400 mt-2">
-            Crea tu primer espacio deportivo para comenzar
+            No hay espacios deportivos asignados
           </Typography>
         </Box>
+      )}
+    </>
+  );
+
+  return (
+    <Box sx={{ mt: 12, p: 3 }}>
+      {renderBreadcrumbs()}
+      
+      {view === 'espacios' && renderEspaciosView()}
+      {view === 'canchas' && (
+        <CanchasList 
+          espacio={selectedEspacio}
+          canchas={canchas}
+          onCanchaClick={handleCanchaClick}
+          onBack={handleBackToEspacios}
+        />
+      )}
+      {view === 'horarios' && (
+        <HorariosCancha 
+          cancha={selectedCancha}
+          espacio={selectedEspacio}
+          onBack={handleBackToCanchas}
+        />
       )}
     </Box>
   );
