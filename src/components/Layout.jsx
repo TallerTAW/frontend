@@ -77,41 +77,25 @@ export default function Layout() {
 
     // Menú de navegación
     const menuItems = [
-        { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'gestor', 'control_acceso', 'cliente'], guest: true },
-        { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente', 'gestor'], guest: true },
-        { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
-        { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
-        { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },
-        { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
-        { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente'] },
-        { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
-        { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
-        { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
-        { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
-        { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
-        { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
+      { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin','gestor','control_acceso','cliente'], guest: true },
+      { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente','gestor'], guest: true }, // cambiar a false si no debe verse en modo invitado
+      { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin','gestor'] },
+      { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin','gestor'] },
+      { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin','gestor'] },
+      { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
+      { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente'] },
+      { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
+      { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin','gestor','control_acceso'] },
+      { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
+      { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
+      { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
+      { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
     ];
 
     const filteredMenuItems = menuItems.filter(item =>
-        (!user && item.guest) || 
-        (user && profile && item.roles.includes(profile.rol)) 
+      (!user && item.guest) ||
+      (user && profile && item.roles.includes(profile.rol))
     );
-  // Menú de navegación (se mantiene igual, es correcto)
-  const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'gestor', 'control_acceso', 'cliente'], guest: true },
-    { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente', 'gestor'], guest: false },
-    { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
-    { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
-    { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin', 'gestor'] },
-    { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
-    { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente'] },
-    { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
-    { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
-    { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
-    { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
-    { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
-    { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
-  ];
 
     // Ruta del logo: Asegúrate de que tu logo se llame 'logo.png' y esté en la carpeta 'public'.
     const logoUrl = '/logo.png'; 

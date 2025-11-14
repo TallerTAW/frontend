@@ -15,7 +15,17 @@ import {
   CardActions,
   Chip,
   Breadcrumbs,
-  Link
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Avatar
 } from '@mui/material';
 import { 
   Add, 
@@ -25,23 +35,21 @@ import {
   CloudUpload,
   Delete as DeleteIcon,
   ZoomIn,
-  LocationOn, // 📍 NUEVO ÍCONO
-  People // 👥 NUEVO ÍCONO
+  LocationOn,
+  People,
   SportsSoccer,
   Schedule,
   Home
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
-
-// === PALETA DE COLORES (Definida para consistencia con Layout/Dashboard) ===
-const COLOR_AZUL_ELECTRICO = '#00BFFF'; // Primario: Títulos, iconos
-const COLOR_VERDE_LIMA = '#A2E831';     // Acento: Botones, estado ACTIVO
-const COLOR_NARANJA_VIBRANTE = '#FD7E14'; // Acento: Estado INACTIVO
+// === PALETA DE COLORES ===
+const COLOR_AZUL_ELECTRICO = '#00BFFF';
+const COLOR_VERDE_LIMA = '#A2E831';
+const COLOR_NARANJA_VIBRANTE = '#FD7E14';
 const COLOR_GRIS_OSCURO = '#333333';
 const COLOR_BLANCO = '#FFFFFF';
 const COLOR_NEGRO_SUAVE = '#212121';
-
 
 // Componente para subir imágenes con drag & drop
 const ImageUploader = ({ onImageChange, currentImage }) => {
@@ -51,20 +59,17 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
 
   const handleFileChange = (file) => {
     if (file) {
-      // Validar tipo de archivo
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
       if (!validTypes.includes(file.type)) {
         toast.error('Solo se permiten imágenes JPG, PNG o GIF');
         return;
       }
 
-      // Validar tamaño (5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('La imagen no debe superar los 5MB');
         return;
       }
 
-      // Crear preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreview(e.target.result);
@@ -196,7 +201,7 @@ const ImageZoomModal = ({ image, open, onClose }) => {
             position: 'absolute',
             top: 16,
             right: 16,
-            zIndex: 10, // Asegurar que el botón esté encima de la imagen
+            zIndex: 10,
             backgroundColor: 'rgba(0,0,0,0.5)',
             color: 'white',
             '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
@@ -218,14 +223,102 @@ const ImageZoomModal = ({ image, open, onClose }) => {
   );
 };
 
+// Componente para listar canchas
+const CanchasList = ({ espacio, canchas, onCanchaClick, onBack }) => {
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton onClick={onBack} sx={{ mr: 2 }}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" sx={{ color: COLOR_AZUL_ELECTRICO, fontWeight: 'bold' }}>
+          Canchas de {espacio.nombre}
+        </Typography>
+      </Box>
+      
+      <Grid container spacing={3}>
+        {canchas.map((cancha) => (
+          <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
+            <Card 
+              sx={{ 
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                }
+              }}
+              onClick={() => onCanchaClick(cancha)}
+            >
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: COLOR_NEGRO_SUAVE }}>
+                  {cancha.nombre}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Tipo: {cancha.tipo}
+                </Typography>
+                <Chip 
+                  label={cancha.estado} 
+                  size="small"
+                  sx={{
+                    backgroundColor: cancha.estado === 'disponible' ? COLOR_VERDE_LIMA : COLOR_NARANJA_VIBRANTE,
+                    color: COLOR_NEGRO_SUAVE,
+                    fontWeight: 'bold',
+                    mt: 1
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+// Componente para horarios de cancha
+const HorariosCancha = ({ cancha, espacio, onBack }) => {
+  const [horarios, setHorarios] = useState([]);
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton onClick={onBack} sx={{ mr: 2 }}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" sx={{ color: COLOR_AZUL_ELECTRICO, fontWeight: 'bold' }}>
+          Horarios - {cancha.nombre}
+        </Typography>
+      </Box>
+      <Typography variant="body1" sx={{ mb: 3 }}>
+        Espacio: {espacio.nombre}
+      </Typography>
+      {/* Aquí iría la lógica para mostrar horarios */}
+    </Box>
+  );
+};
+
+// Icono de flecha hacia atrás (añadir en imports si es necesario)
+const ArrowBack = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+  </svg>
+);
+
 export default function Facilities() {
   const [espacios, setEspacios] = useState([]);
   const [open, setOpen] = useState(false);
   const [gestores, setGestores] = useState([]);
   const [zoomOpen, setZoomOpen] = useState(false);
-  // Se usa el path de la imagen para el zoom
-  const [selectedImage, setSelectedImage] = useState(''); 
+  const [selectedImage, setSelectedImage] = useState('');
   const [editing, setEditing] = useState(null);
+  
+  // ✅ ESTADOS FALTANTES AÑADIDOS
+  const [view, setView] = useState('espacios');
+  const [selectedEspacio, setSelectedEspacio] = useState(null);
+  const [selectedCancha, setSelectedCancha] = useState(null);
+  const [canchas, setCanchas] = useState([]);
+  
   const [formData, setFormData] = useState({
     nombre: '',
     ubicacion: '',
@@ -237,14 +330,15 @@ export default function Facilities() {
   const api_url = import.meta.env.VITE_API_URL;
 
   const { profile } = useAuth();
-    const isAdmin = profile?.rol === 'admin';
+  const isAdmin = profile?.rol === 'admin';
 
-    useEffect(() => {
+  // ✅ useEffect corregido
+  useEffect(() => {
     fetchEspacios();
     if (isAdmin) {
-      fetchGestores(); // Solo cargar gestores si es admin
+      fetchGestores();
     }
-  }, [view]);
+  }, [isAdmin]);
 
   const fetchEspacios = async () => {
     try {
@@ -252,6 +346,20 @@ export default function Facilities() {
       setEspacios(data);
     } catch (error) {
       toast.error('Error al cargar espacios deportivos');
+    }
+  };
+
+  // ✅ FUNCIÓN FALTANTE AÑADIDA
+  const fetchGestores = async () => {
+    try {
+      // Implementar esta llamada API según tu backend
+      // const data = await usuariosApi.getGestores();
+      // setGestores(data);
+      console.log('Fetching gestores...');
+      // Temporalmente establecer un array vacío
+      setGestores([]);
+    } catch (error) {
+      toast.error('Error al cargar gestores');
     }
   };
 
@@ -296,6 +404,32 @@ export default function Facilities() {
     }
   };
 
+  // ✅ FUNCIÓN FALTANTE AÑADIDA
+  const handleEdit = (espacio) => {
+    setEditing(espacio);
+    setFormData({
+      nombre: espacio.nombre,
+      ubicacion: espacio.ubicacion,
+      capacidad: espacio.capacidad,
+      descripcion: espacio.descripcion,
+      gestor_id: espacio.gestor_id,
+    });
+    setOpen(true);
+  };
+
+  // ✅ FUNCIÓN FALTANTE AÑADIDA
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este espacio?')) {
+      try {
+        await espaciosApi.eliminar(id);
+        toast.success('Espacio eliminado correctamente');
+        fetchEspacios();
+      } catch (error) {
+        toast.error('Error al eliminar el espacio');
+      }
+    }
+  };
+
   const handleClose = () => {
     setOpen(false);
     setEditing(null);
@@ -309,15 +443,69 @@ export default function Facilities() {
     setImageFile(null);
   };
 
-  // Ahora pasamos solo el path al zoom
+  // ✅ FUNCIÓN FALTANTE AÑADIDA
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editing) {
+        await espaciosApi.actualizar(editing.id_espacio_deportivo, formData, imageFile);
+        toast.success('Espacio actualizado correctamente');
+      } else {
+        await espaciosApi.crear(formData, imageFile);
+        toast.success('Espacio creado correctamente');
+      }
+      handleClose();
+      fetchEspacios();
+    } catch (error) {
+      toast.error('Error al guardar el espacio');
+    }
+  };
+
   const handleImageZoom = (imageUrl) => {
     setSelectedImage(imageUrl);
     setZoomOpen(true);
   };
-  
-  return (
-    <Box sx={{ mt: 0, p: 0 }}> 
-      {/* Título y Botón */}
+
+  // ✅ COMPONENTE FALTANTE AÑADIDO
+  const renderBreadcrumbs = () => (
+    <Breadcrumbs sx={{ mb: 3 }}>
+      <Link 
+        underline="hover" 
+        color="inherit" 
+        onClick={() => {
+          setView('espacios');
+          setSelectedEspacio(null);
+          setSelectedCancha(null);
+        }}
+        sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+      >
+        <Home sx={{ mr: 0.5 }} fontSize="inherit" />
+        Espacios
+      </Link>
+      {selectedEspacio && (
+        <Link 
+          underline="hover" 
+          color="inherit"
+          onClick={() => {
+            setView('canchas');
+            setSelectedCancha(null);
+          }}
+          sx={{ cursor: 'pointer' }}
+        >
+          {selectedEspacio.nombre}
+        </Link>
+      )}
+      {selectedCancha && (
+        <Typography color="text.primary">
+          {selectedCancha.nombre}
+        </Typography>
+      )}
+    </Breadcrumbs>
+  );
+
+  // ✅ FUNCIÓN FALTANTE AÑADIDA
+  const renderEspaciosView = () => (
+    <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -365,7 +553,7 @@ export default function Facilities() {
         )}
       </Box>
 
-      <Grid container spacing={4}> {/* Aumentado el spacing para mejor separación */}
+      <Grid container spacing={4}>
         {espacios.map((espacio, index) => (
           <Grid item xs={12} sm={6} md={4} key={espacio.id_espacio_deportivo}>
             <motion.div
@@ -375,50 +563,97 @@ export default function Facilities() {
             >
               <Card 
                 sx={{
-                  borderRadius: 3, // Mayor redondeo
-                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)', // Sombra sutil pero visible
+                  borderRadius: 3,
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     boxShadow: '0 12px 24px rgba(0, 0, 0, 0.2)',
-                    transform: 'translateY(-4px)', // Efecto de elevación
+                    transform: 'translateY(-4px)',
                   },
-                  opacity: espacio.estado === 'inactivo' ? 0.6 : 1, // Desactivado
+                  opacity: espacio.estado === 'inactivo' ? 0.6 : 1,
+                  cursor: 'pointer'
                 }}
+                onClick={() => handleEspacioClick(espacio)}
               >
                 <Box 
-                  className="h-48 relative rounded-t-2xl overflow-hidden cursor-pointer" 
-                  sx={{ height: 200 }}
-                  onClick={() => espacio.imagen && handleImageZoom(espacio.imagen)}
+                  sx={{ 
+                    height: 200,
+                    position: 'relative',
+                    borderRadius: '12px 12px 0 0',
+                    overflow: 'hidden'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (espacio.imagen) handleImageZoom(espacio.imagen);
+                  }}
                 >
                   {espacio.imagen ? (
                     <>
                       <img 
                         src={`${api_url}${espacio.imagen}`} 
                         alt={espacio.nombre} 
-                        // 👇 CAMBIO CLAVE: Se añaden las clases para forzar el llenado total del contenedor.
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        style={{ 
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transition: 'transform 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                       />
-                      <Box className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                        <ZoomIn sx={{ color: 'white', opacity: 0, transition: 'opacity 0.3s' }} className="hover:opacity-100" />
+                      <Box 
+                        sx={{ 
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0,0,0,0)',
+                          transition: 'background-color 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0,0,0,0.3)'
+                          }
+                        }}
+                      >
+                        <ZoomIn 
+                          sx={{ 
+                            color: 'white', 
+                            opacity: 0,
+                            transition: 'opacity 0.3s ease',
+                            fontSize: 40
+                          }}
+                          className="hover:opacity-100" 
+                        />
                       </Box>
                     </>
                   ) : (
                     <Box 
-                      className="absolute inset-0 flex items-center justify-center"
-                      sx={{ backgroundColor: `${COLOR_AZUL_ELECTRICO}30` }} 
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: `${COLOR_AZUL_ELECTRICO}30`
+                      }}
                     >
                       <Stadium sx={{ fontSize: 80, color: COLOR_BLANCO, opacity: 0.5 }} />
                     </Box>
                   )}
                   
-                  <Box className="absolute top-3 right-3">
+                  <Box sx={{ position: 'absolute', top: 12, right: 12 }}>
                     <Chip 
                       label={espacio.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
                       size="small"
                       sx={{
-                        // Estilo del Chip con colores de marca
                         backgroundColor: espacio.estado === 'activo' ? COLOR_VERDE_LIMA : COLOR_NARANJA_VIBRANTE,
-                        color: COLOR_NEGRO_SUAVE, // Texto negro sobre fondo de color
+                        color: COLOR_NEGRO_SUAVE,
                         fontWeight: 'bold'
                       }}
                     />
@@ -433,7 +668,6 @@ export default function Facilities() {
                     {espacio.nombre}
                   </Typography>
                   
-                  {/* Ubicación con Ícono */}
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <LocationOn sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
                     <Typography variant="body2" color="text.secondary">
@@ -441,7 +675,6 @@ export default function Facilities() {
                     </Typography>
                   </Box>
 
-                  {/* Capacidad con Ícono */}
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <People sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
                     <Typography variant="body2" color="text.secondary">
@@ -449,17 +682,23 @@ export default function Facilities() {
                     </Typography>
                   </Box>
 
-                  {/* Descripción */}
                   <Typography 
                     variant="caption" 
                     color="text.disabled" 
-                    sx={{ display: '-webkit-box', overflow: 'hidden', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, height: 'auto', minHeight: 30 }}
+                    sx={{ 
+                      display: '-webkit-box', 
+                      overflow: 'hidden', 
+                      WebkitBoxOrient: 'vertical', 
+                      WebkitLineClamp: 2, 
+                      height: 'auto', 
+                      minHeight: 30 
+                    }}
                   >
                     {espacio.descripcion || 'Sin descripción detallada.'}
                   </Typography>
 
                   {isAdmin && (
-                    <Box className="mt-2">
+                    <Box sx={{ mt: 2 }}>
                       <Typography variant="caption" color="text.primary" sx={{ fontWeight: 'medium' }}>
                         Gestor asignado: {espacio.gestor_asignado || 'Sin asignar'}
                       </Typography>
@@ -469,21 +708,30 @@ export default function Facilities() {
                 
                 <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
                   <IconButton
-                    onClick={() => handleEdit(espacio)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(espacio);
+                    }}
                     sx={{ color: COLOR_AZUL_ELECTRICO, '&:hover': { backgroundColor: `${COLOR_AZUL_ELECTRICO}10` } }}
                   >
                     <Edit />
                   </IconButton>
                   {espacio.estado === 'activo' ? (
                     <IconButton
-                      onClick={() => handleDelete(espacio.id_espacio_deportivo)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(espacio.id_espacio_deportivo);
+                      }}
                       sx={{ color: COLOR_NARANJA_VIBRANTE, '&:hover': { backgroundColor: `${COLOR_NARANJA_VIBRANTE}10` } }}
                     >
                       <Delete />
                     </IconButton>
                   ) : (
                     <IconButton
-                      onClick={() => handleActivar(espacio.id_espacio_deportivo)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleActivar(espacio.id_espacio_deportivo);
+                      }}
                       sx={{ color: COLOR_VERDE_LIMA, '&:hover': { backgroundColor: `${COLOR_VERDE_LIMA}10` } }}
                     >
                       <Add />
@@ -503,12 +751,11 @@ export default function Facilities() {
         maxWidth="md"
         fullWidth
         PaperProps={{
-          className: 'rounded-2xl',
+          sx: { borderRadius: 2 }
         }}
       >
         <DialogTitle 
           sx={{ 
-            // ✅ CORREGIDO: Usando COLOR_AZUL_ELECTRICO plano en lugar de degradado
             backgroundColor: COLOR_AZUL_ELECTRICO, 
             color: COLOR_BLANCO, 
             fontWeight: 'bold' 
@@ -517,7 +764,7 @@ export default function Facilities() {
           {editing ? 'Editar Espacio Deportivo' : 'Nuevo Espacio Deportivo'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
-          <DialogContent className="mt-4 space-y-4">
+          <DialogContent sx={{ mt: 2 }}>
             <ImageUploader 
               onImageChange={setImageFile}
               currentImage={editing?.imagen}
@@ -550,9 +797,8 @@ export default function Facilities() {
               inputProps={{ min: '1' }}
             />
             
-            {/* NUEVO: Selector de gestor */}
-            { isAdmin && (
-            <FormControl fullWidth margin="normal">
+            {isAdmin && (
+              <FormControl fullWidth margin="normal">
                 <InputLabel>Gestor asignado</InputLabel>
                 <Select
                   value={formData.gestor_id}
@@ -564,7 +810,7 @@ export default function Facilities() {
                   </MenuItem>
                   {gestores.map((gestor) => (
                     <MenuItem key={gestor.id_usuario} value={gestor.id_usuario}>
-                      <Box className="flex items-center gap-2">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{ width: 24, height: 24 }}>
                           {gestor.nombre?.charAt(0)}
                         </Avatar>
@@ -594,8 +840,8 @@ export default function Facilities() {
               placeholder="Describe las características del espacio..."
             />
           </DialogContent>
-          <DialogActions className="p-4">
-            <Button onClick={handleClose} className="text-gray-600">
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={handleClose} sx={{ color: 'text.secondary' }}>
               Cancelar
             </Button>
             <Button
@@ -603,12 +849,11 @@ export default function Facilities() {
               variant="contained"
               sx={{
                 textTransform: 'none',
-                // ✅ CORREGIDO: Usando COLOR_NARANJA_VIBRANTE plano en lugar de degradado
                 backgroundColor: COLOR_NARANJA_VIBRANTE,
                 color: COLOR_BLANCO,
                 fontWeight: 'bold',
                 '&:hover': {
-                  backgroundColor: '#CC6A11', // Tono más oscuro de naranja para hover
+                  backgroundColor: '#CC6A11',
                   boxShadow: '0 4px 10px rgba(253, 126, 20, 0.5)',
                 },
               }}
@@ -619,7 +864,6 @@ export default function Facilities() {
         </form>
       </Dialog>
 
-
       {/* Modal para zoom de imagen */}
       <ImageZoomModal 
         image={selectedImage}
@@ -628,9 +872,9 @@ export default function Facilities() {
       />
 
       {espacios.length === 0 && (
-        <Box className="text-center py-12">
+        <Box sx={{ textAlign: 'center', py: 12 }}>
           <Stadium sx={{ fontSize: 80, color: 'gray', mb: 2 }} />
-          <Typography variant="h6" className="text-gray-500">
+          <Typography variant="h6" sx={{ color: 'gray' }}>
             No hay espacios deportivos asignados
           </Typography>
         </Box>
@@ -643,7 +887,7 @@ export default function Facilities() {
       {renderBreadcrumbs()}
       
       {view === 'espacios' && renderEspaciosView()}
-      {view === 'canchas' && (
+      {view === 'canchas' && selectedEspacio && (
         <CanchasList 
           espacio={selectedEspacio}
           canchas={canchas}
@@ -651,7 +895,7 @@ export default function Facilities() {
           onBack={handleBackToEspacios}
         />
       )}
-      {view === 'horarios' && (
+      {view === 'horarios' && selectedCancha && selectedEspacio && (
         <HorariosCancha 
           cancha={selectedCancha}
           espacio={selectedEspacio}
