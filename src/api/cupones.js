@@ -66,5 +66,10 @@ export const cuponesApi = {
     
     const response = await api.get(`/cupones/validar/${codigo}?${params}`);
     return response.data;
+  },
+
+  getMisCupones: async () => {
+    const response = await api.get('/cupones/mis-cupones');
+    return response.data;
   }
 };

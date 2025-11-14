@@ -83,7 +83,7 @@ export default function Layout() {
       { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin','gestor'] },
       { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin','gestor'] },
       { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
-      { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente'] },
+      { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente', 'admin'] },
       { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
       { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin','gestor','control_acceso'] },
       { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },

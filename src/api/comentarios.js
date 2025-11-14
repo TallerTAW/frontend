@@ -33,5 +33,10 @@ export const comentariosApi = {
   delete: async (id) => {
     const response = await api.delete(`/comentarios/${id}`);
     return response.data;
+  },
+
+  getMisComentarios: async () => {
+    const response = await api.get('/comentarios/mis-comentarios');
+    return response.data;
   }
 };

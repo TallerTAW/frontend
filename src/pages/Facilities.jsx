@@ -473,24 +473,6 @@ export default function Facilities() {
     setImageFile(null);
   };
 
-  // ✅ FUNCIÓN FALTANTE AÑADIDA
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editing) {
-        await espaciosApi.actualizar(editing.id_espacio_deportivo, formData, imageFile);
-        toast.success('Espacio actualizado correctamente');
-      } else {
-        await espaciosApi.crear(formData, imageFile);
-        toast.success('Espacio creado correctamente');
-      }
-      handleClose();
-      fetchEspacios();
-    } catch (error) {
-      toast.error('Error al guardar el espacio');
-    }
-  };
-
   const handleImageZoom = (imageUrl) => {
     setSelectedImage(imageUrl);
     setZoomOpen(true);
@@ -566,6 +548,7 @@ export default function Facilities() {
               startIcon={<Add />}
               onClick={() => setOpen(true)}
               sx={{
+                marginRight: 2,
                 textTransform: 'none',
                 backgroundColor: COLOR_VERDE_LIMA,
                 color: COLOR_NEGRO_SUAVE,
@@ -589,11 +572,15 @@ export default function Facilities() {
                 setEspacios(nearby); // mostrar solo cercanos o abrir modal/mapa
               }, (err) => toast.error('No se obtuvo ubicación'));
             }}
-            sx={{
+           sx={{
                 textTransform: 'none',
-                background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                backgroundColor: COLOR_VERDE_LIMA,
+                color: COLOR_NEGRO_SUAVE,
+                fontWeight: 'bold',
                 '&:hover': {
-                  background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                  backgroundColor: COLOR_VERDE_LIMA,
+                  opacity: 0.9,
+                  boxShadow: '0 4px 8px rgba(162, 232, 49, 0.4)',
                 },
               }}>
               Buscar canchas cerca de mí
