@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { espaciosApi } from '../api/espacios';
-import { usuariosApi } from '../api/usuarios';
+import { canchasApi } from '../api/canchas';
+import { reservasApi } from '../api/reservas';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import {
@@ -10,19 +11,11 @@ import {
   Grid,
   Card,
   CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   IconButton,
   CardActions,
   Chip,
-  Avatar,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Breadcrumbs,
+  Link
 } from '@mui/material';
 import { 
   Add, 
@@ -34,8 +27,11 @@ import {
   ZoomIn,
   LocationOn, // 📍 NUEVO ÍCONO
   People // 👥 NUEVO ÍCONO
+  SportsSoccer,
+  Schedule,
+  Home
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 
 // === PALETA DE COLORES (Definida para consistencia con Layout/Dashboard) ===
@@ -248,7 +244,7 @@ export default function Facilities() {
     if (isAdmin) {
       fetchGestores(); // Solo cargar gestores si es admin
     }
-  }, [isAdmin]);
+  }, [view]);
 
   const fetchEspacios = async () => {
     try {
@@ -259,91 +255,35 @@ export default function Facilities() {
     }
   };
 
-  const fetchGestores = async () => {
+  const fetchCanchasByEspacio = async (espacioId) => {
     try {
-      const data = await espaciosApi.getGestoresDisponibles();
-      setGestores(data);
+      const data = await canchasApi.getByEspacio(espacioId);
+      setCanchas(data);
     } catch (error) {
-      console.error('Error al cargar gestores:', error);
+      toast.error('Error al cargar las canchas');
     }
   };
 
-  const fetchGestorAsignado = async (espacioId) => {
-    try {
-      const data = await espaciosApi.getGestorAsignado(espacioId);
-      return data.gestor_asignado;
-    } catch (error) {
-      console.error('Error al cargar gestor asignado:', error);
-      return null;
-    }
+  const handleEspacioClick = (espacio) => {
+    setSelectedEspacio(espacio);
+    fetchCanchasByEspacio(espacio.id_espacio_deportivo);
+    setView('canchas');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const submitData = new FormData();
-      submitData.append('nombre', formData.nombre);
-      submitData.append('ubicacion', formData.ubicacion);
-      submitData.append('capacidad', formData.capacidad.toString());
-      if (formData.descripcion) {
-        submitData.append('descripcion', formData.descripcion);
-      }
-      if (formData.gestor_id && isAdmin) { // Solo incluir gestor_id si es admin
-        submitData.append('gestor_id', formData.gestor_id);
-      }
-      if (imageFile) {
-        submitData.append('imagen', imageFile);
-      }
-
-      if (editing) {
-        await espaciosApi.update(editing.id_espacio_deportivo, submitData);
-        toast.success('Espacio actualizado correctamente');
-      } else {
-        await espaciosApi.create(submitData);
-        toast.success('Espacio creado correctamente');
-      }
-      handleClose();
-      fetchEspacios();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Error al guardar el espacio');
-    }
+  const handleCanchaClick = (cancha) => {
+    setSelectedCancha(cancha);
+    setView('horarios');
   };
 
-  const handleEdit = async (espacio) => {
-    setEditing(espacio);
-
-    let gestorAsignadoId = '';
-    if (isAdmin) {
-      try {
-        const gestorAsignado = await fetchGestorAsignado(espacio.id_espacio_deportivo);
-        if (gestorAsignado) {
-          gestorAsignadoId = gestorAsignado.id_usuario;
-        }
-      } catch (err) {
-        console.error('Error al obtener gestor asignado:', err);
-      }
-    }
-    setFormData({
-      nombre: espacio.nombre,
-      ubicacion: espacio.ubicacion || '',
-      capacidad: espacio.capacidad || '',
-      descripcion: espacio.descripcion || '',
-      gestor_id: gestorAsignadoId,
-    });
-    setImageFile(null);
-    setOpen(true);
+  const handleBackToEspacios = () => {
+    setSelectedEspacio(null);
+    setSelectedCancha(null);
+    setView('espacios');
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de desactivar este espacio?')) {
-      try {
-        await espaciosApi.desactivar(id);
-        toast.success('Espacio desactivado correctamente');
-        fetchEspacios();
-      } catch (error) {
-        toast.error('Error al desactivar el espacio');
-      }
-    }
+  const handleBackToCanchas = () => {
+    setSelectedCancha(null);
+    setView('canchas');
   };
 
   const handleActivar = async (id) => {
@@ -691,12 +631,32 @@ export default function Facilities() {
         <Box className="text-center py-12">
           <Stadium sx={{ fontSize: 80, color: 'gray', mb: 2 }} />
           <Typography variant="h6" className="text-gray-500">
-            No hay espacios deportivos registrados
-          </Typography>
-          <Typography variant="body2" className="text-gray-400 mt-2">
-            Crea tu primer espacio deportivo para comenzar
+            No hay espacios deportivos asignados
           </Typography>
         </Box>
+      )}
+    </>
+  );
+
+  return (
+    <Box sx={{ mt: 12, p: 3 }}>
+      {renderBreadcrumbs()}
+      
+      {view === 'espacios' && renderEspaciosView()}
+      {view === 'canchas' && (
+        <CanchasList 
+          espacio={selectedEspacio}
+          canchas={canchas}
+          onCanchaClick={handleCanchaClick}
+          onBack={handleBackToEspacios}
+        />
+      )}
+      {view === 'horarios' && (
+        <HorariosCancha 
+          cancha={selectedCancha}
+          espacio={selectedEspacio}
+          onBack={handleBackToCanchas}
+        />
       )}
     </Box>
   );

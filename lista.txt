@@ -1,0 +1,16 @@
+.env
+.gitignore
+eslint.config.js
+index.html
+lista.txt
+node_modules
+package-lock.json
+package.json
+pnpm-lock.yaml
+postcss.config.js
+public
+README.md
+src
+supabase
+tailwind.config.js
+vite.config.js

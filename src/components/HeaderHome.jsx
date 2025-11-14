@@ -108,6 +108,25 @@ export default function HeaderHome() {
             Explora Nuestra App
           </Button>*/}
 
+          <Button 
+            variant="outlined" 
+            onClick={handleAppExploreClick}
+            sx={{ 
+              borderColor: COLOR_PRIMARY,
+              color: COLOR_PRIMARY,
+              fontWeight: 'bold',
+              borderRadius: '20px',
+              textTransform: 'none',
+              px: 2,
+              '&:hover': {
+                borderColor: COLOR_PRIMARY,
+                backgroundColor: 'rgba(0, 191, 255, 0.1)' // Azul Eléctrico ligero
+              }
+            }}
+          >
+            Explora Nuestra App
+          </Button>
+
           {/* 2. Botón REGÍSTRATE (Outlined con borde Naranja/Rojo) */}
           <Button 
             variant="outlined" 
