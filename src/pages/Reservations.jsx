@@ -1,36 +1,3 @@
-// 📍 ARCHIVO: src/pages/Reservations.jsx (ACTUALIZADO)
-
-import { useEffect } from 'react';
-import { Box, Typography, Card, CardContent, CircularProgress, Grid, Chip, Button } from '@mui/material';
-import { CalendarMonth, Star } from '@mui/icons-material';
-import { motion } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
-import { useUserRatings } from '../hooks/useUserRatings'; // Importar el nuevo hook
-import { useNavigate } from 'react-router-dom'; // Para la redirección
-
-// Paleta de colores (Para mantener consistencia con Ratings.jsx)
-const COLOR_VERDE_LIMA = '#A2E831';
-const COLOR_NARANJA_VIBRANTE = '#FD7E14';
-const COLOR_BLANCO = '#FFFFFF';
-
-// Helper para iconos (copiado de Ratings.jsx)
-const getSportIcon = (canchaTipo) => {
-  const icons = {
-    'Fútbol': '⚽',
-    'Básquetbol': '🏀',
-    'Tenis': '🎾',
-    'Vóleibol': '🏐',
-    'Rugby': '🏉',
-    'Béisbol': '⚾',
-    'Hockey': '🏒',
-    'Ping Pong': '🏓',
-    'Boxeo': '🥊',
-    'Billar': '🎱',
-    'Natación': '🏊',
-    'Atletismo': '🏃'
-  };
-  return icons[canchaTipo] || '🏆';
-};
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { reservasApi } from '../api/reservas';
@@ -61,10 +28,8 @@ import {
   CheckCircle,
   Person,
   SportsSoccer,
-  LocationOn,
   AccessTime,
   AttachMoney,
-  Stadium,
   Star
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -87,26 +52,6 @@ export default function Reservations() {
   const { profile } = useAuth();
   const navigate = useNavigate();
 
-  // USAMOS EL HOOK PARA OBTENER LAS RESERVAS PENDIENTES
-  const { 
-    reservasPendientes, 
-    loadingReservas,
-    fetchReservasPendientes // Para actualizar si es necesario
-  } = useUserRatings();
-  
-  // Opcional: Recargar al montar, aunque el hook ya lo hace
-  useEffect(() => {
-    if (profile && profile.rol !== 'admin') {
-      fetchReservasPendientes();
-    }
-  }, [profile, fetchReservasPendientes]);
-
-
-  const redirectToRatings = () => {
-    navigate('/ratings'); // Asumiendo que /ratings es la ruta para Ratings.jsx
-  };
-
-  
   // Estados principales de reservas
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -124,7 +69,7 @@ export default function Reservations() {
   const [espaciosCache, setEspaciosCache] = useState({});
   const [espaciosFetching, setEspaciosFetching] = useState({});
 
-  // Hook para reservas pendientes de calificar (solo clientes)
+  // Hook para reservas pendientes de calificar
   const { 
     reservasPendientes, 
     loadingReservas,
@@ -132,12 +77,16 @@ export default function Reservations() {
   } = useUserRatings();
 
   useEffect(() => {
-    fetchReservas();
-    // Solo cargar reservas pendientes si es cliente
-    if (profile && profile.rol === 'cliente') {
-      fetchReservasPendientes();
-    }
-  }, [profile]);
+    const loadData = async () => {
+        await fetchReservas();
+        // Solo cargar reservas pendientes si es cliente
+        if (profile && profile.rol === 'cliente' && fetchReservasPendientes) {
+            await fetchReservasPendientes();
+        }
+    };
+    
+    loadData();
+}, [profile, fetchReservasPendientes]);
 
   const fetchReservas = async () => {
     try {
@@ -531,7 +480,7 @@ export default function Reservations() {
   };
 
   const redirectToRatings = () => {
-    navigate('/ratings');
+    navigate('/calificaciones');
   };
 
   if (loading) {
@@ -560,9 +509,6 @@ export default function Reservations() {
         </Typography>
       </motion.div>
 
-      {/* NUEVA SECCIÓN: Reservas Pendientes de Calificar */}
-      {profile?.rol === 'cliente' && (
-        <Card className="rounded-2xl shadow-lg p-6 mb-6" sx={{ border: `2px solid ${COLOR_NARANJA_VIBRANTE}` }}>
       {/* NUEVA SECCIÓN: Reservas Pendientes de Calificar (SOLO PARA CLIENTES) */}
       {profile?.rol === 'cliente' && (
         <Card sx={{ 
@@ -592,7 +538,6 @@ export default function Reservations() {
               </Box>
             ) : reservasPendientes.length > 0 ? (
               <Grid container spacing={2}>
-                {/* Mostramos solo una vista previa de 3 o 4 */}
                 {reservasPendientes.slice(0, 3).map((reserva) => (
                   <Grid item xs={12} md={4} key={reserva.id_reserva}>
                     <Card 
@@ -600,7 +545,6 @@ export default function Reservations() {
                       sx={{ 
                         borderRadius: 2,
                         cursor: 'pointer',
-                        bgcolor: 'warning.light', // Color para destacar
                         bgcolor: 'warning.light',
                         transition: 'all 0.3s',
                         '&:hover': { bgcolor: 'warning.main', color: 'white' }
@@ -652,16 +596,6 @@ export default function Reservations() {
         </Card>
       )}
 
-
-      {/* CONTENIDO PRINCIPAL DE RESERVAS (PÁGINA EN CONSTRUCCIÓN) */}
-      <Card className="rounded-2xl shadow-lg p-6">
-        <CardContent className="text-center">
-          <CalendarMonth sx={{ fontSize: 80, color: '#0f9fe1', opacity: 0.3, mb: 2 }} />
-          <Typography variant="h5" className="font-title text-gray-600 mb-2">
-            Página de Historial de Reservas
-          </Typography>
-          <Typography variant="body1" className="text-gray-500 font-body">
-            Aquí se mostraría la lista completa de todas tus reservas (activas, canceladas, completadas).
       {/* Estadísticas rápidas para admin/gestor */}
       {(profile.rol === 'admin' || profile.rol === 'gestor') && (
         <Grid container spacing={2} sx={{ mb: 4 }}>
@@ -807,17 +741,6 @@ export default function Reservations() {
                             <Typography variant="body2" color="text.secondary">
                               Tipo: {infoCancha.tipo}
                             </Typography>
-                            {/*
-                            <Typography variant="body2" color="text.secondary">
-                              Disciplina: {infoCancha.disciplina}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                              <Stadium sx={{ fontSize: 16, color: COLOR_VERDE_LIMA }} />
-                              <Typography variant="caption" color="text.secondary">
-                                {infoCancha.espacio}
-                              </Typography>
-                            </Box>
-                            */}
                             {infoCancha.precio_por_hora && (
                               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                 Precio/hora: ${infoCancha.precio_por_hora}

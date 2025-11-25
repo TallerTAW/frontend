@@ -1,5 +1,3 @@
-// 📍 ARCHIVO: src/pages/Ratings.jsx (ACTUALIZADO)
-
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -31,19 +29,21 @@ import {
   LocationOn
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-// Importamos el nuevo hook
+// Importamos el nuevo hook y las APIs necesarias
 import { useUserRatings } from '../hooks/useUserRatings';
+import { usuariosApi } from '../api/usuarios';
+import { canchasApi } from '../api/canchas';
 
-// Paleta de colores (Mantener para consistencia de estilo)
+// Paleta de colores
 const COLOR_AZUL_ELECTRICO = '#00BFFF';
 const COLOR_VERDE_LIMA = '#A2E831';
 const COLOR_NARANJA_VIBRANTE = '#FD7E14';
 const COLOR_BLANCO = '#FFFFFF';
+const COLOR_ROJO = '#FF4136';
 const COLOR_NEGRO_SUAVE = '#212121';
 
 export default function Ratings() {
   const { profile } = useAuth();
-  // USAMOS EL NUEVO HOOK: Simplifica la lógica
   const { 
     comentarios, 
     loading, 
@@ -51,28 +51,128 @@ export default function Ratings() {
     handleDeleteComment 
   } = useUserRatings();
 
+  // Estados para cache de usuarios y canchas
+  const [usuariosCache, setUsuariosCache] = useState({});
+  const [canchasCache, setCanchasCache] = useState({});
+  const [loadingAdditionalData, setLoadingAdditionalData] = useState(false);
+
   // Estados locales para el diálogo de calificación
   const [ratingDialog, setRatingDialog] = useState(null);
   const [ratingValue, setRatingValue] = useState(0);
   const [comentario, setComentario] = useState('');
 
-  // Función para abrir el diálogo (con datos existentes si aplica)
-  const handleOpenDialog = useCallback((reserva) => {
-    // Buscar si ya existe un comentario para esta cancha
-    const existingComment = comentarios.find(c => 
-      c.id_cancha === reserva.id_cancha
-    );
-    
-    if (existingComment) {
-      setRatingValue(existingComment.calificacion || 0);
-      setComentario(existingComment.descripcion || '');
-    } else {
-      setRatingValue(0);
-      setComentario('');
-    }
-    // Añadimos 'cancha' a ratingDialog para que el diálogo pueda mostrar el nombre
-    setRatingDialog({ ...reserva, cancha: reserva.cancha }); 
+  // Cargar datos adicionales (usuarios y canchas)
+  useEffect(() => {
+    const loadAdditionalData = async () => {
+      if (comentarios.length === 0) return;
+      
+      setLoadingAdditionalData(true);
+      try {
+        // IDs únicos de usuarios y canchas
+        const userIds = [...new Set(comentarios.map(c => c.id_usuario))];
+        const canchaIds = [...new Set(comentarios.map(c => c.id_cancha))];
+
+        // Cargar usuarios (solo para admin o si necesitamos nombres)
+        const usuariosToLoad = userIds.filter(id => !usuariosCache[id]);
+        if (usuariosToLoad.length > 0) {
+          const usuariosPromises = usuariosToLoad.map(async (id) => {
+            try {
+              const userData = await usuariosApi.getById(id);
+              return { id, data: userData };
+            } catch (error) {
+              console.error(`Error al cargar usuario ${id}:`, error);
+              return { id, data: null };
+            }
+          });
+
+          const usuariosResults = await Promise.all(usuariosPromises);
+          const newUsuariosCache = { ...usuariosCache };
+          usuariosResults.forEach(({ id, data }) => {
+            newUsuariosCache[id] = data;
+          });
+          setUsuariosCache(newUsuariosCache);
+        }
+
+        // Cargar canchas
+        const canchasToLoad = canchaIds.filter(id => !canchasCache[id]);
+        if (canchasToLoad.length > 0) {
+          const canchasPromises = canchasToLoad.map(async (id) => {
+            try {
+              // Usar endpoint público para evitar problemas de permisos
+              const canchaData = await canchasApi.getByIdPublic(id);
+              return { id, data: canchaData };
+            } catch (error) {
+              console.error(`Error al cargar cancha ${id}:`, error);
+              return { id, data: null };
+            }
+          });
+
+          const canchasResults = await Promise.all(canchasPromises);
+          const newCanchasCache = { ...canchasCache };
+          canchasResults.forEach(({ id, data }) => {
+            newCanchasCache[id] = data;
+          });
+          setCanchasCache(newCanchasCache);
+        }
+      } catch (error) {
+        console.error('Error al cargar datos adicionales:', error);
+      } finally {
+        setLoadingAdditionalData(false);
+      }
+    };
+
+    loadAdditionalData();
   }, [comentarios]);
+
+  // Función para obtener información del usuario
+  const getUsuarioInfo = (idUsuario) => {
+    const usuario = usuariosCache[idUsuario];
+    if (!usuario) {
+      return {
+        nombre: 'Cargando...',
+        apellido: '',
+        email: '',
+        rol: 'usuario'
+      };
+    }
+    return {
+      nombre: usuario.nombre || 'Usuario',
+      apellido: usuario.apellido || '',
+      email: usuario.email || '',
+      rol: usuario.rol || 'usuario'
+    };
+  };
+
+  // Función para obtener información de la cancha
+  const getCanchaInfo = (idCancha) => {
+    const cancha = canchasCache[idCancha];
+    if (!cancha) {
+      return {
+        nombre: `Cancha ${idCancha}`,
+        tipo: 'No disponible',
+        espacio: 'No disponible'
+      };
+    }
+    return {
+      nombre: cancha.nombre || `Cancha ${idCancha}`,
+      tipo: cancha.tipo || 'No especificado',
+      espacio: cancha.espacio_deportivo?.nombre || 'Espacio no disponible',
+      precio_por_hora: cancha.precio_por_hora
+    };
+  };
+
+  // Función para abrir el diálogo (con datos existentes si aplica)
+  const handleOpenDialog = useCallback((comentarioItem) => {
+    setRatingValue(comentarioItem.calificacion || 0);
+    setComentario(comentarioItem.descripcion || '');
+    
+    // Crear objeto con información de la cancha para el diálogo
+    const canchaInfo = getCanchaInfo(comentarioItem.id_cancha);
+    setRatingDialog({ 
+      ...comentarioItem, 
+      cancha: canchaInfo 
+    });
+  }, [canchasCache]);
 
   // Función para enviar la calificación
   const handleSubmitRating = async () => {
@@ -91,15 +191,19 @@ export default function Ratings() {
     }
   };
 
-
   const getSportIcon = (canchaTipo) => {
     const icons = {
       'Fútbol': '⚽',
+      'Futbol': '⚽',
       'Básquetbol': '🏀',
+      'Basquetbol': '🏀',
+      'Baloncesto': '🏀',
       'Tenis': '🎾',
       'Vóleibol': '🏐',
+      'Volleyball': '🏐',
       'Rugby': '🏉',
       'Béisbol': '⚾',
+      'Beisbol': '⚾',
       'Hockey': '🏒',
       'Ping Pong': '🏓',
       'Boxeo': '🥊',
@@ -111,7 +215,6 @@ export default function Ratings() {
   };
 
   const formatDate = (dateString) => {
-    // Verifica si la propiedad es una cadena de fecha válida antes de formatear
     const date = new Date(dateString);
     if (isNaN(date)) return 'Fecha desconocida';
 
@@ -126,18 +229,24 @@ export default function Ratings() {
 
   // Función para obtener el nombre completo del usuario
   const getNombreUsuario = (comentarioItem) => {
-    if (comentarioItem.usuario) {
-      return `${comentarioItem.usuario.nombre} ${comentarioItem.usuario.apellido}`;
-    }
-    return 'Usuario';
+    const usuarioInfo = getUsuarioInfo(comentarioItem.id_usuario);
+    return `${usuarioInfo.nombre} ${usuarioInfo.apellido}`.trim();
   };
 
   // Función para obtener las iniciales del usuario para el Avatar
   const getInicialesUsuario = (comentarioItem) => {
-    if (comentarioItem.usuario) {
-      return `${comentarioItem.usuario.nombre?.charAt(0) || ''}${comentarioItem.usuario.apellido?.charAt(0) || ''}`;
-    }
-    return 'U';
+    const usuarioInfo = getUsuarioInfo(comentarioItem.id_usuario);
+    return `${usuarioInfo.nombre?.charAt(0) || ''}${usuarioInfo.apellido?.charAt(0) || ''}` || 'U';
+  };
+
+  // Función para obtener el rol del usuario (con colores diferentes)
+  const getRolColor = (rol) => {
+    const colores = {
+      'admin': COLOR_ROJO,
+      'gestor': COLOR_AZUL_ELECTRICO,
+      'cliente': COLOR_VERDE_LIMA
+    };
+    return colores[rol] || COLOR_NARANJA_VIBRANTE;
   };
 
   if (loading) {
@@ -163,7 +272,18 @@ export default function Ratings() {
         </Typography>
       </motion.div>
 
-      {/* Lista de Comentarios (FUNCIONALIDAD PRINCIPAL) */}
+      {/* Indicador de carga de datos adicionales */}
+      {loadingAdditionalData && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Chip 
+            icon={<CircularProgress size={16} />}
+            label="Cargando información adicional..."
+            variant="outlined"
+          />
+        </Box>
+      )}
+
+      {/* Lista de Comentarios */}
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', color: COLOR_AZUL_ELECTRICO }}>
@@ -177,101 +297,129 @@ export default function Ratings() {
         </Box>
 
         <Grid container spacing={3}>
-          {comentarios.map((comentarioItem, index) => (
-            <Grid item xs={12} key={comentarioItem.id_comentario}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                        <Avatar sx={{ bgcolor: COLOR_AZUL_ELECTRICO }}>
-                          {getInicialesUsuario(comentarioItem)}
-                        </Avatar>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                            {getNombreUsuario(comentarioItem)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDate(comentarioItem.fecha_comentario)}
-                            {comentarioItem.usuario?.rol && (
-                              <Chip 
-                                label={comentarioItem.usuario.rol} 
-                                size="small" 
-                                sx={{ 
-                                  ml: 1,
-                                  backgroundColor: COLOR_VERDE_LIMA,
-                                  color: COLOR_BLANCO,
-                                  fontSize: '0.6rem',
-                                  height: '20px'
-                                }}
-                              />
-                            )}
+          {comentarios.map((comentarioItem, index) => {
+            const usuarioInfo = getUsuarioInfo(comentarioItem.id_usuario);
+            const canchaInfo = getCanchaInfo(comentarioItem.id_cancha);
+            
+            return (
+              <Grid item xs={12} key={comentarioItem.id_comentario}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Card sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                          <Avatar sx={{ bgcolor: COLOR_AZUL_ELECTRICO }}>
+                            {getInicialesUsuario(comentarioItem)}
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                              {getNombreUsuario(comentarioItem)}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {formatDate(comentarioItem.fecha_comentario)}
+                              </Typography>
+                              {profile.rol === 'admin' && (
+                                <Chip 
+                                  label={usuarioInfo.rol} 
+                                  size="small" 
+                                  sx={{ 
+                                    backgroundColor: getRolColor(usuarioInfo.rol),
+                                    color: COLOR_BLANCO,
+                                    fontSize: '0.6rem',
+                                    height: '20px'
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Rating 
+                            value={comentarioItem.calificacion} 
+                            readOnly 
+                            size="medium" 
+                          />
+                          <Typography variant="h6" sx={{ color: COLOR_NARANJA_VIBRANTE, fontWeight: 'bold', ml: 1 }}>
+                            {comentarioItem.calificacion}/5
                           </Typography>
                         </Box>
                       </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Rating 
-                          value={comentarioItem.calificacion} 
-                          readOnly 
-                          size="medium" 
-                        />
-                        <Typography variant="h6" sx={{ color: COLOR_NARANJA_VIBRANTE, fontWeight: 'bold', ml: 1 }}>
-                          {comentarioItem.calificacion}/5
-                        </Typography>
-                      </Box>
-                    </Box>
 
-                    <Typography variant="body1" sx={{ mb: 2, fontStyle: 'italic', color: 'text.primary' }}>
-                      "{comentarioItem.descripcion}"
-                    </Typography>
+                      {/* Descripción del comentario */}
+                      <Typography variant="body1" sx={{ mb: 2, fontStyle: 'italic', color: 'text.primary' }}>
+                        "{comentarioItem.descripcion}"
+                      </Typography>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {/* Información de la cancha */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                         <SportsSoccer sx={{ fontSize: 16, color: COLOR_VERDE_LIMA }} />
-                        <Typography variant="body2" color="text.secondary">
-                          Cancha ID: {comentarioItem.id_cancha}
+                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                          {canchaInfo.nombre}
                         </Typography>
-                        {comentarioItem.usuario?.email && profile.rol === 'admin' && (
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Email: {comentarioItem.usuario.email}
+                        <Chip 
+                          label={canchaInfo.tipo} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ fontSize: '0.6rem' }}
+                        />
+                        {canchaInfo.precio_por_hora && (
+                          <Typography variant="caption" color="text.secondary">
+                            • ${canchaInfo.precio_por_hora}/hora
                           </Typography>
                         )}
                       </Box>
 
-                      {/* Botones de acción */}
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        {(profile.rol === 'admin' || comentarioItem.id_usuario === profile.id_usuario) && (
-                          <>
-                            {/* Al ser un comentario ya hecho, abrimos el diálogo para editar */}
-                            <IconButton
-                              size="small"
-                              // Usar el comentarioItem como base para la edición
-                              onClick={() => handleOpenDialog(comentarioItem)} 
-                              sx={{ color: COLOR_AZUL_ELECTRICO }}
-                            >
-                              <Edit />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeleteComment(comentarioItem.id_comentario)}
-                              sx={{ color: COLOR_NARANJA_VIBRANTE }}
-                            >
-                              <Delete />
-                            </IconButton>
-                          </>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {/* Información adicional para admin */}
+                        {profile.rol === 'admin' && usuarioInfo.email && (
+                          <Typography variant="caption" color="text.secondary">
+                            Contacto: {usuarioInfo.email}
+                          </Typography>
                         )}
+
+                        {/* Botones de acción */}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {(() => {
+                            const isAdmin = profile.rol === 'admin';
+                            const isOwner = comentarioItem.id_usuario === (profile.id_usuario || profile.id);
+                            
+                            // Mostrar botones si es el dueño Y no es admin
+                            if (!isAdmin && isOwner) {
+                              return (
+                                <>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenDialog(comentarioItem)}
+                                    sx={{ color: COLOR_AZUL_ELECTRICO }}
+                                  >
+                                    <Edit />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteComment(comentarioItem.id_comentario)}
+                                    sx={{ color: COLOR_NARANJA_VIBRANTE }}
+                                  >
+                                    <Delete />
+                                  </IconButton>
+                                </>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </Box>
                       </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </Grid>
-          ))}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Grid>
+            );
+          })}
         </Grid>
 
         {comentarios.length === 0 && (
@@ -289,10 +437,9 @@ export default function Ratings() {
         )}
       </Box>
 
-      {/* Dialog para calificar (Reutilizado) */}
-      {/* Nota: Este diálogo ahora puede ser abierto desde Reservations.jsx o desde el botón de Edit aquí */}
+      {/* Dialog para calificar/editar */}
       <Dialog
-        open={Boolean(ratingDialog && ratingDialog.id_cancha)}
+        open={Boolean(ratingDialog)}
         onClose={() => setRatingDialog(null)}
         maxWidth="sm"
         fullWidth
@@ -305,28 +452,24 @@ export default function Ratings() {
             fontWeight: 'bold' 
           }}
         >
-          {comentarios.some(c => c.id_cancha === ratingDialog?.id_cancha && c.id_usuario === profile.id_usuario) ? 
-              'Actualizar Calificación' : 'Calificar Cancha'}
+          {ratingDialog && comentarios.some(c => 
+            c.id_cancha === ratingDialog.id_cancha && 
+            c.id_usuario === (profile.id_usuario || profile.id)
+          ) ? 'Actualizar Calificación' : 'Calificar Cancha'}
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           {ratingDialog && (
             <Box>
               <Box sx={{ textAlign: 'center', mb: 3 }}>
-                {/* Asumimos que el objeto tiene la información de cancha. Si se abre desde 'Edit' en esta página, 
-                puede no tenerla, por lo que lo haríamos opcional */}
                 <Typography sx={{ fontSize: '3rem', mb: 1 }}>
-                  {getSportIcon(ratingDialog.cancha?.tipo || '🏆')}
+                  {getSportIcon(ratingDialog.cancha?.tipo)}
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {ratingDialog.cancha?.nombre || `Cancha ID: ${ratingDialog.id_cancha}`}
+                  {ratingDialog.cancha?.nombre}
                 </Typography>
-                {/* Mostramos fecha y hora solo si son propiedades de reserva (para no mostrar en edición de comentario) */}
-                {ratingDialog.fecha_reserva && (
-                  <Typography variant="body2" color="text.secondary">
-                    {formatDate(ratingDialog.fecha_reserva).split(' • ')[0]} • 
-                    {ratingDialog.hora_inicio?.slice(0,5)} - {ratingDialog.hora_fin?.slice(0,5)}
-                  </Typography>
-                )}
+                <Typography variant="body2" color="text.secondary">
+                  {ratingDialog.cancha?.tipo}
+                </Typography>
               </Box>
               
               <Box sx={{ textAlign: 'center', mb: 3 }}>
@@ -379,8 +522,10 @@ export default function Ratings() {
               },
             }}
           >
-            {comentarios.some(c => c.id_cancha === ratingDialog?.id_cancha && c.id_usuario === profile.id_usuario) ? 
-              'Actualizar' : 'Enviar'} Calificación
+            {ratingDialog && comentarios.some(c => 
+              c.id_cancha === ratingDialog.id_cancha && 
+              c.id_usuario === (profile.id_usuario || profile.id)
+            ) ? 'Actualizar' : 'Enviar'} Calificación
           </Button>
         </DialogActions>
       </Dialog>
