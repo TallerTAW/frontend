@@ -9,6 +9,18 @@ export const reservasApi = {
     console.log('🚀 [API] Enviando reserva completa con cupón:', reservaData.codigo_cupon);
     const response = await api.post('/reservas-completas', reservaData); // ← NUEVO PREFIJO
     console.log('✅ [API] Reserva creada exitosamente:', response.data);
+  getAll: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.keys(filters).forEach(key => {
+      if (filters[key]) params.append(key, filters[key]);
+    });
+    
+    const response = await api.get(`/reservas?${params}`);
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/reservas/${id}`);
     return response.data;
   },
 
@@ -20,6 +32,8 @@ export const reservasApi = {
 
   getAll: async (params = {}) => {
     const response = await api.get('/reservas', { params });
+  update: async (id, reservaData) => {
+    const response = await api.patch(`/reservas/${id}`, reservaData);  // Cambiar put por patch
     return response.data;
   },
 
@@ -42,6 +56,13 @@ export const reservasApi = {
 
   cancel: async (id) => {
     const response = await api.put(`/reservas/${id}`, { estado: 'cancelada' });
+   getByGestor: async (gestorId) => {
+    const response = await api.get(`/reservas/gestor/mis-reservas?gestor_id=${gestorId}`);
+    return response.data;
+  },
+
+  confirmar: async (id) => {
+    const response = await api.post(`/reservas/${id}/confirmar`);
     return response.data;
   },
 

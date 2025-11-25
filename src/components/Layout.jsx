@@ -81,7 +81,7 @@ export default function Layout() {
       { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente','gestor'], guest: true }, // cambiar a false si no debe verse en modo invitado
       { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin','gestor'] },
       { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin','gestor'] },
-      { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin','gestor'] },
+      { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin'] },
       { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
       { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente', 'admin'] },
       { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
