@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+// 📍 ARCHIVO: src/pages/Ratings.jsx (ACTUALIZADO)
+
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { reservasApi } from '../api/reservas';
-import { comentariosApi } from '../api/comentarios';
 import { toast } from 'react-toastify';
 import {
   Box,
@@ -31,8 +31,10 @@ import {
   LocationOn
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+// Importamos el nuevo hook
+import { useUserRatings } from '../hooks/useUserRatings';
 
-// Paleta de colores
+// Paleta de colores (Mantener para consistencia de estilo)
 const COLOR_AZUL_ELECTRICO = '#00BFFF';
 const COLOR_VERDE_LIMA = '#A2E831';
 const COLOR_NARANJA_VIBRANTE = '#FD7E14';
@@ -41,64 +43,21 @@ const COLOR_NEGRO_SUAVE = '#212121';
 
 export default function Ratings() {
   const { profile } = useAuth();
-  const [reservas, setReservas] = useState([]);
-  const [comentarios, setComentarios] = useState([]);
+  // USAMOS EL NUEVO HOOK: Simplifica la lógica
+  const { 
+    comentarios, 
+    loading, 
+    handleSaveRating, 
+    handleDeleteComment 
+  } = useUserRatings();
+
+  // Estados locales para el diálogo de calificación
   const [ratingDialog, setRatingDialog] = useState(null);
   const [ratingValue, setRatingValue] = useState(0);
   const [comentario, setComentario] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [loadingReservas, setLoadingReservas] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      fetchComentarios();
-      // Cargar reservas solo si no es admin y si queremos la funcionalidad de calificar
-      if (profile.rol !== 'admin') {
-        fetchReservas();
-      }
-    }
-  }, [profile]);
-
-  // Cargar comentarios (funcionalidad principal)
-  const fetchComentarios = async () => {
-    try {
-      setLoading(true);
-      
-      let comentariosData;
-      if (profile.rol === 'admin') {
-        comentariosData = await comentariosApi.getAll();
-      } else {
-        comentariosData = await comentariosApi.getByUsuario(profile.id);
-      }
-      
-      setComentarios(comentariosData);
-    } catch (error) {
-      console.error('Error al cargar comentarios:', error);
-      toast.error('Error al cargar comentarios');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cargar reservas (funcionalidad opcional - solo para calificar)
-  const fetchReservas = async () => {
-    try {
-      setLoadingReservas(true);
-      const reservasData = await reservasApi.getByUsuario(profile.id);
-      const reservasCompletadas = reservasData.filter(reserva => 
-        reserva.estado === 'completada' || reserva.estado === 'confirmada'
-      );
-      setReservas(reservasCompletadas);
-    } catch (error) {
-      console.warn('No se pudieron cargar las reservas:', error);
-      // No mostrar error al usuario, simplemente no mostrar la sección de calificar
-      setReservas([]);
-    } finally {
-      setLoadingReservas(false);
-    }
-  };
-
-  const handleOpenDialog = (reserva) => {
+  // Función para abrir el diálogo (con datos existentes si aplica)
+  const handleOpenDialog = useCallback((reserva) => {
     // Buscar si ya existe un comentario para esta cancha
     const existingComment = comentarios.find(c => 
       c.id_cancha === reserva.id_cancha
@@ -111,70 +70,27 @@ export default function Ratings() {
       setRatingValue(0);
       setComentario('');
     }
-    setRatingDialog(reserva);
-  };
+    // Añadimos 'cancha' a ratingDialog para que el diálogo pueda mostrar el nombre
+    setRatingDialog({ ...reserva, cancha: reserva.cancha }); 
+  }, [comentarios]);
 
+  // Función para enviar la calificación
   const handleSubmitRating = async () => {
     if (!ratingDialog || ratingValue === 0) return;
 
-    try {
-      const commentData = {
-        descripcion: comentario,
-        calificacion: ratingValue,
-        id_usuario: profile.id,
-        id_cancha: ratingDialog.id_cancha,
-      };
-
-      const existingComment = comentarios.find(c => 
-        c.id_cancha === ratingDialog.id_cancha && c.id_usuario === profile.id
-      );
-      
-      let resultado;
-      if (existingComment) {
-        resultado = await comentariosApi.update(existingComment.id_comentario, commentData);
-        toast.success('Comentario actualizado correctamente');
-      } else {
-        resultado = await comentariosApi.create(commentData);
-        toast.success('Comentario enviado correctamente');
-      }
-
-      // Actualizar lista de comentarios
-      if (existingComment) {
-        setComentarios(prev => 
-          prev.map(c => c.id_comentario === existingComment.id_comentario ? resultado : c)
-        );
-      } else {
-        setComentarios(prev => [...prev, resultado]);
-      }
-
+    const success = await handleSaveRating(
+      ratingDialog, 
+      ratingValue, 
+      comentario
+    );
+    
+    if (success) {
       setRatingDialog(null);
       setRatingValue(0);
       setComentario('');
-      
-      // Recargar comentarios para asegurar que tenemos los datos actualizados
-      fetchComentarios();
-      
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Error al guardar el comentario');
-      console.error('Error:', error);
     }
   };
 
-  const handleDeleteComment = async (comentarioId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
-      try {
-        await comentariosApi.delete(comentarioId);
-        setComentarios(prev => prev.filter(c => c.id_comentario !== comentarioId));
-        toast.success('Comentario eliminado correctamente');
-      } catch (error) {
-        toast.error('Error al eliminar comentario');
-      }
-    }
-  };
-
-  const hasRating = (canchaId) => {
-    return comentarios.some(c => c.id_cancha === canchaId && c.id_usuario === profile.id);
-  };
 
   const getSportIcon = (canchaTipo) => {
     const icons = {
@@ -195,7 +111,11 @@ export default function Ratings() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    // Verifica si la propiedad es una cadena de fecha válida antes de formatear
+    const date = new Date(dateString);
+    if (isNaN(date)) return 'Fecha desconocida';
+
+    return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -242,116 +162,6 @@ export default function Ratings() {
           {profile?.rol === 'admin' ? 'Administra todos los comentarios del sistema' : 'Comparte tu experiencia con otros usuarios'}
         </Typography>
       </motion.div>
-
-      {/* Sección para usuarios normales - Reservas para calificar (OPCIONAL) */}
-      {profile?.rol !== 'admin' && (
-        <Box sx={{ mb: 6 }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', color: COLOR_VERDE_LIMA, mb: 3 }}>
-            Reservas Disponibles para Calificar
-          </Typography>
-          
-          {loadingReservas ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress size={40} />
-            </Box>
-          ) : (
-            <>
-              <Grid container spacing={3}>
-                {reservas.filter(r => !hasRating(r.id_cancha)).map((reserva, index) => (
-                  <Grid item xs={12} md={6} key={reserva.id_reserva}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                    >
-                      <Card 
-                        sx={{ 
-                          borderRadius: 2,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                            transform: 'translateY(-4px)',
-                          }
-                        }}
-                      >
-                        <Box 
-                          sx={{ 
-                            p: 3, 
-                            background: `linear-gradient(135deg, ${COLOR_VERDE_LIMA} 0%, ${COLOR_AZUL_ELECTRICO} 100%)`,
-                            color: COLOR_BLANCO,
-                            borderRadius: '8px 8px 0 0'
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography sx={{ fontSize: '2.5rem' }}>
-                              {getSportIcon(reserva.cancha?.tipo)}
-                            </Typography>
-                            <Box>
-                              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                {reserva.cancha?.nombre || `Cancha ${reserva.id_cancha}`}
-                              </Typography>
-                              <Typography variant="caption">
-                                {new Date(reserva.fecha_reserva).toLocaleDateString('es-ES')}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                        <CardContent sx={{ p: 3 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            <strong>Horario:</strong> {reserva.hora_inicio?.slice(0,5)} - {reserva.hora_fin?.slice(0,5)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                            <strong>Estado:</strong> 
-                            <Chip 
-                              label={reserva.estado} 
-                              size="small" 
-                              sx={{ 
-                                ml: 1,
-                                backgroundColor: reserva.estado === 'completada' ? COLOR_VERDE_LIMA : COLOR_NARANJA_VIBRANTE,
-                                color: COLOR_BLANCO,
-                                fontWeight: 'bold'
-                              }}
-                            />
-                          </Typography>
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<Star />}
-                            onClick={() => handleOpenDialog(reserva)}
-                            sx={{
-                              backgroundColor: COLOR_NARANJA_VIBRANTE,
-                              color: COLOR_BLANCO,
-                              fontWeight: 'bold',
-                              '&:hover': {
-                                backgroundColor: '#CC6A11',
-                              },
-                            }}
-                          >
-                            Calificar Ahora
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  </Grid>
-                ))}
-              </Grid>
-              
-              {reservas.filter(r => !hasRating(r.id_cancha)).length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'grey.50', borderRadius: 2 }}>
-                  <Star sx={{ fontSize: 60, color: COLOR_VERDE_LIMA, opacity: 0.5, mb: 2 }} />
-                  <Typography color="text.secondary">
-                    No tienes reservas pendientes de calificar
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Las reservas completadas aparecerán aquí para que puedas calificarlas
-                  </Typography>
-                </Box>
-              )}
-            </>
-          )}
-        </Box>
-      )}
 
       {/* Lista de Comentarios (FUNCIONALIDAD PRINCIPAL) */}
       <Box>
@@ -435,14 +245,13 @@ export default function Ratings() {
 
                       {/* Botones de acción */}
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {(profile.rol === 'admin' || comentarioItem.id_usuario === profile.id) && (
+                        {(profile.rol === 'admin' || comentarioItem.id_usuario === profile.id_usuario) && (
                           <>
+                            {/* Al ser un comentario ya hecho, abrimos el diálogo para editar */}
                             <IconButton
                               size="small"
-                              onClick={() => {
-                                // Para editar, necesitaríamos cargar los datos de la cancha
-                                toast.info('Funcionalidad de edición en desarrollo');
-                              }}
+                              // Usar el comentarioItem como base para la edición
+                              onClick={() => handleOpenDialog(comentarioItem)} 
                               sx={{ color: COLOR_AZUL_ELECTRICO }}
                             >
                               <Edit />
@@ -474,13 +283,14 @@ export default function Ratings() {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {profile?.rol === 'admin' ? 
                 'Los comentarios de usuarios aparecerán aquí' : 
-                'Tus comentarios aparecerán aquí después de calificar las canchas'}
+                'Tus comentarios aparecerán aquí'}
             </Typography>
           </Box>
         )}
       </Box>
 
-      {/* Dialog para calificar */}
+      {/* Dialog para calificar (Reutilizado) */}
+      {/* Nota: Este diálogo ahora puede ser abierto desde Reservations.jsx o desde el botón de Edit aquí */}
       <Dialog
         open={Boolean(ratingDialog && ratingDialog.id_cancha)}
         onClose={() => setRatingDialog(null)}
@@ -495,22 +305,28 @@ export default function Ratings() {
             fontWeight: 'bold' 
           }}
         >
-          Calificar Cancha
+          {comentarios.some(c => c.id_cancha === ratingDialog?.id_cancha && c.id_usuario === profile.id_usuario) ? 
+              'Actualizar Calificación' : 'Calificar Cancha'}
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           {ratingDialog && (
             <Box>
               <Box sx={{ textAlign: 'center', mb: 3 }}>
+                {/* Asumimos que el objeto tiene la información de cancha. Si se abre desde 'Edit' en esta página, 
+                puede no tenerla, por lo que lo haríamos opcional */}
                 <Typography sx={{ fontSize: '3rem', mb: 1 }}>
-                  {getSportIcon(ratingDialog.cancha?.tipo)}
+                  {getSportIcon(ratingDialog.cancha?.tipo || '🏆')}
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {ratingDialog.cancha?.nombre || `Cancha ${ratingDialog.id_cancha}`}
+                  {ratingDialog.cancha?.nombre || `Cancha ID: ${ratingDialog.id_cancha}`}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {new Date(ratingDialog.fecha_reserva).toLocaleDateString('es-ES')} • 
-                  {ratingDialog.hora_inicio?.slice(0,5)} - {ratingDialog.hora_fin?.slice(0,5)}
-                </Typography>
+                {/* Mostramos fecha y hora solo si son propiedades de reserva (para no mostrar en edición de comentario) */}
+                {ratingDialog.fecha_reserva && (
+                  <Typography variant="body2" color="text.secondary">
+                    {formatDate(ratingDialog.fecha_reserva).split(' • ')[0]} • 
+                    {ratingDialog.hora_inicio?.slice(0,5)} - {ratingDialog.hora_fin?.slice(0,5)}
+                  </Typography>
+                )}
               </Box>
               
               <Box sx={{ textAlign: 'center', mb: 3 }}>
@@ -563,7 +379,7 @@ export default function Ratings() {
               },
             }}
           >
-            {comentarios.some(c => c.id_cancha === ratingDialog?.id_cancha && c.id_usuario === profile.id) ? 
+            {comentarios.some(c => c.id_cancha === ratingDialog?.id_cancha && c.id_usuario === profile.id_usuario) ? 
               'Actualizar' : 'Enviar'} Calificación
           </Button>
         </DialogActions>

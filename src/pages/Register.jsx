@@ -4,540 +4,552 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { toast } from 'react-toastify';
 import {
-  TextField,
-  Button,
-  Container,
-  Box,
-  Typography,
-  Paper,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  CircularProgress,
-  Grid,
+    TextField,
+    Button,
+    Container,
+    Box,
+    Typography,
+    Alert,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    CircularProgress,
+    Grid,
+    IconButton,
+    InputAdornment,
 } from '@mui/material';
 import { motion } from 'framer-motion';
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
+import LockIcon from '@mui/icons-material/Lock';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+
+// === COLORES DE LA PALETA UNIFICADA ===
+const COLOR_PRIMARY = '#00BFFF';     // Azul Eléctrico
+const COLOR_DARK = '#333333';        // Gris Oscuro (Fondo del formulario)
+const COLOR_LIGHT = '#FFFFFF';       // Blanco (Texto)
+const COLOR_ACCENT_RED = '#FD7E14';  // Naranja/Rojo (Botón principal)
+const COLOR_LIME = '#A2E831';        // Verde Lima (Acentos, foco, hover)
 
 export default function Register() {
-  const [formData, setFormData] = useState({
-    nombre: '',
-    apellido: '',
-    email: '',
-    contrasenia: '',
-    confirmarContrasenia: '',
-    telefono: '',
-    rol: 'cliente'
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
-  const navigate = useNavigate();
-  const recaptchaRef = useRef(null);
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+    // --- Estado y Lógica (Sin cambios) ---
+    const [formData, setFormData] = useState({
+        nombre: '',
+        apellido: '',
+        email: '',
+        contrasenia: '',
+        confirmarContrasenia: '',
+        telefono: '',
+        rol: 'cliente'
     });
-    if (error) setError('');
-  };
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [recaptchaVerified, setRecaptchaVerified] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleRecaptchaChange = (token) => {
-    console.log('reCAPTCHA token:', token ? '✅ Verificado' : '❌ No verificado');
-    setRecaptchaVerified(!!token);
-  };
+    const navigate = useNavigate();
+    const recaptchaRef = useRef(null);
 
-  const handleRecaptchaExpire = () => {
-    console.log('reCAPTCHA expirado');
-    setRecaptchaVerified(false);
-    setError('El reCAPTCHA ha expirado. Por favor, verifica nuevamente.');
-  };
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        });
+        if (error) setError('');
+    };
 
-  const handleRecaptchaError = () => {
-    console.error('Error en reCAPTCHA');
-    setRecaptchaVerified(false);
-    setError('Error en la verificación reCAPTCHA. Intenta nuevamente.');
-  };
+    const handleClickShowPassword = () => setShowPassword((show) => !show);
+    const handleClickShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
+    const handleMouseDownPassword = (event) => {
+        event.preventDefault();
+    };
 
-  const validateForm = () => {
-    if (!formData.nombre || !formData.apellido || !formData.email || !formData.contrasenia) {
-      setError('Todos los campos marcados con * son obligatorios');
-      return false;
-    }
+    const handleRecaptchaChange = (token) => {
+        setRecaptchaVerified(!!token);
+        if (error && !!token) setError('');
+    };
 
-    if (formData.contrasenia.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return false;
-    }
+    const handleRecaptchaExpire = () => {
+        setRecaptchaVerified(false);
+        setError('El reCAPTCHA ha expirado. Por favor, verifica nuevamente.');
+    };
 
-    if (formData.contrasenia !== formData.confirmarContrasenia) {
-      setError('Las contraseñas no coinciden');
-      return false;
-    }
+    const handleRecaptchaError = () => {
+        setRecaptchaVerified(false);
+        setError('Error en la verificación reCAPTCHA. Intenta nuevamente.');
+    };
 
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('El formato del email no es válido');
-      return false;
-    }
-
-    if (!recaptchaVerified) {
-      setError('Por favor, verifica que no eres un robot');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const token = recaptchaRef.current.getValue();
-      if (!token) {
-        throw new Error('No se pudo obtener el token reCAPTCHA');
-      }
-
-      console.log("Token reCAPTCHA obtenido:", token);
-      console.log('Enviando datos de registro:', { 
-        ...formData, 
-        contrasenia: '***',
-        confirmarContrasenia: '***',
-        captcha_token: token
-      });
-      const { confirmarContrasenia, ...registerData } = formData;
-
-      const response = await authApi.register({
-        ...registerData,
-        captcha_token: token  
-      });
-      console.log('Respuesta del registro:', response);
-
-      // En handleSubmit, después del registro exitoso:
-      toast.success('¡Registro exitoso! Tu cuenta está pendiente de aprobación por un administrador. Te notificaremos por email cuando sea activada.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (error) {
-      console.error('Error completo en registro:', error);
-      let errorMessage = 'Error al registrar usuario';
-
-      if (error.response) {
-        const serverError = error.response.data;
-        if (typeof serverError === 'string') {
-          errorMessage = serverError;
-        } else if (serverError?.detail) {
-          errorMessage = typeof serverError.detail === 'string' 
-            ? serverError.detail 
-            : JSON.stringify(serverError.detail);
-        } else if (serverError?.message) {
-          errorMessage = serverError.message;
-        } else {
-          errorMessage = `Error del servidor: ${error.response.status}`;
+    const validateForm = () => {
+        if (!formData.nombre || !formData.apellido || !formData.email || !formData.contrasenia || !formData.confirmarContrasenia) {
+            setError('Todos los campos marcados con ** son obligatorios');
+            return false;
         }
-
-        if (error.response.status === 422) {
-          errorMessage = 'Datos de formulario inválidos';
-        } else if (error.response.status === 400) {
-          if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
-            errorMessage = 'Error de verificación reCAPTCHA. Por favor, verifica el reCAPTCHA nuevamente.';
-          } else {
-            errorMessage = 'Datos incorrectos o usuario ya existe';
-          }
+        if (formData.contrasenia.length < 6) {
+            setError('La contraseña debe tener al menos 6 caracteres');
+            return false;
         }
-      } else if (error.request) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-      } else {
-        errorMessage = error.message || 'Error de configuración';
-      }
-      
-      setError(errorMessage);
-      toast.error(errorMessage);
-      
-      recaptchaRef.current.reset();
-      setRecaptchaVerified(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (formData.contrasenia !== formData.confirmarContrasenia) {
+            setError('Las contraseñas no coinciden');
+            return false;
+        }
+        if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            setError('El formato del email no es válido');
+            return false;
+        }
+        if (!recaptchaVerified) {
+            setError('Por favor, verifica que no eres un robot');
+            return false;
+        }
+        return true;
+    };
 
-  // ----------------------------------------------------------------------
-  // CAMBIOS DE DISEÑO INICIAN AQUÍ
-  // ----------------------------------------------------------------------
-  
-  // Estilo para los campos de texto oscuros
-  const darkInputStyle = {
-    // Estilo base para el contenedor del input
-    '& .MuiInputBase-root': {
-      backgroundColor: '#1c364f', // Fondo azul oscuro
-      color: 'white', // Texto blanco
-      borderRadius: '4px',
-      // Estilo para el input en sí (texto)
-      '& input': {
-          color: 'white',
-      },
-      '& fieldset': {
-        borderColor: 'transparent', // Sin borde visible
-      },
-      '&:hover fieldset': {
-        borderColor: '#00BFFF !important', // Borde azul claro al pasar el ratón
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: '#00BFFF !important', // Borde azul claro al estar enfocado
-      },
-    },
-    // Estilo para la etiqueta (Label)
-    '& .MuiInputLabel-root': {
-      color: 'white', // Etiqueta blanca
-      fontWeight: 'bold',
-      '&.Mui-focused': {
-        color: '#00BFFF', // Etiqueta azul claro al enfocar
-      }
-    },
-    // Estilo para el helper text
-    '& .MuiFormHelperText-root': {
-        color: 'white !important', // Texto de ayuda blanco
-    },
-  };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
 
-  // Estilo para el Select (Tipo de Cuenta)
-  const darkSelectStyle = {
-    '& .MuiOutlinedInput-root': {
-      backgroundColor: '#1c364f', // Fondo azul oscuro
-      color: 'white', // Texto blanco
-      '& .MuiSelect-select': {
-        color: 'white',
-      },
-      '& fieldset': {
-        borderColor: 'transparent',
-      },
-      '&:hover fieldset': {
-        borderColor: '#00BFFF !important',
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: '#00BFFF !important',
-      },
-    },
-    '& .MuiInputLabel-root': {
-      color: '#1d5a73',
-      fontWeight: 'bold',
-      '&.Mui-focused': {
-        color: '#00BFFF',
-      }
-    },
-    '& .MuiSvgIcon-root': { // Icono de flecha del Select
-        color: 'white',
-    }
-  };
-  
-  // Estilo para el campo de Email, que es blanco en la imagen
-  const lightInputStyle = {
-    // Estilo base para el contenedor del input
-    '& .MuiInputBase-root': {
-      backgroundColor: 'white', // Fondo blanco
-      color: 'black', // Texto negro
-      borderRadius: '4px',
-      '& input': {
-          color: 'black',
-      },
-      '& fieldset': {
-        borderColor: '#ccc', // Borde gris suave
-      },
-      '&:hover fieldset': {
-        borderColor: '#00BFFF !important', 
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: '#00BFFF !important', 
-      },
-    },
-    // Estilo para la etiqueta (Label)
-    '& .MuiInputLabel-root': {
-      color: 'black', // Etiqueta negra
-      fontWeight: 'normal',
-      '&.Mui-focused': {
-        color: '#00BFFF', // Etiqueta azul claro al enfocar
-      }
-    },
-  };
+        setLoading(true);
+        setError('');
 
-  return (
-    // CAMBIO: Fondo con imagen de estadio (simulado)
-    <div 
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        backgroundImage: 'url("https://images.pexels.com/photos/15476801/pexels-photo-15476801.jpeg")', // Placeholder para la imagen de estadio
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundColor: '#1C3144', // Color de fallback
-      }}
-    >
-      <Container maxWidth="md">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* CAMBIO: Contenedor principal blanco con borde azul claro */}
-          <Paper 
-            elevation={8} 
+        try {
+            const token = recaptchaRef.current.getValue();
+            if (!token) {
+                throw new Error('No se pudo obtener el token reCAPTCHA');
+            }
+
+            const { confirmarContrasenia, ...registerData } = formData;
+            await authApi.register({
+                ...registerData,
+                captcha_token: token
+            });
+
+            toast.success('¡Registro exitoso! Tu cuenta está pendiente de aprobación por un administrador. Te notificaremos por email cuando sea activada.');
+
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+                setRecaptchaVerified(false);
+            }
+
+            setTimeout(() => {
+                navigate('/login');
+            }, 2000);
+
+        } catch (error) {
+            let errorMessage = 'Error al registrar usuario';
+
+            if (error.response && error.response.data) {
+                 const serverError = error.response.data;
+                 errorMessage = serverError.detail || serverError.message || JSON.stringify(serverError);
+                 if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
+                    errorMessage = 'Error de verificación reCAPTCHA. Por favor, verifica nuevamente.';
+                 } else if (errorMessage.includes('user already exists')) {
+                    errorMessage = 'El email ya está registrado.';
+                 }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            setError(errorMessage);
+            toast.error(errorMessage);
+
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+                setRecaptchaVerified(false);
+            }
+
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // --- ESTILOS UNIFICADOS (Sin cambios) ---
+    
+    const darkInputStyle = {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderRadius: 1,
+        
+        // Estilos para el campo de texto interno OutlinedInput
+        '& .MuiOutlinedInput-root': {
+            color: COLOR_LIGHT,
+            
+            // AJUSTE CLAVE DE ALTURA: Aumentar padding interno
+            '& .MuiOutlinedInput-input': {
+                paddingTop: '16.5px', 
+                paddingBottom: '16.5px',
+            },
+            
+            '& fieldset': { borderColor: COLOR_PRIMARY, transition: 'all 0.3s' },
+            '&:hover fieldset': { borderColor: COLOR_LIME },
+            '&.Mui-focused fieldset': { 
+                borderColor: COLOR_LIME,
+                borderWidth: '2px',
+            },
+        },
+        // Mover la etiqueta (label) flotante para compensar el padding aumentado
+        '& .MuiInputLabel-root': {
+            color: COLOR_LIGHT,
+            '&.Mui-focused': {
+                color: COLOR_LIME,
+            },
+            '&.MuiInputLabel-shrink': {
+                transform: 'translate(14px, -9px) scale(0.75)',
+            },
+        },
+        '& .MuiFormHelperText-root': {
+            color: COLOR_LIGHT,
+            opacity: 0.7,
+        },
+    };
+    
+    const darkSelectStyle = {
+        ...darkInputStyle,
+        
+        // El Select tiene su propio ajuste de padding que debemos igualar
+        '& .MuiOutlinedInput-root': {
+            ...darkInputStyle['& .MuiOutlinedInput-root'], 
+            '& .MuiSelect-select': {
+                paddingTop: '16.5px', 
+                paddingBottom: '16.5px',
+            },
+        },
+        
+        '& .MuiSvgIcon-root': { 
+            color: COLOR_LIME,
+        },
+    };
+
+    // ------------------------------------
+
+    return (
+        <Box
             sx={{
-                padding: '30px 40px', // Aumentar padding
-                borderRadius: '8px',
-                backgroundColor: '#226079d4', // Fondo blanco
-                border: '3px solid #00BFFF' // Borde azul brillante
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundImage: 'url(/static/uploads/cancha-login.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                padding: 4,
+                position: 'relative',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                }
             }}
-          >
-     
-            {/* CABECERA */}
-            <Box className="text-center mb-6">
-              <Typography 
-                variant="h3" 
-                sx={{ color: '#00BFFF', fontWeight: 'bold' }} // Azul brillante
-              >
-                OLYMPIAHUB
-              </Typography>
-              <Typography 
-                variant="h5" 
-                sx={{ color: '#333', fontWeight: 'normal' }} // Color de texto normal
-              >
-                Crear Cuenta
-              </Typography>
-              <Typography 
-                variant="body1" 
-                sx={{ color: '#666' }}
-              >
-                Únete a nuestra comunidad deportiva
-              </Typography>
-            </Box>
-
-            {error && (
-              <Alert severity="error" className="mb-4">
-                {error}
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={2}> {/* Espaciado más reducido */}
-                {/* Nombre */}
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Nombre **" // Doble asterisco para coincidir con la imagen
-                    name="nombre"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    sx={darkInputStyle} // Estilo oscuro
-                    InputProps={{
-                        endAdornment: (
-                            <Box component="span" sx={{ color: 'white' }}>👤</Box> // Icono
-                        ),
-                    }}
-                  />
-                </Grid>
-                {/* Apellido */}
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Apellido **" // Doble asterisco
-                    name="apellido"
-                    value={formData.apellido}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    sx={darkInputStyle} // Estilo oscuro
-                    InputProps={{
-                        endAdornment: (
-                            <Box component="span" sx={{ color: 'white' }}>👥</Box> // Icono
-                        ),
-                    }}
-                  />
-                </Grid>
-                {/* Email (Campo Blanco en la imagen) */}
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Email **" // Doble asterisco
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    sx={lightInputStyle} // Estilo claro
-                  />
-                </Grid>
-                
-                {/* Teléfono */}
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Teléfono"
-                    name="telefono"
-                    value={formData.telefono}
-                    onChange={handleChange}
-                    disabled={loading}
-                    sx={darkInputStyle} // Estilo oscuro
-                    InputProps={{
-                        endAdornment: (
-                            <Box component="span" sx={{ color: 'white' }}>📞</Box> // Icono
-                        ),
-                    }}
-                  />
-                </Grid>
-                
-                {/* Tipo de Cuenta (Select) */}
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth sx={darkSelectStyle}> {/* Estilo oscuro */}
-                    <InputLabel>Tipo de Cuenta</InputLabel>
-                    <Select
-                      name="rol"
-                      value={formData.rol}
-                      onChange={handleChange}
-                      disabled={loading}
-                      label="Tipo de Cuenta"
-                    >
-                      <MenuItem value="cliente">Cliente</MenuItem>
-                      <MenuItem value="gestor">Gestor de Espacios</MenuItem>
-                      <MenuItem value="control_acceso">Control de Acceso</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {/* Contraseña */}
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Contraseña **" // Doble asterisco
-                    name="contrasenia"
-                    type="password"
-                    value={formData.contrasenia}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    helperText="Mínimo 6 caracteres"
-                    sx={darkInputStyle} // Estilo oscuro
-                    InputProps={{
-                        endAdornment: (
-                            <Box component="span" sx={{ color: 'white' }}>$</Box> // Icono
-                        ),
-                    }}
-                  />
-                </Grid>
-
-                {/* Confirmar Contraseña (Ancho completo para seguir el flujo visual de la imagen) */}
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Confirmar Contraseña **" // Doble asterisco
-                    name="confirmarContrasenia"
-                    type="password"
-                    value={formData.confirmarContrasenia}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    sx={darkInputStyle} // Estilo oscuro
-                  />
-                </Grid>
-                
-                {/* ReCAPTCHA Visible (Centrado) */}
-                <Grid item xs={12}>
-                  <Box className="flex justify-center my-4">
-                    <ReCAPTCHA
-                      sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-                      ref={recaptchaRef}
-                      onChange={handleRecaptchaChange}
-                      onExpired={handleRecaptchaExpire}
-                      onErrored={handleRecaptchaError}
-                      // CAMBIO: Agregar estilo para simular el 'No soy un robot' con fondo verde claro
-                      sx={{ '& > div': { border: '2px solid #9eca3f', backgroundColor: '#e6ffe6' } }}
-                    />
-                  </Box>
-                  {recaptchaVerified && (
-                    <Alert severity="success" className="mb-2">
-                      reCAPTCHA verificado correctamente
-                    </Alert>
-                  )}
-                </Grid>
-              </Grid>
-
-              {/* Botón */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading || !recaptchaVerified}
-                // CAMBIO: Color y estilo del botón (Azul sólido en la imagen)
-                sx={{
-                  mt: 3, // Margen superior para separarlo del ReCAPTCHA
-                  textTransform: 'none',
-                  fontSize: '1.1rem',
-                  padding: '12px 20px',
-                  backgroundColor: '#1c364f', // Azul sólido
-                  '&:hover': {
-                    backgroundColor: '#102436', // Azul más oscuro al hover
-                  },
-                  '&:disabled': {
-                    backgroundColor: '#ccc',
-                    color: '#666',
-                  },
-                }}
-              >
-                {loading ? (
-                  <Box className="flex items-center gap-2">
-                    <CircularProgress size={20} color="inherit" />
-                    Creando cuenta...
-                  </Box>
-                ) : (
-                  'Crear Cuenta'
-                )}
-              </Button>
-            </form>
-
-            {/* SECCIÓN DE PIE DE PÁGINA */}
-            <Box className="mt-4 text-center">
-              <Typography variant="body2" className="text-gray-600 font-body">
-                ¿Ya tienes una cuenta?{' '}
-                <Link 
-                  to="/login" 
-                  // CAMBIO: Color del link (Azul oscuro principal)
-                  style={{ 
-                    textDecoration: 'none', 
-                    color: '#1c364f', 
-                    fontWeight: 'bold',
-                    transition: 'color 0.3s' 
-                  }}
+        >
+            {/* Contenedor principal: Ancho ajustado a "sm" */}
+            <Container maxWidth="sm" sx={{ zIndex: 10 }}> 
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
                 >
-                  Inicia sesión aquí
-                </Link>
-              </Typography>
-            </Box>
+                    <Box
+                        component="div"
+                        sx={{
+                            p: 4,
+                            borderRadius: 3,
+                            backgroundColor: COLOR_DARK,
+                            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)', 
+                            textAlign: 'center',
+                            color: COLOR_LIGHT,
+                            border: `1px solid rgba(255, 255, 255, 0.1)` 
+                        }}
+                    >
+           
+                        {/* CABECERA (sin cambios) */}
+                        <Box className="text-center mb-6" sx={{ mb: 4 }}>
+                            <Typography
+                                variant="h4"
+                                fontWeight={700}
+                                sx={{
+                                    color: COLOR_LIME,
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    letterSpacing: '5px',
+                                    mb: 0.5,
+                                }}
+                            >
+                                REGISTRO
+                            </Typography>
+                            <Typography
+                                variant="subtitle1"
+                                sx={{
+                                    mb: 3,
+                                    opacity: 0.8,
+                                    fontFamily: 'Roboto, sans-serif'
+                                }}
+                            >
+                                Únete a nuestra comunidad deportiva
+                            </Typography>
+                        </Box>
 
-            <Box className="mt-2 p-2 rounded-lg">
-              <Typography 
-                variant="caption" 
-                className="text-gray-500 block text-center"
-                sx={{ color: '#1c364f', fontWeight: 'bold' }} // Color azul
-              >
-                ** Campos obligatorios
-              </Typography>
-              <Typography 
-                variant="caption" 
-                className="text-gray-500 block text-center mt-1"
-                sx={{ color: '#666' }} // Color más suave para el texto legal
-              >
-                Al registrarte, aceptas nuestros términos y condiciones
-              </Typography>
-            </Box>
-          </Paper>
-        </motion.div>
-      </Container>
-    </div>
-  );
+                        {error && (
+                            <Alert severity="error" className="mb-4" sx={{ mb: 2 }}>
+                                {error}
+                            </Alert>
+                        )}
+
+                        <form onSubmit={handleSubmit}>
+                            {/* Grid container con spacing={3} para la separación vertical */}
+                            <Grid container spacing={3}>
+                            
+                                {/* Nombre (xs=12, ocupa el 100% del ancho) */}
+                                <Grid item xs={12}> 
+                                    <TextField
+                                        fullWidth 
+                                        label="Nombre **" 
+                                        name="nombre"
+                                        value={formData.nombre}
+                                        onChange={handleChange}
+                                        required
+                                        disabled={loading}
+                                        sx={darkInputStyle}
+                                        InputProps={{
+                                            startAdornment: <PersonIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                        }}
+                                    />
+                                </Grid>
+                                
+                                {/* Apellido (xs=12, ocupa el 100% del ancho) */}
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth 
+                                        label="Apellido **"
+                                        name="apellido"
+                                        value={formData.apellido}
+                                        onChange={handleChange}
+                                        required
+                                        disabled={loading}
+                                        sx={darkInputStyle}
+                                        InputProps={{
+                                            startAdornment: <PersonIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                        }}
+                                    />
+                                </Grid>
+
+                                {/* Email (xs=12, ocupa el 100% del ancho) */}
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth 
+                                        label="Email **"
+                                        name="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                        disabled={loading}
+                                        sx={darkInputStyle}
+                                        InputProps={{
+                                            startAdornment: <EmailIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                        }}
+                                    />
+                                </Grid>
+                                
+                                {/* === Fila Teléfono y Tipo de Cuenta (Clave para Ancho Consistente) === */}
+                                
+                                <Grid item xs={12}> {/* Este GridItem asegura el spacing vertical */}
+                                    <Grid container spacing={0}> {/* Grid anidado que elimina el spacing horizontal */}
+                                        
+                                        {/* Teléfono: Ocupa el 50% y tiene un margen a la derecha (pr: 1.5) para el espaciado */}
+                                        <Grid item xs={6} sx={{ pr: 1.5 }}>
+                                            <TextField
+                                                fullWidth 
+                                                label="Teléfono"
+                                                name="telefono"
+                                                value={formData.telefono}
+                                                onChange={handleChange}
+                                                disabled={loading}
+                                                sx={darkInputStyle}
+                                                InputProps={{
+                                                    startAdornment: <PhoneIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                                }}
+                                            />
+                                        </Grid>
+
+                                        {/* Tipo de Cuenta (Select): Ocupa el otro 50% y tiene un margen a la izquierda (pl: 1.5) */}
+                                        <Grid item xs={6} sx={{ pl: 1.5 }}>
+                                            <FormControl fullWidth disabled={loading} sx={darkSelectStyle}> 
+                                                <InputLabel>Tipo de Cuenta</InputLabel> 
+                                                <Select
+                                                    name="rol"
+                                                    value={formData.rol}
+                                                    onChange={handleChange}
+                                                    label="Tipo de Cuenta"
+                                                    startAdornment={
+                                                        <InputAdornment position="start">
+                                                            <AssignmentIndIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />
+                                                        </InputAdornment>
+                                                    }
+                                                >
+                                                    <MenuItem value="cliente">Cliente</MenuItem>
+                                                    <MenuItem value="gestor">Gestor de Espacios</MenuItem>
+                                                    <MenuItem value="control_acceso">Control de Acceso</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
+                                
+                                {/* Contraseña (xs=12, ocupa el 100% del ancho) */}
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth 
+                                        label="Contraseña **"
+                                        name="contrasenia"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={formData.contrasenia}
+                                        onChange={handleChange}
+                                        required
+                                        disabled={loading}
+                                        helperText="Mínimo 6 caracteres"
+                                        sx={darkInputStyle}
+                                        InputProps={{
+                                            startAdornment: <LockIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={handleClickShowPassword}
+                                                        onMouseDown={handleMouseDownPassword}
+                                                        edge="end"
+                                                        disabled={loading}
+                                                    >
+                                                        {showPassword ? <VisibilityOff sx={{ color: COLOR_LIME }} /> : <Visibility sx={{ color: COLOR_LIME }} />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+                                </Grid>
+
+                                {/* Confirmar Contraseña (xs=12, ocupa el 100% del ancho) */}
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth 
+                                        label="Confirmar Contraseña **"
+                                        name="confirmarContrasenia"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        value={formData.confirmarContrasenia}
+                                        onChange={handleChange}
+                                        required
+                                        disabled={loading}
+                                        sx={darkInputStyle}
+                                        InputProps={{
+                                            startAdornment: <LockIcon sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={handleClickShowConfirmPassword}
+                                                        onMouseDown={handleMouseDownPassword}
+                                                        edge="end"
+                                                        disabled={loading}
+                                                    >
+                                                        {showConfirmPassword ? <VisibilityOff sx={{ color: COLOR_LIME }} /> : <Visibility sx={{ color: COLOR_LIME }} />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+                                </Grid>
+                                
+                                {/* ReCAPTCHA (xs=12, ocupa el 100% del ancho) */}
+                                <Grid item xs={12}>
+                                    <Box 
+                                        sx={{ 
+                                            my: 2, 
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            py: 1
+                                        }}
+                                    >
+                                        <ReCAPTCHA
+                                            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "TU_SITEKEY_DE_EJEMPLO"}
+                                            ref={recaptchaRef}
+                                            onChange={handleRecaptchaChange}
+                                            onExpired={handleRecaptchaExpire}
+                                            onErrored={handleRecaptchaError}
+                                            theme="dark"
+                                        />
+                                    </Box>
+                                </Grid>
+                            </Grid>
+
+                            {/* Botón: Crear Cuenta */}
+                            <Button
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                disabled={loading || !recaptchaVerified}
+                                sx={{
+                                    mt: 4,
+                                    mb: 1.5,
+                                    py: 1.8,
+                                    backgroundColor: COLOR_ACCENT_RED,
+                                    color: COLOR_LIGHT,
+                                    fontWeight: 'bold',
+                                    fontSize: '1.2em',
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    borderRadius: 1,
+                                    transition: 'all 0.3s ease-in-out',
+                                    '&:hover': {
+                                        backgroundColor: COLOR_LIME,
+                                        color: COLOR_DARK,
+                                        transform: 'translateY(-3px)',
+                                        boxShadow: `0 8px 20px rgba(162, 232, 49, 0.6)`,
+                                    },
+                                    opacity: loading || !recaptchaVerified ? 0.8 : 1,
+                                }}
+                            >
+                                {loading ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <CircularProgress size={24} color="inherit" />
+                                        Creando cuenta...
+                                    </Box>
+                                ) : (
+                                    'CREAR CUENTA'
+                                )}
+                            </Button>
+                        </form>
+
+                        {/* SECCIÓN DE PIE DE PÁGINA */}
+                        <Box className="mt-4 text-center" sx={{ mt: 3 }}>
+                            <Typography variant="body2" sx={{ color: COLOR_LIGHT, opacity: 0.8 }}>
+                                ¿Ya tienes una cuenta?{' '}
+                                <Link
+                                    to="/login"
+                                    style={{
+                                        textDecoration: 'none',
+                                        color: COLOR_PRIMARY,
+                                        fontWeight: 'bold',
+                                        transition: 'color 0.3s',
+                                    }}
+                                >
+                                    Inicia sesión aquí
+                                </Link>
+                            </Typography>
+                            <Typography 
+                                variant="caption" 
+                                sx={{ color: COLOR_LIME, fontWeight: 'bold', display: 'block', mt: 1 }}
+                            >
+                                ** Campos obligatorios
+                            </Typography>
+                            <Typography 
+                                variant="caption" 
+                                sx={{ color: COLOR_LIGHT, opacity: 0.5, display: 'block', mt: 0.5 }}
+                            >
+                                Al registrarte, aceptas nuestros términos y condiciones
+                            </Typography>
+                        </Box>
+
+                    </Box>
+                </motion.div>
+            </Container>
+        </Box>
+    );
 }
