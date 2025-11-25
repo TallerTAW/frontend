@@ -1,9 +1,14 @@
+// 📍 ARCHIVO: src/pages/reservar.jsx
+// 🎯 PROPÓSITO: Página principal de reservas
+// 💡 CAMBIO PRINCIPAL: Usar createCompleta en lugar de create para aplicar cupones
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom'; // ✅ AGREGAR NAVIGATE
 import { espaciosApi } from '../api/espacios';
 import { disciplinasApi } from '../api/disciplinas';
 import { canchasApi } from '../api/canchas';
-import { reservasApi } from '../api/reservas';
+import { reservasApi } from '../api/reservas'; // ✅ API ACTUALIZADA
 import { cuponesApi } from '../api/cupones';
 import { toast } from 'react-toastify';
 import {
@@ -35,6 +40,7 @@ import { motion } from 'framer-motion';
 
 export default function Reservar() {
   const { profile } = useAuth();
+  const navigate = useNavigate(); // ✅ AGREGAR NAVIGATE
   const [activeStep, setActiveStep] = useState(0);
   const [espacios, setEspacios] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
@@ -84,33 +90,33 @@ export default function Reservar() {
   };
 
   const fetchCanchas = async () => {
-  if (selectedEspacio && selectedDisciplina) {
-    try {
-      // ✅ USAR ENDPOINT ESPECÍFICO que filtra por espacio Y disciplina
-      const data = await canchasApi.getByEspacioYDisciplina(
-        selectedEspacio.id_espacio_deportivo,
-        selectedDisciplina.id_disciplina
-      );
-      
-      setCanchas(data);
-      
-      // ✅ MOSTRAR MENSAJE SI NO HAY CANCHAS
-      if (data.length === 0) {
-        toast.info(`No hay canchas de ${selectedDisciplina.nombre} disponibles en ${selectedEspacio.nombre}`);
-      }
-      
-    } catch (error) {
-      console.error('Error al cargar canchas:', error);
-      
-      if (error.response?.status === 404) {
-        toast.info(`No hay canchas de ${selectedDisciplina.nombre} en ${selectedEspacio.nombre}`);
-        setCanchas([]);
-      } else {
-        toast.error('Error al cargar canchas disponibles');
+    if (selectedEspacio && selectedDisciplina) {
+      try {
+        // ✅ USAR ENDPOINT ESPECÍFICO que filtra por espacio Y disciplina
+        const data = await canchasApi.getByEspacioYDisciplina(
+          selectedEspacio.id_espacio_deportivo,
+          selectedDisciplina.id_disciplina
+        );
+        
+        setCanchas(data);
+        
+        // ✅ MOSTRAR MENSAJE SI NO HAY CANCHAS
+        if (data.length === 0) {
+          toast.info(`No hay canchas de ${selectedDisciplina.nombre} disponibles en ${selectedEspacio.nombre}`);
+        }
+        
+      } catch (error) {
+        console.error('Error al cargar canchas:', error);
+        
+        if (error.response?.status === 404) {
+          toast.info(`No hay canchas de ${selectedDisciplina.nombre} en ${selectedEspacio.nombre}`);
+          setCanchas([]);
+        } else {
+          toast.error('Error al cargar canchas disponibles');
+        }
       }
     }
-  }
-};
+  };
 
   const fetchCuponesUsuario = async () => {
     try {
@@ -127,13 +133,15 @@ export default function Reservar() {
   const fetchHorariosDisponibles = async () => {
     if (selectedCancha && reservationData.fecha_reserva) {
       try {
+        // ✅ CAMBIO: Usar el nuevo endpoint con prefijo /reservas-completas/
         const data = await reservasApi.getDisponibilidad(
           selectedCancha.id_cancha, 
           reservationData.fecha_reserva
         );
-        setHorariosDisponibles(data.horarios_disponibles || []);
+        setHorariosDisponibles(data || []); // ✅ CAMBIO: data en lugar de data.horarios_disponibles
       } catch (error) {
-        console.error('Error al cargar horarios disponibles');
+        console.error('Error al cargar horarios disponibles:', error);
+        setHorariosDisponibles([]);
       }
     }
   };
@@ -175,7 +183,7 @@ export default function Reservar() {
 
     let total = hours * selectedCancha.precio_por_hora;
 
-    // Aplicar cupón si está seleccionado
+    // Aplicar cupón si está seleccionado (solo para visualización en frontend)
     if (selectedCoupon) {
       const coupon = cupones.find(c => c.id_cupon === parseInt(selectedCoupon));
       if (coupon) {
@@ -191,50 +199,60 @@ export default function Reservar() {
   };
 
   const handleConfirmReservation = async () => {
-  // Si es invitado, redirigir a login
-  if (!profile) {
-    toast.info('Por favor, inicia sesión o regístrate para completar tu reserva');
-    navigate('/login', { 
-      state: { 
-        from: '/reservar',
-        reservationData: {
-          ...reservationData,
-          selectedEspacio,
-          selectedDisciplina, 
-          selectedCancha
-        }
-      } 
-    });
-    return;
-  }
-
-  try {
-    const costoTotal = calcularCostoTotal();
+    // ✅ CORRECCIÓN PRINCIPAL: Usar el endpoint completo con soporte para cupones
+    console.log('🎯 [FRONTEND] Iniciando confirmación de reserva...');
     
-    const reservaData = {
-      ...reservationData,
-      costo_total: costoTotal,
-      id_usuario: profile.id
-    };
+    // Si es invitado, redirigir a login
+    if (!profile) {
+      toast.info('Por favor, inicia sesión o regístrate para completar tu reserva');
+      navigate('/login', { 
+        state: { 
+          from: '/reservar',
+          reservationData: {
+            ...reservationData,
+            selectedEspacio,
+            selectedDisciplina, 
+            selectedCancha
+          }
+        } 
+      });
+      return;
+    }
 
-    const nuevaReserva = await reservasApi.create(reservaData);
+    try {
+      // Obtener el código del cupón seleccionado
+      const codigoCupon = selectedCoupon 
+        ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
+        : null;
 
-      // Aplicar cupón si se seleccionó
-      if (selectedCoupon) {
-        try {
-          await cuponesApi.aplicar({
-            codigo_cupon: cupones.find(c => c.id_cupon === parseInt(selectedCoupon)).codigo,
-            id_reserva: nuevaReserva.id_reserva
-          });
-        } catch (cuponError) {
-          console.warn('No se pudo aplicar el cupón:', cuponError);
-        }
+      console.log('🎫 [FRONTEND] Cupón seleccionado:', codigoCupon);
+      console.log('📅 [FRONTEND] Datos de reserva:', reservationData);
+
+      // ✅ USAR EL ENDPOINT COMPLETO DE RESERVAS que soporta cupones
+      const reservaData = {
+        ...reservationData,
+        id_usuario: profile.id,
+        codigo_cupon: codigoCupon  // ← Incluir código de cupón
+      };
+
+      console.log('🚀 [FRONTEND] Enviando reserva al backend...', reservaData);
+      
+      // ✅ CAMBIO CRÍTICO: Usar createCompleta en lugar de create
+      const nuevaReserva = await reservasApi.createCompleta(reservaData);
+
+      console.log('✅ [FRONTEND] Reserva creada exitosamente:', nuevaReserva);
+      
+      // Mostrar mensaje de éxito según si se aplicó cupón o no
+      if (codigoCupon) {
+        toast.success(`¡Reserva creada exitosamente con cupón aplicado! Total: $${nuevaReserva.costo_total}`);
+      } else {
+        toast.success(`¡Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`);
       }
-
-      toast.success('Reserva creada exitosamente');
+      
       setConfirmOpen(false);
       resetForm();
     } catch (error) {
+      console.error('❌ [FRONTEND] Error creando reserva:', error);
       toast.error(error.response?.data?.detail || 'Error al crear la reserva');
     }
   };
@@ -555,25 +573,30 @@ export default function Reservar() {
                   <Typography variant="h5" className="font-title text-primary">
                     Total: ${calcularCostoTotal().toFixed(2)}
                   </Typography>
+                  {selectedCoupon && (
+                    <Typography variant="body2" className="text-green-600 font-body">
+                      ✅ Cupón aplicado - Precio final con descuento
+                    </Typography>
+                  )}
                 </Box>
                 <Button
-  fullWidth
-  variant="contained"
-  onClick={() => setConfirmOpen(true)}
-  disabled={!reservationData.fecha_reserva || !reservationData.hora_inicio || !reservationData.hora_fin}
-  className="mt-4"
-  sx={{
-    textTransform: 'none',
-    background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
-    '&:hover': {
-      background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
-    },
-    fontSize: '1.1rem',
-    py: 1.5,
-  }}
->
-  {profile ? 'Confirmar Reserva' : 'Iniciar Sesión para Reservar'}
-</Button>
+                  fullWidth
+                  variant="contained"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={!reservationData.fecha_reserva || !reservationData.hora_inicio || !reservationData.hora_fin}
+                  className="mt-4"
+                  sx={{
+                    textTransform: 'none',
+                    background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                    '&:hover': {
+                      background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                    },
+                    fontSize: '1.1rem',
+                    py: 1.5,
+                  }}
+                >
+                  {profile ? 'Confirmar Reserva' : 'Iniciar Sesión para Reservar'}
+                </Button>
               </Card>
             </Grid>
           </Grid>
@@ -597,6 +620,11 @@ export default function Reservar() {
             <Typography className="font-body mb-1">
               <strong>Horario:</strong> {reservationData.hora_inicio} - {reservationData.hora_fin}
             </Typography>
+            {selectedCoupon && (
+              <Typography className="font-body mb-1 text-green-600">
+                <strong>Cupón aplicado:</strong> {cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo}
+              </Typography>
+            )}
             <Typography className="font-title text-primary text-xl mt-2">
               <strong>Total:</strong> ${calcularCostoTotal().toFixed(2)}
             </Typography>
