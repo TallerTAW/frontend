@@ -1,13 +1,19 @@
 import api from './index';
 
 
-// ejemplo usando axios
-export async function getNearbyEspacios(lat, lon, radius_km = 5) {
-  const res = await axios.get(`${API_URL}/espacios/nearby`, {
-    params: { lat, lon, radius_km }
+/**
+ * Obtiene los espacios deportivos cercanos a una ubicación dada.
+ * @param {number} lat - Latitud actual del usuario
+ * @param {number} lon - Longitud actual del usuario
+ * @param {number} radiusKm - Radio en kilómetros (por defecto 5)
+ * @returns {Promise<Array>} Lista de espacios cercanos con su distancia
+ */
+const getNearby = async (lat, lon, radiusKm = 5) => {
+  const response = await api.get('/espacios/nearby', {
+    params: { lat, lon, radius_km: radiusKm },
   });
-  return res.data;
-}
+  return response.data;
+};
 
 
 export const espaciosApi = {
@@ -78,4 +84,5 @@ export const espaciosApi = {
     const response = await api.get(`/espacios/${espacioId}/gestor-asignado`);
     return response.data;
   },
+  getNearby,
 };

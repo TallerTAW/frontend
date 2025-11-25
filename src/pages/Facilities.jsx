@@ -25,12 +25,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Avatar
+  Avatar,
+  Paper // Nuevo import para el componente de mapa simulado
 } from '@mui/material';
-import { 
-  Add, 
-  Edit, 
-  Delete, 
+import {
+  Add,
+  Edit,
+  Delete,
   Stadium,
   CloudUpload,
   Delete as DeleteIcon,
@@ -39,7 +40,9 @@ import {
   People,
   SportsSoccer,
   Schedule,
-  Home
+  Home,
+  Map, // Nuevo icono
+  ArrowBack
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -52,6 +55,7 @@ const COLOR_BLANCO = '#FFFFFF';
 const COLOR_NEGRO_SUAVE = '#212121';
 
 // Componente para subir imágenes con drag & drop
+// ... (ImageUploader Componente sin cambios)
 const ImageUploader = ({ onImageChange, currentImage }) => {
   const [preview, setPreview] = useState(currentImage);
   const [dragOver, setDragOver] = useState(false);
@@ -133,15 +137,15 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
         style={{ display: 'none' }}
         id="image-upload"
       />
-      
+
       {preview ? (
         <Box sx={{ position: 'relative', width: '100%' }}>
-          <img 
+          <img
             src={preview.startsWith('data:') ? preview : `${api_url}${preview}`}
-            alt="Preview" 
-            style={{ 
-              maxWidth: '100%', 
-              maxHeight: 200, 
+            alt="Preview"
+            style={{
+              maxWidth: '100%',
+              maxHeight: 200,
               borderRadius: 8,
               objectFit: 'cover'
             }}
@@ -176,9 +180,10 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
 };
 
 // Modal para ver imagen en zoom
+// ... (ImageZoomModal Componente sin cambios)
 const ImageZoomModal = ({ image, open, onClose }) => {
   const api_url = import.meta.env.VITE_API_URL;
-  
+
   if (!open) return null;
 
   return (
@@ -209,11 +214,11 @@ const ImageZoomModal = ({ image, open, onClose }) => {
         >
           <DeleteIcon />
         </IconButton>
-        <img 
-          src={image.startsWith('data:') ? image : `${api_url}${image}`} 
-          alt="Zoom" 
-          style={{ 
-            maxWidth: '90vw', 
+        <img
+          src={image.startsWith('data:') ? image : `${api_url}${image}`}
+          alt="Zoom"
+          style={{
+            maxWidth: '90vw',
             maxHeight: '90vh',
             borderRadius: 8
           }}
@@ -224,6 +229,7 @@ const ImageZoomModal = ({ image, open, onClose }) => {
 };
 
 // Componente para listar canchas
+// ... (CanchasList Componente sin cambios)
 const CanchasList = ({ espacio, canchas, onCanchaClick, onBack }) => {
   return (
     <Box>
@@ -235,12 +241,12 @@ const CanchasList = ({ espacio, canchas, onCanchaClick, onBack }) => {
           Canchas de {espacio.nombre}
         </Typography>
       </Box>
-      
+
       <Grid container spacing={3}>
         {canchas.map((cancha) => (
           <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
-            <Card 
-              sx={{ 
+            <Card
+              sx={{
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 '&:hover': {
@@ -257,8 +263,8 @@ const CanchasList = ({ espacio, canchas, onCanchaClick, onBack }) => {
                 <Typography variant="body2" color="text.secondary">
                   Tipo: {cancha.tipo}
                 </Typography>
-                <Chip 
-                  label={cancha.estado} 
+                <Chip
+                  label={cancha.estado}
                   size="small"
                   sx={{
                     backgroundColor: cancha.estado === 'disponible' ? COLOR_VERDE_LIMA : COLOR_NARANJA_VIBRANTE,
@@ -277,6 +283,7 @@ const CanchasList = ({ espacio, canchas, onCanchaClick, onBack }) => {
 };
 
 // Componente para horarios de cancha
+// ... (HorariosCancha Componente sin cambios)
 const HorariosCancha = ({ cancha, espacio, onBack }) => {
   const [horarios, setHorarios] = useState([]);
 
@@ -299,11 +306,98 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
 };
 
 // Icono de flecha hacia atrás (añadir en imports si es necesario)
-const ArrowBack = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-  </svg>
-);
+// ... (ArrowBack Componente sin cambios)
+// Ya está definido arriba
+
+// ⭐ NUEVO COMPONENTE: Selector de Mapa
+const MapPickerModal = ({ open, onClose, onLocationSelect, initialLat, initialLon }) => {
+    // Estado para la ubicación seleccionada en el mapa (simulado)
+    const [mapLocation, setMapLocation] = useState({ lat: initialLat || -16.5, lon: initialLon || -68.15 });
+    
+    // Función de simulación para seleccionar ubicación
+    // En una implementación real con Leaflet/Google Maps, esto se llamaría con un evento click en el mapa
+    const handleMapClick = (e) => {
+        // Simulación: establecer coordenadas aleatorias cercanas para demostración
+        const newLat = -16.5 + (Math.random() - 0.5) * 0.05;
+        const newLon = -68.15 + (Math.random() - 0.5) * 0.05;
+        setMapLocation({ lat: newLat.toFixed(6), lon: newLon.toFixed(6) });
+        toast.info(`Nueva Ubicación Simulada: ${newLat.toFixed(6)}, ${newLon.toFixed(6)}`);
+    };
+
+    const handleConfirm = () => {
+        onLocationSelect(mapLocation.lat, mapLocation.lon);
+        onClose();
+    };
+
+    useEffect(() => {
+      setMapLocation({ lat: initialLat || -16.5, lon: initialLon || -68.15 });
+    }, [initialLat, initialLon, open]);
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="lg"
+            fullWidth
+            PaperProps={{ sx: { borderRadius: 2 } }}
+        >
+            <DialogTitle
+                sx={{
+                    backgroundColor: COLOR_AZUL_ELECTRICO,
+                    color: COLOR_BLANCO,
+                    fontWeight: 'bold'
+                }}
+            >
+                📍 Seleccionar Ubicación en el Mapa
+            </DialogTitle>
+            <DialogContent dividers>
+                <Paper 
+                    elevation={3}
+                    sx={{ 
+                        height: '50vh', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        cursor: 'crosshair',
+                        backgroundColor: '#f0f0f0'
+                    }}
+                    onClick={handleMapClick} // Simula el click en el mapa
+                >
+                    {/* Aquí iría el componente de tu librería de mapas (e.g., Leaflet MapContainer) */}
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Map sx={{ fontSize: 60, color: COLOR_GRIS_OSCURO, opacity: 0.6 }} />
+                        <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+                           Click para **simular** la selección en el mapa
+                        </Typography>
+                        <Typography variant="body1" sx={{ mt: 1, fontWeight: 'bold' }}>
+                            Coordenadas Seleccionadas: {mapLocation.lat}, {mapLocation.lon}
+                        </Typography>
+                    </Box>
+                </Paper>
+                
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} sx={{ color: 'text.secondary' }}>
+                    Cancelar
+                </Button>
+                <Button
+                    onClick={handleConfirm}
+                    variant="contained"
+                    startIcon={<LocationOn />}
+                    sx={{
+                        textTransform: 'none',
+                        backgroundColor: COLOR_VERDE_LIMA,
+                        color: COLOR_NEGRO_SUAVE,
+                        fontWeight: 'bold',
+                        '&:hover': { backgroundColor: COLOR_VERDE_LIMA, opacity: 0.9 }
+                    }}
+                >
+                    Confirmar Ubicación
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
 
 export default function Facilities() {
   const [espacios, setEspacios] = useState([]);
@@ -312,20 +406,21 @@ export default function Facilities() {
   const [zoomOpen, setZoomOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
   const [editing, setEditing] = useState(null);
-  
-  // ✅ ESTADOS FALTANTES AÑADIDOS
+
+  // ✅ ESTADOS FALTANTES Y NUEVO ESTADO DE MAPA AÑADIDO
   const [view, setView] = useState('espacios');
   const [selectedEspacio, setSelectedEspacio] = useState(null);
   const [selectedCancha, setSelectedCancha] = useState(null);
   const [canchas, setCanchas] = useState([]);
-  
+  const [mapOpen, setMapOpen] = useState(false); // ⭐ NUEVO ESTADO: Controla la apertura del modal del mapa
+
   const [formData, setFormData] = useState({
     nombre: '',
     ubicacion: '',
     capacidad: '',
     descripcion: '',
-    latitud: '',    // NUEVO
-    longitud: '',   // NUEVO
+    latitud: '',
+    longitud: '',
     gestor_id: '',
   });
   const [imageFile, setImageFile] = useState(null);
@@ -442,6 +537,8 @@ export default function Facilities() {
       ubicacion: espacio.ubicacion,
       capacidad: espacio.capacidad,
       descripcion: espacio.descripcion,
+      latitud: espacio.latitud || '', // Asegurar que se carguen lat/lon
+      longitud: espacio.longitud || '', // Asegurar que se carguen lat/lon
       gestor_id: espacio.gestor_id,
     });
     setOpen(true);
@@ -468,6 +565,8 @@ export default function Facilities() {
       ubicacion: '',
       capacidad: '',
       descripcion: '',
+      latitud: '',
+      longitud: '',
       gestor_id: '',
     });
     setImageFile(null);
@@ -478,12 +577,30 @@ export default function Facilities() {
     setZoomOpen(true);
   };
 
+  const handleCanchaClick = (cancha) => {
+    setSelectedCancha(cancha);
+    setView('horarios');
+  };
+
+  // ⭐ NUEVO HANDLER: Abre el modal del mapa
+  const handleOpenMap = () => {
+    setMapOpen(true);
+  };
+
+  // ⭐ NUEVO HANDLER: Cierra el modal del mapa y establece las coordenadas
+  const handleLocationSelect = (lat, lon) => {
+    setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
+    toast.success(`Coordenadas seleccionadas: Latitud ${lat}, Longitud ${lon}`);
+    setMapOpen(false);
+  };
+
+
   // ✅ COMPONENTE FALTANTE AÑADIDO
   const renderBreadcrumbs = () => (
     <Breadcrumbs sx={{ mb: 3 }}>
-      <Link 
-        underline="hover" 
-        color="inherit" 
+      <Link
+        underline="hover"
+        color="inherit"
         onClick={() => {
           setView('espacios');
           setSelectedEspacio(null);
@@ -495,8 +612,8 @@ export default function Facilities() {
         Espacios
       </Link>
       {selectedEspacio && (
-        <Link 
-          underline="hover" 
+        <Link
+          underline="hover"
           color="inherit"
           onClick={() => {
             setView('canchas');
@@ -524,11 +641,11 @@ export default function Facilities() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 'bold', 
-              color: COLOR_AZUL_ELECTRICO 
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+              color: COLOR_AZUL_ELECTRICO
             }}
           >
             Gestión de Espacios Deportivos
@@ -597,7 +714,7 @@ export default function Facilities() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card 
+              <Card
                 sx={{
                   borderRadius: 3,
                   boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
@@ -611,8 +728,8 @@ export default function Facilities() {
                 }}
                 onClick={() => handleEspacioClick(espacio)}
               >
-                <Box 
-                  sx={{ 
+                <Box
+                  sx={{
                     height: 200,
                     position: 'relative',
                     borderRadius: '12px 12px 0 0',
@@ -625,10 +742,10 @@ export default function Facilities() {
                 >
                   {espacio.imagen ? (
                     <>
-                      <img 
-                        src={`${api_url}${espacio.imagen}`} 
-                        alt={espacio.nombre} 
-                        style={{ 
+                      <img
+                        src={`${api_url}${espacio.imagen}`}
+                        alt={espacio.nombre}
+                        style={{
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
@@ -637,8 +754,8 @@ export default function Facilities() {
                         onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
                         onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                       />
-                      <Box 
-                        sx={{ 
+                      <Box
+                        sx={{
                           position: 'absolute',
                           top: 0,
                           left: 0,
@@ -654,19 +771,19 @@ export default function Facilities() {
                           }
                         }}
                       >
-                        <ZoomIn 
-                          sx={{ 
-                            color: 'white', 
+                        <ZoomIn
+                          sx={{
+                            color: 'white',
                             opacity: 0,
                             transition: 'opacity 0.3s ease',
                             fontSize: 40
                           }}
-                          className="hover:opacity-100" 
+                          className="hover:opacity-100"
                         />
                       </Box>
                     </>
                   ) : (
-                    <Box 
+                    <Box
                       sx={{
                         position: 'absolute',
                         top: 0,
@@ -682,9 +799,9 @@ export default function Facilities() {
                       <Stadium sx={{ fontSize: 80, color: COLOR_BLANCO, opacity: 0.5 }} />
                     </Box>
                   )}
-                  
+
                   <Box sx={{ position: 'absolute', top: 12, right: 12 }}>
-                    <Chip 
+                    <Chip
                       label={espacio.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
                       size="small"
                       sx={{
@@ -695,15 +812,15 @@ export default function Facilities() {
                     />
                   </Box>
                 </Box>
-                
+
                 <CardContent sx={{ pb: 1 }}>
-                  <Typography 
-                    variant="h6" 
+                  <Typography
+                    variant="h6"
                     sx={{ fontWeight: 'bold', color: COLOR_NEGRO_SUAVE, mb: 1 }}
                   >
                     {espacio.nombre}
                   </Typography>
-                  
+
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <LocationOn sx={{ fontSize: 18, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
                     <Typography variant="body2" color="text.secondary">
@@ -718,16 +835,16 @@ export default function Facilities() {
                     </Typography>
                   </Box>
 
-                  <Typography 
-                    variant="caption" 
-                    color="text.disabled" 
-                    sx={{ 
-                      display: '-webkit-box', 
-                      overflow: 'hidden', 
-                      WebkitBoxOrient: 'vertical', 
-                      WebkitLineClamp: 2, 
-                      height: 'auto', 
-                      minHeight: 30 
+                  <Typography
+                    variant="caption"
+                    color="text.disabled"
+                    sx={{
+                      display: '-webkit-box',
+                      overflow: 'hidden',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 2,
+                      height: 'auto',
+                      minHeight: 30
                     }}
                   >
                     {espacio.descripcion || 'Sin descripción detallada.'}
@@ -741,7 +858,7 @@ export default function Facilities() {
                     </Box>
                   )}
                 </CardContent>
-                
+
                 <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
                   <IconButton
                     onClick={(e) => {
@@ -790,22 +907,22 @@ export default function Facilities() {
           sx: { borderRadius: 2 }
         }}
       >
-        <DialogTitle 
-          sx={{ 
-            backgroundColor: COLOR_AZUL_ELECTRICO, 
-            color: COLOR_BLANCO, 
-            fontWeight: 'bold' 
+        <DialogTitle
+          sx={{
+            backgroundColor: COLOR_AZUL_ELECTRICO,
+            color: COLOR_BLANCO,
+            fontWeight: 'bold'
           }}
         >
           {editing ? 'Editar Espacio Deportivo' : 'Nuevo Espacio Deportivo'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent sx={{ mt: 2 }}>
-            <ImageUploader 
+            <ImageUploader
               onImageChange={setImageFile}
               currentImage={editing?.imagen}
             />
-            
+
             <TextField
               fullWidth
               label="Nombre del espacio"
@@ -832,47 +949,67 @@ export default function Facilities() {
               margin="normal"
               inputProps={{ min: '1' }}
             />
-
-
-            <TextField
-              label="Latitud"
-              value={formData.latitud}
-              onChange={(e) => setFormData({...formData, latitud: e.target.value})}
-              placeholder="-16.5000"
-              margin="normal"
-            />
-            <TextField
-              label="Longitud"
-              value={formData.longitud}
-              onChange={(e) => setFormData({...formData, longitud: e.target.value})}
-              placeholder="-68.1500"
-              margin="normal"
-            />
-
-            <Button
-              variant="outlined"
-              onClick={() => {
-                if (!navigator.geolocation) {
-                  alert('Geolocalización no soportada por este navegador');
-                  return;
-                }
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
-                    toast.success('Ubicación capturada');
-                  },
-                  (err) => {
-                    console.error(err);
-                    toast.error('No se pudo obtener la ubicación. Revisa permisos.');
-                  },
-                  { enableHighAccuracy: true, timeout: 10000 }
-                );
-              }}
-            >
-              Usar mi ubicación
-            </Button>
+            
+            <Grid container spacing={2} alignItems="center" sx={{ mt: 1, mb: 2 }}>
+                <Grid item xs={12} sm={6}>
+                    <TextField
+                        label="Latitud"
+                        value={formData.latitud}
+                        onChange={(e) => setFormData({...formData, latitud: e.target.value})}
+                        placeholder="-16.5000"
+                        margin="normal"
+                        fullWidth
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField
+                        label="Longitud"
+                        value={formData.longitud}
+                        onChange={(e) => setFormData({...formData, longitud: e.target.value})}
+                        placeholder="-68.1500"
+                        margin="normal"
+                        fullWidth
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          alert('Geolocalización no soportada por este navegador');
+                          return;
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            const lat = pos.coords.latitude;
+                            const lon = pos.coords.longitude;
+                            setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
+                            toast.success('Ubicación capturada');
+                          },
+                          (err) => {
+                            console.error(err);
+                            toast.error('No se pudo obtener la ubicación. Revisa permisos.');
+                          },
+                          { enableHighAccuracy: true, timeout: 10000 }
+                        );
+                      }}
+                      fullWidth
+                    >
+                      Usar mi ubicación
+                    </Button>
+                </Grid>
+                {/* ⭐ NUEVO BOTÓN AÑADIDO */}
+                <Grid item xs={12} sm={6}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleOpenMap}
+                      startIcon={<Map />}
+                      fullWidth
+                    >
+                      Buscar en Mapa
+                    </Button>
+                </Grid>
+            </Grid>
             
             {isAdmin && (
               <FormControl fullWidth margin="normal">
@@ -941,8 +1078,18 @@ export default function Facilities() {
         </form>
       </Dialog>
 
+      {/* ⭐ NUEVO MODAL: Selector de Mapa */}
+      <MapPickerModal
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        onLocationSelect={handleLocationSelect}
+        initialLat={formData.latitud}
+        initialLon={formData.longitud}
+      />
+      {/* Fin Nuevo Modal */}
+
       {/* Modal para zoom de imagen */}
-      <ImageZoomModal 
+      <ImageZoomModal
         image={selectedImage}
         open={zoomOpen}
         onClose={() => setZoomOpen(false)}
@@ -962,10 +1109,10 @@ export default function Facilities() {
   return (
     <Box sx={{ mt: 12, p: 3 }}>
       {renderBreadcrumbs()}
-      
+
       {view === 'espacios' && renderEspaciosView()}
       {view === 'canchas' && selectedEspacio && (
-        <CanchasList 
+        <CanchasList
           espacio={selectedEspacio}
           canchas={canchas}
           onCanchaClick={handleCanchaClick}
@@ -973,7 +1120,7 @@ export default function Facilities() {
         />
       )}
       {view === 'horarios' && selectedCancha && selectedEspacio && (
-        <HorariosCancha 
+        <HorariosCancha
           cancha={selectedCancha}
           espacio={selectedEspacio}
           onBack={handleBackToCanchas}
