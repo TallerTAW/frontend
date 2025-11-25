@@ -1,5 +1,6 @@
 // 📍 ARCHIVO: src/hooks/useUserRatings.js (CORREGIDO: Eliminando loop infinito)
 
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 // Nota: Asumo que estos imports son correctos para tu proyecto

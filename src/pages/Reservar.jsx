@@ -84,21 +84,33 @@ export default function Reservar() {
   };
 
   const fetchCanchas = async () => {
-    if (selectedEspacio && selectedDisciplina) {
-      try {
-        // Usar endpoint público para reservas
-        const data = await canchasApi.getByEspacioPublic(selectedEspacio.id_espacio_deportivo);
-        
-        // Filtrar por disciplina si es necesario (depende de tu modelo de datos)
-        const canchasFiltradas = data.filter(cancha => 
-          cancha.estado === 'disponible'
-        );
-        setCanchas(canchasFiltradas);
-      } catch (error) {
-        toast.error('Error al cargar canchas');
+  if (selectedEspacio && selectedDisciplina) {
+    try {
+      // ✅ USAR ENDPOINT ESPECÍFICO que filtra por espacio Y disciplina
+      const data = await canchasApi.getByEspacioYDisciplina(
+        selectedEspacio.id_espacio_deportivo,
+        selectedDisciplina.id_disciplina
+      );
+      
+      setCanchas(data);
+      
+      // ✅ MOSTRAR MENSAJE SI NO HAY CANCHAS
+      if (data.length === 0) {
+        toast.info(`No hay canchas de ${selectedDisciplina.nombre} disponibles en ${selectedEspacio.nombre}`);
+      }
+      
+    } catch (error) {
+      console.error('Error al cargar canchas:', error);
+      
+      if (error.response?.status === 404) {
+        toast.info(`No hay canchas de ${selectedDisciplina.nombre} en ${selectedEspacio.nombre}`);
+        setCanchas([]);
+      } else {
+        toast.error('Error al cargar canchas disponibles');
       }
     }
-  };
+  }
+};
 
   const fetchCuponesUsuario = async () => {
     try {

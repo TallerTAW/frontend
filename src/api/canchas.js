@@ -72,5 +72,10 @@ export const canchasApi = {
   getByIdPublic: async (id) => {
     const response = await api.get(`/canchas/public/${id}`);
     return response.data;
+  },
+  // ✅ NUEVO MÉTODO: Obtener canchas por espacio y disciplina
+  getByEspacioYDisciplina: async (espacioId, disciplinaId) => {
+    const response = await api.get(`/canchas/public/espacio/${espacioId}/disciplina/${disciplinaId}`);
+    return response.data;
   }
 };

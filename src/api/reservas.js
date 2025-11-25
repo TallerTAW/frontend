@@ -2,7 +2,6 @@
 import api from './index';
 
 export const reservasApi = {
-  // RESERVAS BÁSICAS - usar /reservas/
   getAll: async (filters = {}) => {
     const params = new URLSearchParams();
     Object.keys(filters).forEach(key => {
@@ -24,7 +23,7 @@ export const reservasApi = {
   },
 
   update: async (id, reservaData) => {
-    const response = await api.put(`/reservas/${id}`, reservaData);
+    const response = await api.patch(`/reservas/${id}`, reservaData);  // Cambiar put por patch
     return response.data;
   },
 
@@ -35,6 +34,11 @@ export const reservasApi = {
 
   getByUsuario: async (usuarioId) => {
     const response = await api.get(`/reservas/usuario/${usuarioId}`);
+    return response.data;
+  },
+
+   getByGestor: async (gestorId) => {
+    const response = await api.get(`/reservas/gestor/mis-reservas?gestor_id=${gestorId}`);
     return response.data;
   },
 

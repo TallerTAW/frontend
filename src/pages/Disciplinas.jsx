@@ -243,13 +243,14 @@ export default function Disciplinas() {
                                 >
                                     <Edit />
                                 </IconButton>
+                                {/*
                                 <IconButton
                                     onClick={() => handleDelete(disciplina.id_disciplina)}
                                     sx={{ color: '#E53935', '&:hover': { backgroundColor: `#E5393510` } }}
                                     title="Eliminar Disciplina"
                                 >
                                     <Delete />
-                                </IconButton>
+                                </IconButton>*/}
                             </CardActions>
                         </Card>
                     </motion.div>
