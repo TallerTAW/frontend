@@ -1,3 +1,4 @@
+// 📍 ARCHIVO: src/hooks/useUserRatings.js (CORREGIDO: Eliminando loop infinito)
 
 
 import { useState, useEffect, useCallback } from 'react';

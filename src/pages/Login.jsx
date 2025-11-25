@@ -34,7 +34,7 @@ export default function Login() {
 
     // --- LÓGICA DE AUTENTICACIÓN Y RECAPTCHA ---
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
-    const { signIn, error: authError, clearError } = useAuth();
+    const { signIn, clearError } = useAuth(); 
     const navigate = useNavigate();
     const recaptchaRef = useRef(null);
 
@@ -54,6 +54,7 @@ export default function Login() {
 
     // Lógica para el reCAPTCHA
     const handleRecaptchaChange = (token) => {
+        // Establece el estado a verdadero si hay un token, falso si se resetea (null)
         setRecaptchaVerified(!!token);
     };
 
@@ -69,7 +70,7 @@ export default function Login() {
         setSnackbarMessage('');
         clearError(); 
 
-        // Validaciones básicas
+        // 1. Validaciones de campos
         if (!email || !password) {
             setSnackbarMessage('Por favor, ingresa tu email y contraseña.');
             setSnackbarSeverity('warning');
@@ -77,6 +78,7 @@ export default function Login() {
             return;
         }
 
+        // 2. Validación de CAPTCHA
         if (!recaptchaVerified) {
             setSnackbarMessage('Por favor, verifica que no eres un robot marcando el CAPTCHA.');
             setSnackbarSeverity('error');
@@ -87,45 +89,40 @@ export default function Login() {
         setIsLoading(true);
 
         try {
+            // Obtiene el token del CAPTCHA
             const token = recaptchaRef.current.getValue();
             if (!token) {
-                throw new Error('No se pudo obtener el token reCAPTCHA.');
+                 // Esto no debería pasar si recaptchaVerified es true, pero es un buen guardrail
+                throw new Error('Token reCAPTCHA no disponible.');
             }
 
+            // Llama a la función de autenticación
             const result = await signIn(email, password, token);
             
-            if (result.error) {
-                // Manejo específico de diferentes tipos de errores
+            // Resetea el CAPTCHA después de cada intento de login para forzar una nueva verificación
+            if (recaptchaRef.current) {
+                recaptchaRef.current.reset();
+                setRecaptchaVerified(false);
+            }
+
+            if (result && result.error) { 
+                // Manejo de errores del backend
+                let errorSeverity = 'error';
                 if (result.type === 'inactive') {
-                    // Usuario inactivo - mostramos mensaje especial
-                    setSnackbarMessage(result.error);
-                    setSnackbarSeverity('warning'); // Cambiamos a warning para usuario inactivo
-                } else if (result.type === 'credentials') {
-                    // Credenciales incorrectas
-                    setSnackbarMessage(result.error);
-                    setSnackbarSeverity('error');
-                } else if (result.type === 'captcha') {
-                    // Error de captcha
-                    setSnackbarMessage(result.error);
-                    setSnackbarSeverity('error');
-                    // Reseteamos el captcha
-                    if (recaptchaRef.current) {
-                        recaptchaRef.current.reset();
-                        setRecaptchaVerified(false);
-                    }
-                } else {
-                    // Error general
-                    setSnackbarMessage(result.error);
-                    setSnackbarSeverity('error');
+                    errorSeverity = 'warning'; 
                 }
+                
+                setSnackbarMessage(result.error);
+                setSnackbarSeverity(errorSeverity); 
                 setOpenSnackbar(true);
+                
             } else {
                 // Login exitoso
                 setSnackbarMessage('¡Inicio de sesión exitoso! Redirigiendo...');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
                 
-                // Redirige después de un breve delay para mostrar el mensaje
+                // Redirige después de un breve delay
                 setTimeout(() => {
                     navigate('/dashboard'); 
                 }, 1500);
@@ -133,11 +130,11 @@ export default function Login() {
 
         } catch (err) {
             console.error('Error durante el proceso de login:', err);
-            setSnackbarMessage(`Error inesperado: ${err.message}`);
+            setSnackbarMessage(`Error inesperado: ${err.message}.`);
             setSnackbarSeverity('error');
             setOpenSnackbar(true);
             
-            // Reseteamos el captcha en caso de error inesperado
+             // Asegura que se resetea el captcha en caso de error inesperado
             if (recaptchaRef.current) {
                 recaptchaRef.current.reset();
                 setRecaptchaVerified(false);
@@ -155,7 +152,8 @@ export default function Login() {
 
     // Estilos compartidos para los campos de texto
     const inputStyles = {
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        // Fondo ligeramente transparente para los campos de texto
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', 
         borderRadius: 1,
         
         '& .MuiOutlinedInput-root': {
@@ -168,10 +166,10 @@ export default function Login() {
             },
         },
         '& .MuiInputLabel-root': {
-             color: COLOR_LIGHT,
-             '&.Mui-focused': {
-                 color: COLOR_LIME,
-             },
+            color: COLOR_LIGHT,
+            '&.Mui-focused': {
+                color: COLOR_LIME,
+            },
         },
     };
 
@@ -182,6 +180,7 @@ export default function Login() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                // Asegúrate de que esta URL de fondo es correcta
                 backgroundImage: 'url(/static/uploads/cancha-login.jpg)', 
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
@@ -191,7 +190,7 @@ export default function Login() {
                     content: '""',
                     position: 'absolute',
                     top: 0, left: 0, width: '100%', height: '100%',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Capa de oscuridad
                 }
             }}
         >
@@ -284,15 +283,23 @@ export default function Login() {
                         }}
                     />
 
-                    {/* RECAPTCHA VISIBLE */}
-                    <Box sx={{ my: 2, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
-                         <Box sx={{ mt: 1 }}>
-                             <ReCAPTCHA
-                                 sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "TU_SITEKEY_DE_EJEMPLO"}
-                                 ref={recaptchaRef}
-                                 onChange={handleRecaptchaChange}
-                             />
-                         </Box>
+                    {/* RECAPTCHA CLÁSICO (MEJOR INTEGRADO) */}
+                    {/* Centrado con flexbox y usando el tema oscuro */}
+                    <Box 
+                        sx={{ 
+                            my: 2, 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            // Opcional: añade un poco de espacio extra encima y debajo del CAPTCHA
+                            py: 1 
+                        }}
+                    >
+                        <ReCAPTCHA
+                            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "TU_SITEKEY_DE_EJEMPLO"}
+                            ref={recaptchaRef}
+                            onChange={handleRecaptchaChange}
+                            theme="dark" // Clave para la integración visual en tema oscuro
+                        />
                     </Box>
 
                     {/* BOTÓN 1: INICIAR SESIÓN */}
@@ -300,7 +307,8 @@ export default function Login() {
                         type="submit"
                         fullWidth
                         variant="contained"
-                        disabled={isLoading || !recaptchaVerified}
+                        // El botón se deshabilita si está cargando O si el CAPTCHA no está verificado
+                        disabled={isLoading || !recaptchaVerified} 
                         sx={{
                             mt: 3,
                             mb: 1.5,
@@ -317,6 +325,7 @@ export default function Login() {
                                 boxShadow: `0 5px 15px rgba(162, 232, 49, 0.5)`,
                             },
                             transition: 'all 0.3s ease-in-out',
+                            opacity: isLoading || !recaptchaVerified ? 0.7 : 1, // Feedback visual de deshabilitado
                         }}
                     >
                         {isLoading ? (
