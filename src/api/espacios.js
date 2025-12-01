@@ -17,6 +17,13 @@ const getNearby = async (lat, lon, radiusKm = 5) => {
 
 
 export const espaciosApi = {
+
+  getAdminAll: async (includeInactive = false) => {
+    // Llama al endpoint especial que hace el cruce con usuarios
+    const response = await api.get(`/espacios/admin/todos-espacios?include_inactive=${includeInactive}`);
+    return response.data;
+  },
+  
   getAll: async (includeInactive = false) => {
     const response = await api.get(`/espacios/?include_inactive=${includeInactive}`);
     return response.data;

@@ -29,5 +29,14 @@ export const usuariosApi = {
   activar: async (id) => {
     const response = await api.put(`/usuarios/${id}/activar`);
     return response.data;
-  }
+  },
+
+  // ✅ AQUI DEBE ESTAR
+  getGestores: async () => {
+    const response = await api.get('/usuarios/rol/gestores');
+    return response.data;
+  },
+  
 };
+
+
