@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { espaciosApi } from '../api/espacios';
 import { canchasApi } from '../api/canchas';
 import { reservasApi } from '../api/reservas';
+import { usuariosApi } from "../api/usuarios";
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import {
@@ -406,6 +407,8 @@ export default function Facilities() {
   const [zoomOpen, setZoomOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // ✅ ESTADOS FALTANTES Y NUEVO ESTADO DE MAPA AÑADIDO
   const [view, setView] = useState('espacios');
@@ -439,32 +442,42 @@ export default function Facilities() {
 
   const fetchEspacios = async () => {
     try {
-      const data = await espaciosApi.getMisEspacios();
+      setLoading(true);
+      let data;
+      
+      // SI ES ADMIN, USAMOS EL ENDPOINT QUE TRAE GESTORES
+      if (isAdmin) {
+          data = await espaciosApi.getAdminAll(true); // true para ver inactivos si quieres
+      } else {
+          // Si es cliente/gestor, usamos el normal
+          data = await espaciosApi.getAll();
+      }
+      
       setEspacios(data);
     } catch (error) {
-      toast.error('Error al cargar espacios deportivos');
+      console.error('Error al cargar espacios:', error);
+      toast.error('Error al cargar los espacios deportivos');
+    } finally {
+      setLoading(false);
     }
   };
 
   // ✅ FUNCIÓN FALTANTE AÑADIDA
   const fetchGestores = async () => {
-    try {
-      // Implementar esta llamada API según tu backend
-      // const data = await usuariosApi.getGestores();
-      // setGestores(data);
-      console.log('Fetching gestores...');
-      // Temporalmente establecer un array vacío
-      setGestores([]);
-    } catch (error) {
-      toast.error('Error al cargar gestores');
-    }
-  };
+  try {
+    const data = await usuariosApi.getGestores(); 
+    setGestores(data);
+  } catch (error) {
+    toast.error('Error al cargar gestores');
+  }
+};
 
   const fetchCanchasByEspacio = async (espacioId) => {
     try {
       const data = await canchasApi.getByEspacio(espacioId);
       setCanchas(data);
     } catch (error) {
+      console.error("Error cargando gestores", error);
       toast.error('Error al cargar las canchas');
     }
   };
@@ -531,16 +544,20 @@ export default function Facilities() {
 
   // ✅ FUNCIÓN FALTANTE AÑADIDA
   const handleEdit = (espacio) => {
-    setEditing(espacio);
+    setSelectedEspacio(espacio);
     setFormData({
       nombre: espacio.nombre,
       ubicacion: espacio.ubicacion,
       capacidad: espacio.capacidad,
       descripcion: espacio.descripcion,
-      latitud: espacio.latitud || '', // Asegurar que se carguen lat/lon
-      longitud: espacio.longitud || '', // Asegurar que se carguen lat/lon
-      gestor_id: espacio.gestor_id,
+      estado: espacio.estado,
+      latitud: espacio.latitud || -16.5000,
+      longitud: espacio.longitud || -68.1193,
+      // AQUÍ LA CLAVE: Si el backend devuelve null, ponemos string vacío para que el Select no falle
+      gestor_id: espacio.gestor_id || '', 
+      imagen: null
     });
+    setPreviewImage(espacio.imagen_url ? `http://localhost:8000${espacio.imagen_url}` : null);
     setOpen(true);
   };
 
@@ -850,13 +867,33 @@ export default function Facilities() {
                     {espacio.descripcion || 'Sin descripción detallada.'}
                   </Typography>
 
-                  {isAdmin && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="caption" color="text.primary" sx={{ fontWeight: 'medium' }}>
-                        Gestor asignado: {espacio.gestor_asignado || 'Sin asignar'}
-                      </Typography>
-                    </Box>
-                  )}
+                  {/* ... dentro del map de espacios ... */}
+                    {isAdmin && (
+                      <Box sx={{ mt: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Gestor Responsable
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                            {/* Usamos gestor_nombre que ahora SÍ llega del backend */}
+                            {espacio.gestor_nombre ? (
+                                <>
+                                    <Avatar 
+                                        sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: 'primary.main' }}
+                                    >
+                                        {espacio.gestor_nombre.charAt(0)}
+                                    </Avatar>
+                                    <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                        {espacio.gestor_nombre} {espacio.gestor_apellido}
+                                    </Typography>
+                                </>
+                            ) : (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                    Sin asignar
+                                </Typography>
+                            )}
+                        </Box>
+                      </Box>
+                    )}
                 </CardContent>
 
                 <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
