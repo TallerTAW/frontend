@@ -1,14 +1,12 @@
 // 📍 ARCHIVO: src/pages/reservar.jsx
-// 🎯 PROPÓSITO: Página principal de reservas
-// 💡 CAMBIO PRINCIPAL: Usar createCompleta en lugar de create para aplicar cupones
-
+// 🎯 PROPÓSITO: Página principal de reservas con lógica de filtrado y MEJORAS DE UX/UI.
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom'; // ✅ AGREGAR NAVIGATE
+import { useNavigate } from 'react-router-dom';
 import { espaciosApi } from '../api/espacios';
 import { disciplinasApi } from '../api/disciplinas';
 import { canchasApi } from '../api/canchas';
-import { reservasApi } from '../api/reservas'; // ✅ API ACTUALIZADA
+import { reservasApi } from '../api/reservas';
 import { cuponesApi } from '../api/cupones';
 import { toast } from 'react-toastify';
 import {
@@ -31,24 +29,28 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  ToggleButtonGroup,
-  ToggleButton,
-  Rating,
+  Divider // Añadido para separación visual en el Paso 4
 } from '@mui/material';
-import { Stadium, Category, SportsSoccer, ArrowBack, ArrowForward } from '@mui/icons-material';
+import { Stadium, SportsSoccer, ArrowBack, CalendarToday, AccessTime, Money, People } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function Reservar() {
   const { profile } = useAuth();
-  const navigate = useNavigate(); // ✅ AGREGAR NAVIGATE
+  const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
+  
+  // Datos principales de la aplicación
   const [espacios, setEspacios] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
   const [canchas, setCanchas] = useState([]);
   const [cupones, setCupones] = useState([]);
+  // Selecciones del usuario
   const [selectedEspacio, setSelectedEspacio] = useState(null);
   const [selectedDisciplina, setSelectedDisciplina] = useState(null);
   const [selectedCancha, setSelectedCancha] = useState(null);
+  const [selectedCoupon, setSelectedCoupon] = useState('');
+  
+  // Datos de la reserva
   const [reservationData, setReservationData] = useState({
     fecha_reserva: '',
     hora_inicio: '',
@@ -59,9 +61,10 @@ export default function Reservar() {
     id_cancha: '',
     id_usuario: profile?.id
   });
-  const [selectedCoupon, setSelectedCoupon] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
+  const today = new Date().toISOString().split('T')[0];
+  const steps = ['Seleccionar Espacio', 'Seleccionar Disciplina', 'Seleccionar Cancha', 'Confirmar Reserva'];
 
   useEffect(() => {
     fetchEspacios();
@@ -69,10 +72,20 @@ export default function Reservar() {
       fetchCuponesUsuario();
     }
   }, [profile]);
+  
+  useEffect(() => {
+    if (selectedDisciplina) {
+      fetchCanchas();
+    }
+  }, [selectedEspacio, selectedDisciplina]);
+  
+  useEffect(() => {
+    fetchHorariosDisponibles();
+  }, [selectedCancha, reservationData.fecha_reserva]);
 
+  // === 1. CARGA DE ESPACIOS ===
   const fetchEspacios = async () => {
     try {
-      // Usar endpoint público para reservas
       const data = await espaciosApi.getDisponibles();
       setEspacios(data);
     } catch (error) {
@@ -80,50 +93,51 @@ export default function Reservar() {
     }
   };
 
-  const fetchDisciplinas = async () => {
+  // === 2. CARGA DE DISCIPLINAS POR ESPACIO (LÓGICA DE FILTRADO) ===
+  const fetchDisciplinas = async (espacioId) => {
+    if (!espacioId) return;
     try {
-      const data = await disciplinasApi.getAll();
+      const data = await disciplinasApi.getByEspacio(espacioId);
       setDisciplinas(data);
+
+      if (data.length === 0) {
+        toast.info(`El espacio seleccionado no tiene canchas con disciplinas configuradas.`);
+      }
+
     } catch (error) {
-      toast.error('Error al cargar disciplinas');
+      toast.error('Error al cargar disciplinas disponibles para este espacio');
+      setDisciplinas([]);
     }
   };
 
+  // === 3. CARGA DE CANCHAS POR ESPACIO Y DISCIPLINA ===
   const fetchCanchas = async () => {
     if (selectedEspacio && selectedDisciplina) {
       try {
-        // ✅ USAR ENDPOINT ESPECÍFICO que filtra por espacio Y disciplina
         const data = await canchasApi.getByEspacioYDisciplina(
           selectedEspacio.id_espacio_deportivo,
           selectedDisciplina.id_disciplina
         );
-        
         setCanchas(data);
         
-        // ✅ MOSTRAR MENSAJE SI NO HAY CANCHAS
         if (data.length === 0) {
           toast.info(`No hay canchas de ${selectedDisciplina.nombre} disponibles en ${selectedEspacio.nombre}`);
         }
         
       } catch (error) {
         console.error('Error al cargar canchas:', error);
-        
-        if (error.response?.status === 404) {
-          toast.info(`No hay canchas de ${selectedDisciplina.nombre} en ${selectedEspacio.nombre}`);
-          setCanchas([]);
-        } else {
-          toast.error('Error al cargar canchas disponibles');
-        }
+        toast.error('Error al cargar canchas disponibles');
+        setCanchas([]);
       }
     }
   };
-
+  
   const fetchCuponesUsuario = async () => {
     try {
       const data = await cuponesApi.getByUsuario(profile.id);
       setCupones(data.filter(cupon => 
         cupon.estado === 'activo' && 
-        (!cupon.fecha_expiracion || new Date(cupon.fecha_expiracion) > new Date())
+        (!cupon.fecha_expiracion || new Date(cupon.fecha_expiracion) > new Date()) 
       ));
     } catch (error) {
       console.error('Error al cargar cupones');
@@ -133,12 +147,11 @@ export default function Reservar() {
   const fetchHorariosDisponibles = async () => {
     if (selectedCancha && reservationData.fecha_reserva) {
       try {
-        // ✅ CAMBIO: Usar el nuevo endpoint con prefijo /reservas-completas/
         const data = await reservasApi.getDisponibilidad(
-          selectedCancha.id_cancha, 
+          selectedCancha.id_cancha,
           reservationData.fecha_reserva
         );
-        setHorariosDisponibles(data || []); // ✅ CAMBIO: data en lugar de data.horarios_disponibles
+        setHorariosDisponibles(data || []);
       } catch (error) {
         console.error('Error al cargar horarios disponibles:', error);
         setHorariosDisponibles([]);
@@ -146,26 +159,24 @@ export default function Reservar() {
     }
   };
 
-  useEffect(() => {
-    if (selectedDisciplina) {
-      fetchCanchas();
-    }
-  }, [selectedEspacio, selectedDisciplina]);
-
-  useEffect(() => {
-    fetchHorariosDisponibles();
-  }, [selectedCancha, reservationData.fecha_reserva]);
+  // === MANEJADORES DE PASOS ===
 
   const handleEspacioSelect = (espacio) => {
     setSelectedEspacio(espacio);
+    // Reiniciar selecciones dependientes
+    setSelectedDisciplina(null);
+    setSelectedCancha(null);
+    setDisciplinas([]);
+    setCanchas([]);
     setActiveStep(1);
-    fetchDisciplinas();
+    fetchDisciplinas(espacio.id_espacio_deportivo);
   };
-
+  
   const handleDisciplinaSelect = (disciplina) => {
     setSelectedDisciplina(disciplina);
     setReservationData(prev => ({ ...prev, id_disciplina: disciplina.id_disciplina }));
     setActiveStep(2);
+    setSelectedCancha(null);
   };
 
   const handleCanchaSelect = (cancha) => {
@@ -176,14 +187,12 @@ export default function Reservar() {
 
   const calcularCostoTotal = () => {
     if (!selectedCancha || !reservationData.hora_inicio || !reservationData.hora_fin) return 0;
-
     const start = new Date(`2000-01-01T${reservationData.hora_inicio}`);
     const end = new Date(`2000-01-01T${reservationData.hora_fin}`);
     const hours = (end - start) / (1000 * 60 * 60);
 
     let total = hours * selectedCancha.precio_por_hora;
-
-    // Aplicar cupón si está seleccionado (solo para visualización en frontend)
+    // Aplicar cupón si está seleccionado
     if (selectedCoupon) {
       const coupon = cupones.find(c => c.id_cupon === parseInt(selectedCoupon));
       if (coupon) {
@@ -197,17 +206,13 @@ export default function Reservar() {
 
     return Math.max(0, total);
   };
-
+  
   const handleConfirmReservation = async () => {
-    // ✅ CORRECCIÓN PRINCIPAL: Usar el endpoint completo con soporte para cupones
-    console.log('🎯 [FRONTEND] Iniciando confirmación de reserva...');
-    
-    // Si es invitado, redirigir a login
     if (!profile) {
       toast.info('Por favor, inicia sesión o regístrate para completar tu reserva');
       navigate('/login', { 
         state: { 
-          from: '/reservar',
+          from: '/reservar', 
           reservationData: {
             ...reservationData,
             selectedEspacio,
@@ -220,39 +225,27 @@ export default function Reservar() {
     }
 
     try {
-      // Obtener el código del cupón seleccionado
       const codigoCupon = selectedCoupon 
-        ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
+        ?
+        cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
         : null;
-
-      console.log('🎫 [FRONTEND] Cupón seleccionado:', codigoCupon);
-      console.log('📅 [FRONTEND] Datos de reserva:', reservationData);
-
-      // ✅ USAR EL ENDPOINT COMPLETO DE RESERVAS que soporta cupones
       const reservaData = {
         ...reservationData,
         id_usuario: profile.id,
-        codigo_cupon: codigoCupon  // ← Incluir código de cupón
+        codigo_cupon: codigoCupon 
       };
-
-      console.log('🚀 [FRONTEND] Enviando reserva al backend...', reservaData);
-      
-      // ✅ CAMBIO CRÍTICO: Usar createCompleta en lugar de create
       const nuevaReserva = await reservasApi.createCompleta(reservaData);
+      const mensaje = codigoCupon 
+        ? `¡Reserva creada exitosamente con cupón aplicado!
+Total: $${nuevaReserva.costo_total}`
+        : `¡Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`;
 
-      console.log('✅ [FRONTEND] Reserva creada exitosamente:', nuevaReserva);
-      
-      // Mostrar mensaje de éxito según si se aplicó cupón o no
-      if (codigoCupon) {
-        toast.success(`¡Reserva creada exitosamente con cupón aplicado! Total: $${nuevaReserva.costo_total}`);
-      } else {
-        toast.success(`¡Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`);
-      }
+      toast.success(mensaje);
       
       setConfirmOpen(false);
       resetForm();
     } catch (error) {
-      console.error('❌ [FRONTEND] Error creando reserva:', error);
+      console.error('Error creando reserva:', error);
       toast.error(error.response?.data?.detail || 'Error al crear la reserva');
     }
   };
@@ -275,19 +268,7 @@ export default function Reservar() {
     setSelectedCoupon('');
     fetchCuponesUsuario();
   };
-
-  const steps = ['Seleccionar Espacio', 'Seleccionar Disciplina', 'Seleccionar Cancha', 'Confirmar Reserva'];
-
-  const today = new Date().toISOString().split('T')[0];
-
-  const isHorarioDisponible = (horaInicio, horaFin) => {
-    return horariosDisponibles.some(horario => 
-      horario.hora_inicio === horaInicio && 
-      horario.hora_fin === horaFin && 
-      horario.disponible
-    );
-  };
-
+  
   return (
     <Box>
       <motion.div
@@ -300,7 +281,8 @@ export default function Reservar() {
         </Typography>
       </motion.div>
 
-      <Stepper activeStep={activeStep} className="mb-8">
+      <Stepper 
+        activeStep={activeStep} className="mb-8">
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -308,7 +290,7 @@ export default function Reservar() {
         ))}
       </Stepper>
 
-      {/* Paso 1: Seleccionar Espacio */}
+      {/* Paso 1: Seleccionar Espacio (Estilos se mantienen, ya son sólidos) */}
       {activeStep === 0 && (
         <Box>
           <Typography variant="h6" className="font-title mb-4">
@@ -336,7 +318,7 @@ export default function Reservar() {
                         {espacio.nombre}
                       </Typography>
                       <Typography variant="body2" className="text-gray-600 font-body">
-                        {espacio.ubicacion}
+                      {espacio.ubicacion}
                       </Typography>
                       <Typography variant="body2" className="text-gray-500 font-body mt-2">
                         Capacidad: {espacio.capacidad} personas
@@ -350,21 +332,30 @@ export default function Reservar() {
         </Box>
       )}
 
-      {/* Paso 2: Seleccionar Disciplina */}
+      {/* Paso 2: Seleccionar Disciplina (Estilos se mantienen, ya son sólidos) */}
       {activeStep === 1 && (
         <Box>
-          <Box className="flex items-center gap-4 mb-4">
+          <Box className="flex items-center gap-4 mb-6">
             <Button
               startIcon={<ArrowBack />}
               onClick={() => setActiveStep(0)}
-              className="text-primary"
+              sx={{ color: 'text.secondary', fontWeight: 'bold' }}
             >
               Atrás
             </Button>
             <Typography variant="h6" className="font-title">
-              Selecciona una Disciplina
+              Selecciona una Disciplina en **{selectedEspacio?.nombre}**
             </Typography>
           </Box>
+
+          {disciplinas.length === 0 && (
+            <Box className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
+              <Typography>
+                No se encontraron disciplinas con canchas disponibles en **{selectedEspacio?.nombre}**.
+              </Typography>
+            </Box>
+          )}
+
           <Grid container spacing={3}>
             {disciplinas.map((disciplina, index) => (
               <Grid item xs={12} sm={6} md={3} key={disciplina.id_disciplina}>
@@ -374,15 +365,19 @@ export default function Reservar() {
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
                   <Card
-                    className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-gradient-to-br from-secondary/10 to-accent/10"
+                    className="rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform 
+                      hover:-translate-y-2 cursor-pointer bg-gradient-to-br from-secondary/10 to-accent/10"
                     onClick={() => handleDisciplinaSelect(disciplina)}
                   >
                     <CardContent className="text-center py-8">
                       <Box className="text-7xl mb-4">
-                        {disciplina.nombre === 'Fútbol' ? '⚽' :
-                         disciplina.nombre === 'Básquetbol' ? '🏀' :
-                         disciplina.nombre === 'Tenis' ? '🎾' :
-                         disciplina.nombre === 'Vóleibol' ? '🏐' : '🏆'}
+                        {disciplina.nombre.includes('Fútbol') ? '⚽' : 
+                         disciplina.nombre.includes('Básquetbol') ?
+                        '🏀' : 
+                         disciplina.nombre.includes('Tenis') ?
+                        '🎾' : 
+                         disciplina.nombre.includes('Vóleibol') ?
+                        '🏐' : '🏆'}
                       </Box>
                       <Typography variant="h5" className="font-title">
                         {disciplina.nombre}
@@ -396,21 +391,30 @@ export default function Reservar() {
         </Box>
       )}
 
-      {/* Paso 3: Seleccionar Cancha */}
+      {/* Paso 3: Seleccionar Cancha (Estilos se mantienen, ya son sólidos) */}
       {activeStep === 2 && (
         <Box>
-          <Box className="flex items-center gap-4 mb-4">
+          <Box className="flex items-center gap-4 mb-6">
             <Button
               startIcon={<ArrowBack />}
               onClick={() => setActiveStep(1)}
-              className="text-primary"
+              sx={{ color: 'text.secondary', fontWeight: 'bold' }}
             >
               Atrás
             </Button>
             <Typography variant="h6" className="font-title">
-              Selecciona una Cancha
+              Selecciona una Cancha de **{selectedDisciplina?.nombre}**
             </Typography>
           </Box>
+          
+          {canchas.length === 0 && (
+            <Box className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
+              <Typography>
+                No se encontraron canchas de **{selectedDisciplina?.nombre}** disponibles en **{selectedEspacio?.nombre}**.
+              </Typography>
+            </Box>
+          )}
+
           <Grid container spacing={3}>
             {canchas.filter(c => c.estado === 'disponible').map((cancha, index) => (
               <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
@@ -441,9 +445,9 @@ export default function Reservar() {
                         Tipo: {cancha.tipo}
                       </Typography>
                       <Typography variant="body2" className="text-gray-600 font-body mb-2">
-                        Horario: {cancha.hora_apertura.slice(0,5)} - {cancha.hora_cierre.slice(0,5)}
+                        Horario: **{cancha.hora_apertura.slice(0,5)}** - **{cancha.hora_cierre.slice(0,5)}**
                       </Typography>
-                      <Typography variant="h6" className="font-title text-accent">
+                      <Typography variant="h5" className="font-title text-primary mt-3">
                         ${cancha.precio_por_hora}/hora
                       </Typography>
                     </CardContent>
@@ -455,14 +459,14 @@ export default function Reservar() {
         </Box>
       )}
 
-      {/* Paso 4: Confirmar Reserva */}
+      {/* Paso 4: Confirmar Reserva - MEJORAS UX/UI */}
       {activeStep === 3 && selectedCancha && (
         <Box>
-          <Box className="flex items-center gap-4 mb-4">
+          <Box className="flex items-center gap-4 mb-6">
             <Button
               startIcon={<ArrowBack />}
               onClick={() => setActiveStep(2)}
-              className="text-primary"
+              sx={{ color: 'text.secondary', fontWeight: 'bold' }}
             >
               Atrás
             </Button>
@@ -472,132 +476,215 @@ export default function Reservar() {
           </Box>
 
           <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
-              <Card className="rounded-2xl shadow-lg p-4">
-                <Typography variant="h6" className="font-title mb-4">
-                  Detalles de la Cancha
-                </Typography>
-                <Typography className="font-body mb-2">
-                  <strong>Cancha:</strong> {selectedCancha.nombre}
-                </Typography>
-                <Typography className="font-body mb-2">
-                  <strong>Espacio:</strong> {selectedEspacio?.nombre}
-                </Typography>
-                <Typography className="font-body mb-2">
-                  <strong>Disciplina:</strong> {selectedDisciplina?.nombre}
-                </Typography>
-                <Typography className="font-body mb-2">
-                  <strong>Precio:</strong> ${selectedCancha.precio_por_hora}/hora
-                </Typography>
-                <Typography className="font-body">
-                  <strong>Horario:</strong> {selectedCancha.hora_apertura.slice(0,5)} - {selectedCancha.hora_cierre.slice(0,5)}
-                </Typography>
-              </Card>
+            {/* Columna 1: Detalles de la Cancha (UX: Resaltar información estática) */}
+            <Grid item xs={12} md={5}>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Card className="rounded-2xl shadow-xl p-6 h-full bg-primary/10 border-l-4 border-primary">
+                  <Typography variant="h5" className="font-title text-primary pb-3 mb-4">
+                    Detalles de la Cancha
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography className="font-body text-lg mb-2">
+                    <SportsSoccer sx={{ fontSize: 20, mr: 1, verticalAlign: 'middle', color: 'primary.main' }} />
+                    <strong className="text-primary">Cancha:</strong> {selectedCancha.nombre}
+                  </Typography>
+                  <Typography className="font-body mb-2">
+                    <Stadium sx={{ fontSize: 20, mr: 1, verticalAlign: 'middle', color: 'text.secondary' }} />
+                    <strong className="text-gray-700">Espacio:</strong> {selectedEspacio?.nombre}
+                  </Typography>
+                  <Typography className="font-body mb-4">
+                    <People sx={{ fontSize: 20, mr: 1, verticalAlign: 'middle', color: 'text.secondary' }} />
+                    <strong className="text-gray-700">Disciplina:</strong> {selectedDisciplina?.nombre}
+                  </Typography>
+                  
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography className="font-body text-xl text-accent font-bold mb-2">
+                    <Money sx={{ fontSize: 24, mr: 1, verticalAlign: 'middle', color: 'accent.main' }} />
+                    <strong>Precio:</strong> ${selectedCancha.precio_por_hora}/hora
+                  </Typography>
+                  <Typography className="font-body text-md text-gray-800">
+                    <AccessTime sx={{ fontSize: 20, mr: 1, verticalAlign: 'middle', color: 'text.secondary' }} />
+                    **Horario:** {selectedCancha.hora_apertura.slice(0,5)} - {selectedCancha.hora_cierre.slice(0,5)}
+                  </Typography>
+                </Card>
+              </motion.div>
             </Grid>
 
-            <Grid item xs={12} md={6}>
-              <Card className="rounded-2xl shadow-lg p-4">
-                <Typography variant="h6" className="font-title mb-4">
-                  Información de la Reserva
-                </Typography>
-                <TextField
-                  fullWidth
-                  label="Fecha"
-                  type="date"
-                  value={reservationData.fecha_reserva}
-                  onChange={(e) => setReservationData({ ...reservationData, fecha_reserva: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: today }}
-                  required
-                  className="mb-4"
-                  margin="normal"
-                />
-                <TextField
-                  fullWidth
-                  label="Hora de inicio"
-                  type="time"
-                  value={reservationData.hora_inicio}
-                  onChange={(e) => setReservationData({ ...reservationData, hora_inicio: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                  margin="normal"
-                />
-                <TextField
-                  fullWidth
-                  label="Hora de fin"
-                  type="time"
-                  value={reservationData.hora_fin}
-                  onChange={(e) => setReservationData({ ...reservationData, hora_fin: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                  margin="normal"
-                />
-                <TextField
-                  fullWidth
-                  label="Cantidad de asistentes"
-                  type="number"
-                  value={reservationData.cantidad_asistentes}
-                  onChange={(e) => setReservationData({ ...reservationData, cantidad_asistentes: parseInt(e.target.value) })}
-                  inputProps={{ min: 1, max: selectedEspacio?.capacidad }}
-                  margin="normal"
-                />
-                <TextField
-                  fullWidth
-                  label="Material prestado (opcional)"
-                  value={reservationData.material_prestado}
-                  onChange={(e) => setReservationData({ ...reservationData, material_prestado: e.target.value })}
-                  margin="normal"
-                  helperText="Ej: Balones, redes, etc."
-                />
-                
-                {cupones.length > 0 && (
-                  <FormControl fullWidth margin="normal">
-                    <InputLabel>Cupón de descuento</InputLabel>
-                    <Select
-                      value={selectedCoupon}
-                      onChange={(e) => setSelectedCoupon(e.target.value)}
-                    >
-                      <MenuItem value="">Sin cupón</MenuItem>
-                      {cupones.map((coupon) => (
-                        <MenuItem key={coupon.id_cupon} value={coupon.id_cupon}>
-                          {coupon.tipo === 'porcentaje' ? 
-                            `${coupon.monto_descuento}% descuento` : 
-                            `$${coupon.monto_descuento} descuento`} - {coupon.codigo}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-                
-                <Box className="mt-4 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl">
-                  <Typography variant="h5" className="font-title text-primary">
-                    Total: ${calcularCostoTotal().toFixed(2)}
+            {/* Columna 2: Formulario de Reserva (UX: Agrupación y Campos claros) */}
+            <Grid item xs={12} md={7}>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Card className="rounded-2xl shadow-xl p-6">
+                  <Typography variant="h5" className="font-title text-secondary mb-4 pb-2 border-b">
+                    Información de la Reserva
                   </Typography>
-                  {selectedCoupon && (
-                    <Typography variant="body2" className="text-green-600 font-body">
-                      ✅ Cupón aplicado - Precio final con descuento
-                    </Typography>
+               
+                  <TextField
+                    fullWidth
+                    label="Fecha"
+                    type="date"
+                    value={reservationData.fecha_reserva}
+                    onChange={(e) => setReservationData({ ...reservationData, fecha_reserva: e.target.value, hora_inicio: '', hora_fin: '' })} 
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: today }}
+                    required
+                    margin="normal"
+                    // Estilo limpio con ícono al final
+                    InputProps={{
+                      endAdornment: <CalendarToday color="action" />,
+                    }}
+                  />
+                  
+                  {/* Campos de Hora con validación */}
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Hora de inicio"
+                        type="time"
+                        value={reservationData.hora_inicio}
+                        onChange={(e) => setReservationData({ ...reservationData, hora_inicio: e.target.value, hora_fin: '' })} 
+                        InputLabelProps={{ shrink: true }}
+                        required
+                        margin="normal"
+                        error={
+                          reservationData.hora_inicio && 
+                          (reservationData.hora_inicio < selectedCancha?.hora_apertura.slice(0, 5) || 
+                           reservationData.hora_inicio >= selectedCancha?.hora_cierre.slice(0, 5))
+                        }
+                        helperText={
+                          reservationData.hora_inicio && 
+                          (reservationData.hora_inicio < selectedCancha?.hora_apertura.slice(0, 5) || 
+                           reservationData.hora_inicio >= selectedCancha?.hora_cierre.slice(0, 5)) 
+                            ? `La hora debe estar entre ${selectedCancha?.hora_apertura.slice(0, 5)} y ${selectedCancha?.hora_cierre.slice(0, 5)}.`
+                            : ''
+                        }
+                        InputProps={{
+                          endAdornment: <AccessTime color="action" />,
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Hora de fin"
+                        type="time"
+                        value={reservationData.hora_fin}
+                        onChange={(e) => setReservationData({ ...reservationData, hora_fin: e.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        required
+                        margin="normal"
+                        disabled={!reservationData.hora_inicio}
+                        error={
+                          reservationData.hora_fin && 
+                          (reservationData.hora_fin <= reservationData.hora_inicio || 
+                           reservationData.hora_fin > selectedCancha?.hora_cierre.slice(0, 5))
+                        }
+                        helperText={
+                          reservationData.hora_fin && 
+                          (reservationData.hora_fin <= reservationData.hora_inicio)
+                            ? 'La hora de fin debe ser posterior a la de inicio.'
+                            : reservationData.hora_fin > selectedCancha?.hora_cierre.slice(0, 5)
+                            ? `La hora de fin no puede exceder las ${selectedCancha?.hora_cierre.slice(0, 5)}.`
+                            : ''
+                        }
+                        InputProps={{
+                          endAdornment: <AccessTime color="action" />,
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                 
+                  <TextField
+                    fullWidth
+                    label="Cantidad de asistentes"
+                    type="number"
+                    value={reservationData.cantidad_asistentes}
+                    onChange={(e) => setReservationData({ ...reservationData, cantidad_asistentes: parseInt(e.target.value) })}
+                    inputProps={{ min: 1, max: selectedEspacio?.capacidad }}
+                    margin="normal"
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Material prestado (opcional)"
+                    value={reservationData.material_prestado}
+                    onChange={(e) => setReservationData({ ...reservationData, material_prestado: e.target.value })}
+                    margin="normal"
+                    helperText="Ej: Balones, redes, etc."
+                  />
+                  
+                  {cupones.length > 0 && (
+                    <FormControl fullWidth margin="normal">
+                      <InputLabel>Cupón de descuento</InputLabel>
+                      <Select
+                        value={selectedCoupon}
+                        onChange={(e) => setSelectedCoupon(e.target.value)}
+                      >
+                        <MenuItem value="">Sin cupón</MenuItem>
+                        {cupones.map((coupon) => (
+                          <MenuItem key={coupon.id_cupon} value={coupon.id_cupon}>
+                            {coupon.tipo === 'porcentaje' ?
+                              `${coupon.monto_descuento}% descuento` :
+                              `$${coupon.monto_descuento} descuento`} - {coupon.codigo}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   )}
-                </Box>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={!reservationData.fecha_reserva || !reservationData.hora_inicio || !reservationData.hora_fin}
-                  className="mt-4"
-                  sx={{
-                    textTransform: 'none',
-                    background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
-                    '&:hover': {
-                      background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
-                    },
-                    fontSize: '1.1rem',
-                    py: 1.5,
-                  }}
-                >
-                  {profile ? 'Confirmar Reserva' : 'Iniciar Sesión para Reservar'}
-                </Button>
-              </Card>
+                  
+                  {/* UX: Resaltar el total con fondo y tipografía grande */}
+                  <Box className="mt-6 p-4 bg-primary/20 rounded-xl text-center shadow-md">
+                    <Typography variant="h3" className="font-title text-primary">
+                      Total: **${calcularCostoTotal().toFixed(2)}**
+                    </Typography>
+                    {selectedCoupon && (
+                      <Typography variant="body1" className="text-green-800 font-body font-bold mt-1">
+                        ✅ Cupón aplicado
+                      </Typography>
+                    )}
+                  </Box>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={() => setConfirmOpen(true)}
+                    // Lógica de deshabilitación
+                    disabled={
+                      !reservationData.fecha_reserva ||
+                      !reservationData.hora_inicio ||
+                      !reservationData.hora_fin ||
+                      (reservationData.hora_inicio && 
+                       (reservationData.hora_inicio < selectedCancha?.hora_apertura.slice(0, 5) || 
+                        reservationData.hora_inicio >= selectedCancha?.hora_cierre.slice(0, 5))) ||
+                      (reservationData.hora_fin && 
+                       (reservationData.hora_fin <= reservationData.hora_inicio || 
+                        reservationData.hora_fin > selectedCancha?.hora_cierre.slice(0, 5)))
+                    }
+                    className="mt-6"
+                    sx={{
+                      textTransform: 'none',
+                      background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
+                      '&:hover': {
+                        background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
+                      },
+                      fontSize: '1.4rem', // Botón principal muy grande
+                      py: 2, 
+                      boxShadow: '0 6px 20px rgba(15, 159, 225, 0.4)',
+                    }}
+                  >
+                    {profile ?
+                      'Confirmar Reserva y Pagar' : 'Iniciar Sesión para Reservar'}
+                  </Button>
+                </Card>
+              </motion.div>
             </Grid>
           </Grid>
         </Box>
@@ -605,28 +692,29 @@ export default function Reservar() {
 
       {/* Dialog de confirmación */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        
         <DialogTitle className="font-title">Confirmar Reserva</DialogTitle>
         <DialogContent>
           <Typography className="font-body">
-            ¿Estás seguro de confirmar esta reserva?
+            Revisa los detalles finales antes de proceder al pago:
           </Typography>
           <Box className="mt-4 p-4 bg-gray-100 rounded-xl">
             <Typography className="font-body mb-1">
-              <strong>Cancha:</strong> {selectedCancha?.nombre}
+              <strong className="text-primary">Cancha:</strong> {selectedCancha?.nombre}
             </Typography>
             <Typography className="font-body mb-1">
-              <strong>Fecha:</strong> {reservationData.fecha_reserva}
+              <strong className="text-gray-700">Fecha:</strong> {reservationData.fecha_reserva}
             </Typography>
             <Typography className="font-body mb-1">
-              <strong>Horario:</strong> {reservationData.hora_inicio} - {reservationData.hora_fin}
+              <strong className="text-gray-700">Horario:</strong> {reservationData.hora_inicio} - {reservationData.hora_fin}
             </Typography>
             {selectedCoupon && (
               <Typography className="font-body mb-1 text-green-600">
                 <strong>Cupón aplicado:</strong> {cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo}
               </Typography>
             )}
-            <Typography className="font-title text-primary text-xl mt-2">
-              <strong>Total:</strong> ${calcularCostoTotal().toFixed(2)}
+            <Typography className="font-title text-primary text-2xl mt-3">
+              <strong>Total a Pagar:</strong> ${calcularCostoTotal().toFixed(2)}
             </Typography>
           </Box>
         </DialogContent>
@@ -642,7 +730,7 @@ export default function Reservar() {
               },
             }}
           >
-            Confirmar
+            Pagar
           </Button>
         </DialogActions>
       </Dialog>
