@@ -6,16 +6,6 @@ export const canchasApi = {
     return response.data;
   },
 
-  getMisCanchas: async () => {
-    const response = await api.get('/canchas/gestor/mis-canchas');
-    return response.data;
-  },
-
-  getAllAdmin: async () => {
-    const response = await api.get('/canchas/');
-    return response.data;
-  },
-
   getById: async (id) => {
     const response = await api.get(`/canchas/${id}`);
     return response.data;
@@ -73,7 +63,7 @@ export const canchasApi = {
     const response = await api.get(`/canchas/public/${id}`);
     return response.data;
   },
-  // ✅ NUEVO MÉTODO: Obtener canchas por espacio y disciplina
+
   getByEspacioYDisciplina: async (espacioId, disciplinaId) => {
     const response = await api.get(`/canchas/public/espacio/${espacioId}/disciplina/${disciplinaId}`);
     return response.data;

@@ -443,16 +443,8 @@ export default function Facilities() {
   const fetchEspacios = async () => {
     try {
       setLoading(true);
-      let data;
-      
-      // SI ES ADMIN, USAMOS EL ENDPOINT QUE TRAE GESTORES
-      if (isAdmin) {
-          data = await espaciosApi.getAdminAll(true); // true para ver inactivos si quieres
-      } else {
-          // Si es cliente/gestor, usamos el normal
-          data = await espaciosApi.getAll();
-      }
-      
+      // SOLO usa getAll() - el backend maneja el rol
+      const data = await espaciosApi.getAll();
       setEspacios(data);
     } catch (error) {
       console.error('Error al cargar espacios:', error);
@@ -462,15 +454,15 @@ export default function Facilities() {
     }
   };
 
-  // ✅ FUNCIÓN FALTANTE AÑADIDA
-  const fetchGestores = async () => {
-  try {
-    const data = await usuariosApi.getGestores(); 
-    setGestores(data);
-  } catch (error) {
-    toast.error('Error al cargar gestores');
-  }
-};
+    // ✅ FUNCIÓN FALTANTE AÑADIDA
+    const fetchGestores = async () => {
+    try {
+      const data = await usuariosApi.getGestores(); 
+      setGestores(data);
+    } catch (error) {
+      toast.error('Error al cargar gestores');
+    }
+  };
 
   const fetchCanchasByEspacio = async (espacioId) => {
     try {
@@ -557,7 +549,7 @@ export default function Facilities() {
       gestor_id: espacio.gestor_id || '', 
       imagen: null
     });
-    setPreviewImage(espacio.imagen_url ? `http://localhost:8000${espacio.imagen_url}` : null);
+    setPreviewImage(espacio.imagen ? `${api_url}${espacio.imagen}` : null);
     setOpen(true);
   };
 

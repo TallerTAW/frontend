@@ -289,13 +289,16 @@ export default function Courts() {
   
   const fetchData = async () => {
     try {
-      const [canchasData, espaciosData] = await Promise.all([
-        canchasApi.getMisCanchas(),
-        espaciosApi.getMisEspacios()
-      ]);
+      // Obtener canchas según el rol
+      const canchasData = await canchasApi.getAll(); // Usar getAll() que ya filtra por rol
+      
+      // Obtener espacios según el rol
+      const espaciosData = await espaciosApi.getAll(); // Usar getAll() que ya filtra por rol
+      
       setCanchas(canchasData);
       setEspacios(espaciosData);
     } catch (error) {
+      console.error('Error al cargar datos:', error);
       toast.error('Error al cargar datos');
     }
   };
@@ -447,8 +450,9 @@ export default function Courts() {
   };
 
   const getEspacioNombre = (idEspacio) => {
+    if (!idEspacio) return 'Sin espacio asignado';
     const espacio = espacios.find(e => e.id_espacio_deportivo === parseInt(idEspacio));
-    return espacio ? espacio.nombre : 'Espacio no asignado';
+    return espacio ? espacio.nombre : 'Espacio no encontrado';
   };
   
   // ===================================================
@@ -461,8 +465,8 @@ export default function Courts() {
     .filter(cancha => {
       // 1. Filtro de Texto (nombre y tipo)
       const matchesSearchTerm = searchTerm === '' || 
-        cancha.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        cancha.tipo.toLowerCase().includes(searchTerm.toLowerCase());
+        (cancha.nombre && cancha.nombre.toLowerCase().includes(searchTerm.toLowerCase())) || 
+        (cancha.tipo && cancha.tipo.toLowerCase().includes(searchTerm.toLowerCase()));
 
       // 2. Filtro por Tipo de Deporte
       const matchesTipo = selectedTipo === '' || cancha.tipo === selectedTipo;
@@ -470,26 +474,45 @@ export default function Courts() {
       // 3. Filtro por Estado
       const matchesEstado = selectedEstado === '' || cancha.estado === selectedEstado;
 
-      // 4. Filtro por Hora
-      const matchesTime = selectedTime === '' || (
-        selectedTime >= cancha.hora_apertura.slice(0, 5) && 
-        selectedTime < cancha.hora_cierre.slice(0, 5)
-      );
+      // 4. Filtro por Hora - CORRECCIÓN IMPORTANTE
+      let matchesTime = true;
+      if (selectedTime) {
+        // Convertir tiempo seleccionado a minutos para comparación
+        const [hours, minutes] = selectedTime.split(':').map(Number);
+        const selectedMinutes = hours * 60 + minutes;
+        
+        // Convertir hora_apertura de la cancha a minutos
+        const aperturaTime = cancha.hora_apertura;
+        const [aperturaHours, aperturaMinutes] = typeof aperturaTime === 'string' 
+          ? aperturaTime.split(':').map(Number)
+          : [aperturaTime.getHours ? aperturaTime.getHours() : 8, aperturaTime.getMinutes ? aperturaTime.getMinutes() : 0];
+        const aperturaMinutesTotal = aperturaHours * 60 + aperturaMinutes;
+        
+        // Convertir hora_cierre de la cancha a minutos
+        const cierreTime = cancha.hora_cierre;
+        const [cierreHours, cierreMinutes] = typeof cierreTime === 'string'
+          ? cierreTime.split(':').map(Number)
+          : [cierreTime.getHours ? cierreTime.getHours() : 22, cierreTime.getMinutes ? cierreTime.getMinutes() : 0];
+        const cierreMinutesTotal = cierreHours * 60 + cierreMinutes;
+        
+        matchesTime = selectedMinutes >= aperturaMinutesTotal && 
+                    selectedMinutes < cierreMinutesTotal;
+      }
       
       return matchesSearchTerm && matchesTipo && matchesEstado && matchesTime;
     })
-    .sort((a, b) => { // ORDENAMIENTO POR PRECIO
-        if (sortPriceDirection === '') return 0; // Sin ordenamiento
-        
-        const priceA = parseFloat(a.precio_por_hora);
-        const priceB = parseFloat(b.precio_por_hora);
-        
-        if (sortPriceDirection === 'asc') {
-            return priceA - priceB; // Ascendente (el menor primero)
-        } else if (sortPriceDirection === 'desc') {
-            return priceB - priceA; // Descendente (el mayor primero)
-        }
-        return 0;
+    .sort((a, b) => {
+      if (sortPriceDirection === '') return 0;
+      
+      const priceA = parseFloat(a.precio_por_hora) || 0;
+      const priceB = parseFloat(b.precio_por_hora) || 0;
+      
+      if (sortPriceDirection === 'asc') {
+        return priceA - priceB;
+      } else if (sortPriceDirection === 'desc') {
+        return priceB - priceA;
+      }
+      return 0;
     });
   // ===================================================
 
@@ -594,7 +617,7 @@ export default function Courts() {
               variant="outlined"
               sx={{ 
                 '& fieldset': { borderRadius: 2 },
-                minWidth: 120 // Ancho fijo para estabilidad
+                minWidth: 120
               }} 
             />
           </Grid>
