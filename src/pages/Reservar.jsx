@@ -1,14 +1,13 @@
 // 📍 ARCHIVO: src/pages/reservar.jsx
-// 🎯 PROPÓSITO: Página principal de reservas
-// 💡 CAMBIO PRINCIPAL: Usar createCompleta en lugar de create para aplicar cupones
+// 🎯 Página principal de reservas - CORREGIDA
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom'; // ✅ AGREGAR NAVIGATE
+import { useNavigate } from 'react-router-dom';
 import { espaciosApi } from '../api/espacios';
 import { disciplinasApi } from '../api/disciplinas';
 import { canchasApi } from '../api/canchas';
-import { reservasApi } from '../api/reservas'; // ✅ API ACTUALIZADA
+import { reservasApi } from '../api/reservas';
 import { cuponesApi } from '../api/cupones';
 import { toast } from 'react-toastify';
 import {
@@ -40,7 +39,7 @@ import { motion } from 'framer-motion';
 
 export default function Reservar() {
   const { profile } = useAuth();
-  const navigate = useNavigate(); // ✅ AGREGAR NAVIGATE
+  const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [espacios, setEspacios] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
@@ -72,7 +71,6 @@ export default function Reservar() {
 
   const fetchEspacios = async () => {
     try {
-      // Usar endpoint público para reservas
       const data = await espaciosApi.getDisponibles();
       setEspacios(data);
     } catch (error) {
@@ -92,7 +90,6 @@ export default function Reservar() {
   const fetchCanchas = async () => {
     if (selectedEspacio && selectedDisciplina) {
       try {
-        // ✅ USAR ENDPOINT ESPECÍFICO que filtra por espacio Y disciplina
         const data = await canchasApi.getByEspacioYDisciplina(
           selectedEspacio.id_espacio_deportivo,
           selectedDisciplina.id_disciplina
@@ -100,7 +97,6 @@ export default function Reservar() {
         
         setCanchas(data);
         
-        // ✅ MOSTRAR MENSAJE SI NO HAY CANCHAS
         if (data.length === 0) {
           toast.info(`No hay canchas de ${selectedDisciplina.nombre} disponibles en ${selectedEspacio.nombre}`);
         }
@@ -133,12 +129,11 @@ export default function Reservar() {
   const fetchHorariosDisponibles = async () => {
     if (selectedCancha && reservationData.fecha_reserva) {
       try {
-        // ✅ CAMBIO: Usar el nuevo endpoint con prefijo /reservas-completas/
-        const data = await reservasApi.getDisponibilidad(
+        const data = await reservasApi.getHorariosDisponibles(
           selectedCancha.id_cancha, 
           reservationData.fecha_reserva
         );
-        setHorariosDisponibles(data || []); // ✅ CAMBIO: data en lugar de data.horarios_disponibles
+        setHorariosDisponibles(data || []);
       } catch (error) {
         console.error('Error al cargar horarios disponibles:', error);
         setHorariosDisponibles([]);
@@ -199,10 +194,8 @@ export default function Reservar() {
   };
 
   const handleConfirmReservation = async () => {
-    // ✅ CORRECCIÓN PRINCIPAL: Usar el endpoint completo con soporte para cupones
     console.log('🎯 [FRONTEND] Iniciando confirmación de reserva...');
     
-    // Si es invitado, redirigir a login
     if (!profile) {
       toast.info('Por favor, inicia sesión o regístrate para completar tu reserva');
       navigate('/login', { 
@@ -220,40 +213,38 @@ export default function Reservar() {
     }
 
     try {
-      // Obtener el código del cupón seleccionado
-      const codigoCupon = selectedCoupon 
-        ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
-        : null;
-
-      console.log('🎫 [FRONTEND] Cupón seleccionado:', codigoCupon);
-      console.log('📅 [FRONTEND] Datos de reserva:', reservationData);
-
-      // ✅ USAR EL ENDPOINT COMPLETO DE RESERVAS que soporta cupones
+      // ✅ SIMPLIFICAR: NO ENVIAR CUPÓN POR AHORA
       const reservaData = {
         ...reservationData,
-        id_usuario: profile.id,
-        codigo_cupon: codigoCupon  // ← Incluir código de cupón
+        id_usuario: profile.id
+        // ❗ NO incluir codigo_cupon hasta que arregles el backend
       };
 
       console.log('🚀 [FRONTEND] Enviando reserva al backend...', reservaData);
       
-      // ✅ CAMBIO CRÍTICO: Usar createCompleta en lugar de create
-      const nuevaReserva = await reservasApi.createCompleta(reservaData);
+      // ✅ USAR create (NO createCompleta)
+      const nuevaReserva = await reservasApi.create(reservaData);
 
       console.log('✅ [FRONTEND] Reserva creada exitosamente:', nuevaReserva);
       
-      // Mostrar mensaje de éxito según si se aplicó cupón o no
-      if (codigoCupon) {
-        toast.success(`¡Reserva creada exitosamente con cupón aplicado! Total: $${nuevaReserva.costo_total}`);
-      } else {
-        toast.success(`¡Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`);
-      }
+      toast.success(`¡Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`);
       
       setConfirmOpen(false);
       resetForm();
+      
+      // ✅ REDIRIGIR A LA PÁGINA DE RESERVAS DEL USUARIO
+      navigate('/reservations');
     } catch (error) {
       console.error('❌ [FRONTEND] Error creando reserva:', error);
-      toast.error(error.response?.data?.detail || 'Error al crear la reserva');
+      
+      let errorMessage = 'Error al crear la reserva';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 

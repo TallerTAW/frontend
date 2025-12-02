@@ -77,5 +77,46 @@ export const canchasApi = {
   getByEspacioYDisciplina: async (espacioId, disciplinaId) => {
     const response = await api.get(`/canchas/public/espacio/${espacioId}/disciplina/${disciplinaId}`);
     return response.data;
+  },
+   // ✅ NUEVO: Obtener canchas por espacios (para gestores)
+  getByEspacios: async (espacioIds) => {
+    try {
+      // Si tienes endpoint específico
+      const response = await api.get('/canchas/by-espacios', {
+        params: { espacio_ids: espacioIds.join(',') }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener canchas por espacios:', error);
+      
+      // Fallback: obtener todas y filtrar
+      try {
+        const allCanchas = await canchasApi.getAll();
+        return allCanchas.filter(cancha => 
+          espacioIds.includes(cancha.id_espacio_deportivo)
+        );
+      } catch (fallbackError) {
+        console.error('Fallback falló:', fallbackError);
+        return [];
+      }
+    }
+  },
+  
+  // ✅ NUEVO: Obtener canchas de un gestor específico
+  getByGestor: async (gestorId) => {
+    try {
+      // Primero obtener espacios del gestor
+      const response = await api.get(`/espacios/gestor/${gestorId}`);
+      const espacios = response.data || [];
+      const espacioIds = espacios.map(e => e.id_espacio_deportivo);
+      
+      if (espacioIds.length === 0) return [];
+      
+      // Luego obtener canchas de esos espacios
+      return await canchasApi.getByEspacios(espacioIds);
+    } catch (error) {
+      console.error('Error al obtener canchas del gestor:', error);
+      return [];
+    }
   }
 };
