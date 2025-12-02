@@ -42,7 +42,7 @@ import {
   SportsSoccer,
   Schedule,
   Home,
-  Map, // Nuevo icono
+  Map,
   ArrowBack
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -55,8 +55,6 @@ const COLOR_GRIS_OSCURO = '#333333';
 const COLOR_BLANCO = '#FFFFFF';
 const COLOR_NEGRO_SUAVE = '#212121';
 
-// Componente para subir imágenes con drag & drop
-// ... (ImageUploader Componente sin cambios)
 const ImageUploader = ({ onImageChange, currentImage }) => {
   const [preview, setPreview] = useState(currentImage);
   const [dragOver, setDragOver] = useState(false);
@@ -487,14 +485,24 @@ export default function Facilities() {
       submitData.append('nombre', formData.nombre);
       submitData.append('ubicacion', formData.ubicacion);
       submitData.append('capacidad', formData.capacidad.toString());
+      
       if (formData.descripcion) {
         submitData.append('descripcion', formData.descripcion);
       }
-      if (formData.latitud) submitData.append('latitud', formData.latitud);
-      if (formData.longitud) submitData.append('longitud', formData.longitud);
-      if (formData.gestor_id && isAdmin) { // Solo incluir gestor_id si es admin
-        submitData.append('gestor_id', formData.gestor_id);
+      
+      if (formData.latitud) {
+        submitData.append('latitud', formData.latitud);
       }
+      if (formData.longitud) {
+        submitData.append('longitud', formData.longitud);
+      }
+      
+      if (isAdmin && formData.gestor_id) {
+        submitData.append('gestor_id', formData.gestor_id);
+      } else if (isAdmin && formData.gestor_id === '') {
+        submitData.append('gestor_id', '');
+      }
+      
       if (imageFile) {
         submitData.append('imagen', imageFile);
       }
@@ -506,9 +514,11 @@ export default function Facilities() {
         await espaciosApi.create(submitData);
         toast.success('Espacio creado correctamente');
       }
-      handleClose();
-      fetchEspacios();
+      
+      handleClose(); 
+      fetchEspacios(); 
     } catch (error) {
+      console.error('Error al guardar:', error);
       toast.error(error.response?.data?.detail || 'Error al guardar el espacio');
     }
   };
@@ -534,26 +544,23 @@ export default function Facilities() {
     }
   };
 
-  // ✅ FUNCIÓN FALTANTE AÑADIDA
   const handleEdit = (espacio) => {
-    setSelectedEspacio(espacio);
+    setEditing(espacio);
     setFormData({
-      nombre: espacio.nombre,
-      ubicacion: espacio.ubicacion,
-      capacidad: espacio.capacidad,
-      descripcion: espacio.descripcion,
-      estado: espacio.estado,
+      nombre: espacio.nombre || '',
+      ubicacion: espacio.ubicacion || '',
+      capacidad: espacio.capacidad || '',
+      descripcion: espacio.descripcion || '',
+      estado: espacio.estado || 'activo',
       latitud: espacio.latitud || -16.5000,
       longitud: espacio.longitud || -68.1193,
-      // AQUÍ LA CLAVE: Si el backend devuelve null, ponemos string vacío para que el Select no falle
-      gestor_id: espacio.gestor_id || '', 
-      imagen: null
+      gestor_id: espacio.gestor_id || '',
     });
     setPreviewImage(espacio.imagen ? `${api_url}${espacio.imagen}` : null);
-    setOpen(true);
+    setImageFile(null); 
+    setOpen(true); 
   };
 
-  // ✅ FUNCIÓN FALTANTE AÑADIDA
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este espacio?')) {
       try {
@@ -579,6 +586,7 @@ export default function Facilities() {
       gestor_id: '',
     });
     setImageFile(null);
+    setPreviewImage(null);
   };
 
   const handleImageZoom = (imageUrl) => {
@@ -591,12 +599,10 @@ export default function Facilities() {
     setView('horarios');
   };
 
-  // ⭐ NUEVO HANDLER: Abre el modal del mapa
   const handleOpenMap = () => {
     setMapOpen(true);
   };
 
-  // ⭐ NUEVO HANDLER: Cierra el modal del mapa y establece las coordenadas
   const handleLocationSelect = (lat, lon) => {
     setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
     toast.success(`Coordenadas seleccionadas: Latitud ${lat}, Longitud ${lon}`);
@@ -604,7 +610,6 @@ export default function Facilities() {
   };
 
 
-  // ✅ COMPONENTE FALTANTE AÑADIDO
   const renderBreadcrumbs = () => (
     <Breadcrumbs sx={{ mb: 3 }}>
       <Link
