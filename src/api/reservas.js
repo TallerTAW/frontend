@@ -4,7 +4,7 @@ export const reservasApi = {
   // ✅ MÉTODO NUEVO: Para reservas con cupones (agregado por tu compañero)
   createCompleta: async (reservaData) => {
     console.log('🚀 [API] Enviando reserva completa con cupón:', reservaData.codigo_cupon);
-    const response = await api.post('/reservas-completas', reservaData);
+    const response = await api.post('/reservas', reservaData);
     console.log('✅ [API] Reserva creada exitosamente:', response.data);
     return response.data;
   },
@@ -64,7 +64,7 @@ export const reservasApi = {
   getHorariosDisponibles: async (canchaId, fecha) => {
     // Intentar con el nuevo endpoint primero, luego con el antiguo como fallback
     try {
-      const response = await api.get(`/reservas-completas/cancha/${canchaId}/horarios-disponibles`, {
+      const response = await api.get(`/reservas/cancha/${canchaId}/horarios-disponibles`, {
         params: { fecha }
       });
       return response.data;
@@ -81,7 +81,7 @@ export const reservasApi = {
   verificarDisponibilidad: async (canchaId, fecha, horaInicio, horaFin) => {
     // Intentar con el nuevo endpoint primero
     try {
-      const response = await api.get(`/reservas-completas/verificar-disponibilidad`, {
+      const response = await api.get(`/reservas/verificar-disponibilidad`, {
         params: { 
           cancha_id: canchaId, 
           fecha, 
@@ -107,7 +107,7 @@ export const reservasApi = {
 
   // ✅ MÉTODO NUEVO: Obtener reserva por código (agregado por tu compañero)
   getByCodigo: async (codigoReserva) => {
-    const response = await api.get(`/reservas-completas/codigo/${codigoReserva}`);
+    const response = await api.get(`/reservas/codigo/${codigoReserva}`);
     return response.data;
   },
 

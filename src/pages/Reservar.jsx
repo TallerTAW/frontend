@@ -29,12 +29,32 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider // Añadido para separación visual en el Paso 4
+  Divider
 } from '@mui/material';
 import { Stadium, SportsSoccer, ArrowBack, CalendarToday, AccessTime, Money, People } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function Reservar() {
+
+  const formatHourToFull = (timeString) => {
+    if (!timeString) return '';
+    // Tomar solo la hora y agregar :00
+    const [hours] = timeString.split(':');
+    return `${hours}:00`;
+  };
+
+  const getAvailableHours = (horaApertura, horaCierre) => {
+    const start = parseInt(horaApertura);
+    const end = parseInt(horaCierre);
+    const hours = [];
+    
+    for (let i = start; i < end; i++) {
+      hours.push(i.toString());
+    }
+    
+    return hours;
+  };
+
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
@@ -49,6 +69,7 @@ export default function Reservar() {
   const [selectedDisciplina, setSelectedDisciplina] = useState(null);
   const [selectedCancha, setSelectedCancha] = useState(null);
   const [selectedCoupon, setSelectedCoupon] = useState('');
+  const [duracionHoras, setDuracionHoras] = useState(1);
   
   // Datos de la reserva
   const [reservationData, setReservationData] = useState({
@@ -145,17 +166,45 @@ export default function Reservar() {
   };
 
   const fetchHorariosDisponibles = async () => {
-    if (selectedCancha && reservationData.fecha_reserva) {
-      try {
-        const data = await reservasApi.getDisponibilidad(
-          selectedCancha.id_cancha,
-          reservationData.fecha_reserva
-        );
-        setHorariosDisponibles(data || []);
-      } catch (error) {
-        console.error('Error al cargar horarios disponibles:', error);
+    if (!selectedCancha || !reservationData.fecha_reserva) {
+      setHorariosDisponibles([]);
+      return;
+    }
+    
+    try {
+      const data = await reservasApi.getHorariosDisponibles(
+        selectedCancha.id_cancha,
+        reservationData.fecha_reserva
+      );
+      
+      if (!Array.isArray(data)) {
+        console.warn('⚠️ API no retornó array:', data);
         setHorariosDisponibles([]);
+        return;
       }
+      
+      console.log('📊 Datos recibidos de API:', data);
+      
+      // Procesar datos: convertir formato y asegurar que sean horas completas
+      const processedData = data.map(slot => {
+        const horaInicio = slot.hora_inicio?.split(':').slice(0, 2).join(':') || '00:00';
+        const horaFin = slot.hora_fin?.split(':').slice(0, 2).join(':') || '00:00';
+        
+        return {
+          ...slot,
+          hora_inicio: horaInicio,
+          hora_fin: horaFin,
+          disponible: slot.disponible === true && slot.mensaje !== 'OCUPADO'
+        };
+      });
+      
+      console.log('✅ Horarios procesados:', processedData);
+      setHorariosDisponibles(processedData);
+      
+    } catch (error) {
+      console.error('❌ Error al cargar horarios disponibles:', error);
+      toast.error('Error al cargar horarios disponibles');
+      setHorariosDisponibles([]);
     }
   };
 
@@ -187,24 +236,135 @@ export default function Reservar() {
 
   const calcularCostoTotal = () => {
     if (!selectedCancha || !reservationData.hora_inicio || !reservationData.hora_fin) return 0;
-    const start = new Date(`2000-01-01T${reservationData.hora_inicio}`);
-    const end = new Date(`2000-01-01T${reservationData.hora_fin}`);
-    const hours = (end - start) / (1000 * 60 * 60);
-
-    let total = hours * selectedCancha.precio_por_hora;
-    // Aplicar cupón si está seleccionado
-    if (selectedCoupon) {
-      const coupon = cupones.find(c => c.id_cupon === parseInt(selectedCoupon));
-      if (coupon) {
-        if (coupon.tipo === 'porcentaje') {
-          total = total * (1 - coupon.monto_descuento / 100);
-        } else {
-          total = Math.max(0, total - coupon.monto_descuento);
+    
+    try {
+      // Parsear horas
+      const startHour = parseInt(reservationData.hora_inicio.split(':')[0]);
+      const endHour = parseInt(reservationData.hora_fin.split(':')[0]);
+      
+      // Calcular diferencia de horas
+      const hours = endHour - startHour;
+      
+      if (hours <= 0) return 0;
+      
+      let total = hours * selectedCancha.precio_por_hora;
+      
+      // Aplicar cupón si está seleccionado
+      if (selectedCoupon) {
+        const coupon = cupones.find(c => c.id_cupon === parseInt(selectedCoupon));
+        if (coupon) {
+          if (coupon.tipo === 'porcentaje') {
+            total = total * (1 - coupon.monto_descuento / 100);
+          } else {
+            total = Math.max(0, total - coupon.monto_descuento);
+          }
         }
       }
-    }
 
-    return Math.max(0, total);
+      return Math.max(0, total);
+    } catch (error) {
+      console.error('Error calculando costo:', error);
+      return 0;
+    }
+  };
+
+  const getOccupiedHours = () => {
+  if (!horariosDisponibles.length) return [];
+  return horariosDisponibles
+    .filter(slot => !slot.disponible && slot.hora_inicio.endsWith(':00')) // ✅ Cambia hora_disponible por hora_inicio
+    .map(slot => slot.hora_inicio); // ✅ Cambia hora_disponible por hora_inicio
+};
+
+  const isHorarioDisponible = () => {
+    if (!reservationData.hora_inicio || !reservationData.hora_fin) return true;
+    
+    try {
+      const inicio = parseInt(reservationData.hora_inicio.split(':')[0]);
+      const fin = parseInt(reservationData.hora_fin.split(':')[0]);
+      
+      // Validar que sean números
+      if (isNaN(inicio) || isNaN(fin)) return false;
+      
+      if (fin <= inicio) return false; // Hora fin debe ser mayor que inicio
+      
+      // Verificar que todas las horas entre inicio y fin estén disponibles
+      for (let hour = inicio; hour < fin; hour++) {
+        const horaCheck = hour.toString().padStart(2, '0') + ':00';
+        const slot = horariosDisponibles.find(s => s.hora_inicio === horaCheck);
+        
+        // Si no existe el slot o no está disponible
+        if (!slot || !slot.disponible) {
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error en isHorarioDisponible:', error);
+      return false;
+    }
+  };
+
+  // Función para verificar disponibilidad específica
+  const verificarDisponibilidad = async () => {
+    if (!selectedCancha || !reservationData.fecha_reserva || 
+        !reservationData.hora_inicio || !reservationData.hora_fin) {
+      return false;
+    }
+    
+    try {
+      // Asegurar formato HH:MM:SS
+      const horaInicio = reservationData.hora_inicio.includes(':') 
+        ? (reservationData.hora_inicio.split(':').length === 2 
+          ? `${reservationData.hora_inicio}:00` 
+          : reservationData.hora_inicio)
+        : `${reservationData.hora_inicio}:00:00`;
+      
+      const horaFin = reservationData.hora_fin.includes(':')
+        ? (reservationData.hora_fin.split(':').length === 2
+          ? `${reservationData.hora_fin}:00`
+          : reservationData.hora_fin)
+        : `${reservationData.hora_fin}:00:00`;
+      
+      console.log('🔍 Verificando disponibilidad:', {
+        cancha: selectedCancha.id_cancha,
+        fecha: reservationData.fecha_reserva,
+        hora_inicio: horaInicio,
+        hora_fin: horaFin
+      });
+      
+      const resultado = await reservasApi.verificarDisponibilidad(
+        selectedCancha.id_cancha,
+        reservationData.fecha_reserva,
+        horaInicio,
+        horaFin
+      );
+      
+      console.log('✅ Resultado verificación:', resultado);
+      return resultado.disponible === true;
+    } catch (error) {
+      console.error('Error verificando disponibilidad:', error);
+      
+      // Si hay error 422, intentar con formato diferente
+      if (error.response?.status === 422) {
+        console.log('⚠️ Intentando con formato diferente...');
+        try {
+          // Intentar sin segundos
+          const resultado = await reservasApi.verificarDisponibilidad(
+            selectedCancha.id_cancha,
+            reservationData.fecha_reserva,
+            reservationData.hora_inicio,  // Sin :00 adicional
+            reservationData.hora_fin      // Sin :00 adicional
+          );
+          return resultado.disponible === true;
+        } catch (error2) {
+          console.error('Error en segundo intento:', error2);
+          return false;
+        }
+      }
+      
+      return false;
+    }
   };
   
   const handleConfirmReservation = async () => {
@@ -224,20 +384,29 @@ export default function Reservar() {
       return;
     }
 
+    // ✅ SOLO validación frontend (ya es suficiente)
+    if (!isHorarioDisponible()) {
+      toast.error('❌ El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
+      return;
+    }
+    
+    // ❌ NO hagas verificación extra con el backend aquí
+    // El backend ya valida en create_reserva
+
     try {
       const codigoCupon = selectedCoupon 
-        ?
-        cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
+        ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
         : null;
+      
       const reservaData = {
         ...reservationData,
         id_usuario: profile.id,
         codigo_cupon: codigoCupon 
       };
+      
       const nuevaReserva = await reservasApi.createCompleta(reservaData);
       const mensaje = codigoCupon 
-        ? `¡Reserva creada exitosamente con cupón aplicado!
-Total: $${nuevaReserva.costo_total}`
+        ? `¡Reserva creada exitosamente con cupón aplicado! Total: $${nuevaReserva.costo_total}`
         : `¡Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`;
 
       toast.success(mensaje);
@@ -246,7 +415,15 @@ Total: $${nuevaReserva.costo_total}`
       resetForm();
     } catch (error) {
       console.error('Error creando reserva:', error);
-      toast.error(error.response?.data?.detail || 'Error al crear la reserva');
+      
+      // ✅ El backend ya te dirá si el horario está ocupado
+      if (error.response?.data?.detail?.includes('no está disponible') || 
+          error.response?.data?.detail?.includes('ocupado') ||
+          error.response?.status === 400) {
+        toast.error(`❌ ${error.response.data.detail || 'El horario seleccionado no está disponible'}`);
+      } else {
+        toast.error(error.response?.data?.detail || 'Error al crear la reserva');
+      }
     }
   };
 
@@ -475,6 +652,15 @@ Total: $${nuevaReserva.costo_total}`
             </Typography>
           </Box>
 
+          // Puedes mostrar esta información al usuario:
+          {getOccupiedHours().length > 0 && (
+            <Box sx={{ mt: 2, p: 1, bgcolor: 'warning.light', borderRadius: 1 }}>
+              <Typography variant="caption" color="text.primary">
+                ⚠️ Horas ocupadas: {getOccupiedHours().join(', ')}
+              </Typography>
+            </Box>
+          )}
+
           <Grid container spacing={4}>
             {/* Columna 1: Detalles de la Cancha (UX: Resaltar información estática) */}
             <Grid item xs={12} md={5}>
@@ -546,71 +732,130 @@ Total: $${nuevaReserva.costo_total}`
                   {/* Campos de Hora con validación */}
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Hora de inicio"
-                        type="time"
-                        value={reservationData.hora_inicio}
-                        onChange={(e) => setReservationData({ ...reservationData, hora_inicio: e.target.value, hora_fin: '' })} 
-                        InputLabelProps={{ shrink: true }}
-                        required
-                        margin="normal"
-                        error={
-                          reservationData.hora_inicio && 
-                          (reservationData.hora_inicio < selectedCancha?.hora_apertura.slice(0, 5) || 
-                           reservationData.hora_inicio >= selectedCancha?.hora_cierre.slice(0, 5))
-                        }
-                        helperText={
-                          reservationData.hora_inicio && 
-                          (reservationData.hora_inicio < selectedCancha?.hora_apertura.slice(0, 5) || 
-                           reservationData.hora_inicio >= selectedCancha?.hora_cierre.slice(0, 5)) 
-                            ? `La hora debe estar entre ${selectedCancha?.hora_apertura.slice(0, 5)} y ${selectedCancha?.hora_cierre.slice(0, 5)}.`
-                            : ''
-                        }
-                        InputProps={{
-                          endAdornment: <AccessTime color="action" />,
-                        }}
-                      />
+                      <FormControl fullWidth margin="normal" required>
+                        <InputLabel>Hora de inicio</InputLabel>
+                        <Select
+                          value={reservationData.hora_inicio}
+                          onChange={(e) => {
+                            const horaInicio = e.target.value;
+                            setReservationData({ 
+                              ...reservationData, 
+                              hora_inicio: horaInicio,
+                              hora_fin: '' // Resetear hora fin cuando cambia inicio
+                            });
+                          }}
+                          label="Hora de inicio"
+                          disabled={!reservationData.fecha_reserva}
+                        >
+                          <MenuItem value="">
+                            <em>Seleccionar hora</em>
+                          </MenuItem>
+                          {horariosDisponibles
+                            .filter(slot => {
+                              // Solo mostrar horas que estén disponibles
+                              return slot.disponible === true;
+                            })
+                            .map((slot) => {
+                              const horaInicio = slot.hora_inicio;
+                              
+                              return (
+                                <MenuItem key={horaInicio} value={horaInicio}>
+                                  {horaInicio}
+                                </MenuItem>
+                              );
+                            })}
+                        </Select>
+                        {horariosDisponibles.filter(s => !s.disponible).length > 0 && (
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                            ⚠️ Horas ocupadas no se muestran en la lista
+                          </Typography>
+                        )}
+                      </FormControl>
                     </Grid>
+                    
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Hora de fin"
-                        type="time"
-                        value={reservationData.hora_fin}
-                        onChange={(e) => setReservationData({ ...reservationData, hora_fin: e.target.value })}
-                        InputLabelProps={{ shrink: true }}
-                        required
-                        margin="normal"
-                        disabled={!reservationData.hora_inicio}
-                        error={
-                          reservationData.hora_fin && 
-                          (reservationData.hora_fin <= reservationData.hora_inicio || 
-                           reservationData.hora_fin > selectedCancha?.hora_cierre.slice(0, 5))
-                        }
-                        helperText={
-                          reservationData.hora_fin && 
-                          (reservationData.hora_fin <= reservationData.hora_inicio)
-                            ? 'La hora de fin debe ser posterior a la de inicio.'
-                            : reservationData.hora_fin > selectedCancha?.hora_cierre.slice(0, 5)
-                            ? `La hora de fin no puede exceder las ${selectedCancha?.hora_cierre.slice(0, 5)}.`
-                            : ''
-                        }
-                        InputProps={{
-                          endAdornment: <AccessTime color="action" />,
-                        }}
-                      />
+                      <FormControl fullWidth margin="normal" required>
+                        <InputLabel>Hora de fin</InputLabel>
+                        <Select
+                          value={reservationData.hora_fin}
+                          onChange={(e) => {
+                            const horaFin = e.target.value;
+                            setReservationData({ ...reservationData, hora_fin: horaFin });
+                          }}
+                          label="Hora de fin"
+                          disabled={!reservationData.hora_inicio}
+                          error={!!(reservationData.hora_fin && !isHorarioDisponible())} // ✅ CORREGIDO
+                        >
+                          <MenuItem value="">
+                            <em>Seleccionar hora</em>
+                          </MenuItem>
+                          {reservationData.hora_inicio && 
+                            horariosDisponibles
+                              .filter(slot => {
+                                // Solo mostrar horas DISPONIBLES
+                                if (!slot.disponible) return false;
+                                
+                                // Convertir a minutos para comparar
+                                const toMinutes = (timeStr) => {
+                                  const [hours, minutes] = timeStr.split(':').map(Number);
+                                  return hours * 60 + minutes;
+                                };
+                                
+                                const slotMinutes = toMinutes(slot.hora_inicio);
+                                const inicioMinutes = toMinutes(reservationData.hora_inicio);
+                                
+                                // Solo horas después de la hora de inicio
+                                return slotMinutes > inicioMinutes;
+                              })
+                              .map((slot) => {
+                                const horaFin = slot.hora_inicio;
+                                
+                                return (
+                                  <MenuItem key={horaFin} value={horaFin}>
+                                    {horaFin}
+                                  </MenuItem>
+                                );
+                              })
+                          }
+                        </Select>
+                        {reservationData.hora_fin && !isHorarioDisponible() && (
+                          <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                            ⚠️ Este horario está ocupado o no está disponible
+                          </Typography>
+                        )}
+                      </FormControl>
                     </Grid>
                   </Grid>
+
+                  <Box sx={{ mt: 1, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      ⏰ Las reservas solo pueden hacerse en horas completas (ej: 10:00, 11:00)
+                    </Typography>
+                  </Box>
                  
                   <TextField
                     fullWidth
                     label="Cantidad de asistentes"
                     type="number"
-                    value={reservationData.cantidad_asistentes}
-                    onChange={(e) => setReservationData({ ...reservationData, cantidad_asistentes: parseInt(e.target.value) })}
-                    inputProps={{ min: 1, max: selectedEspacio?.capacidad }}
+                    value={reservationData.cantidad_asistentes || ''} // Asegurar que no sea undefined
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Convertir a número o mantener vacío
+                      const numValue = value === '' ? '' : parseInt(value, 10);
+                      // Validar que sea número válido y positivo
+                      if (value === '' || (!isNaN(numValue) && numValue > 0)) {
+                        setReservationData({ 
+                          ...reservationData, 
+                          cantidad_asistentes: numValue === '' ? 1 : numValue
+                        });
+                      }
+                    }}
+                    inputProps={{ 
+                      min: 1, 
+                      max: selectedEspacio?.capacidad || 100 
+                    }}
                     margin="normal"
+                    required
                   />
 
                   <TextField
@@ -656,17 +901,13 @@ Total: $${nuevaReserva.costo_total}`
                     fullWidth
                     variant="contained"
                     onClick={() => setConfirmOpen(true)}
-                    // Lógica de deshabilitación
                     disabled={
                       !reservationData.fecha_reserva ||
                       !reservationData.hora_inicio ||
                       !reservationData.hora_fin ||
-                      (reservationData.hora_inicio && 
-                       (reservationData.hora_inicio < selectedCancha?.hora_apertura.slice(0, 5) || 
-                        reservationData.hora_inicio >= selectedCancha?.hora_cierre.slice(0, 5))) ||
-                      (reservationData.hora_fin && 
-                       (reservationData.hora_fin <= reservationData.hora_inicio || 
-                        reservationData.hora_fin > selectedCancha?.hora_cierre.slice(0, 5)))
+                      !isHorarioDisponible() || // ✅ NUEVA VALIDACIÓN
+                      parseInt(reservationData.hora_fin.split(':')[0]) <= 
+                      parseInt(reservationData.hora_inicio.split(':')[0])
                     }
                     className="mt-6"
                     sx={{
@@ -675,7 +916,11 @@ Total: $${nuevaReserva.costo_total}`
                       '&:hover': {
                         background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
                       },
-                      fontSize: '1.4rem', // Botón principal muy grande
+                      '&:disabled': {
+                        background: '#ccc',
+                        color: '#666'
+                      },
+                      fontSize: '1.4rem',
                       py: 2, 
                       boxShadow: '0 6px 20px rgba(15, 159, 225, 0.4)',
                     }}
@@ -683,6 +928,15 @@ Total: $${nuevaReserva.costo_total}`
                     {profile ?
                       'Confirmar Reserva y Pagar' : 'Iniciar Sesión para Reservar'}
                   </Button>
+
+                  {!isHorarioDisponible() && reservationData.hora_inicio && reservationData.hora_fin && (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+                      <Typography variant="body2" color="error.contrastText">
+                        ⚠️ El horario seleccionado ({reservationData.hora_inicio} - {reservationData.hora_fin}) 
+                        no está disponible. Por favor, seleccione otro horario.
+                      </Typography>
+                    </Box>
+                  )}
                 </Card>
               </motion.div>
             </Grid>
@@ -723,11 +977,16 @@ Total: $${nuevaReserva.costo_total}`
           <Button
             onClick={handleConfirmReservation}
             variant="contained"
+            disabled={!isHorarioDisponible()} // ✅ Validar aquí también
             sx={{
               background: 'linear-gradient(to right, #0f9fe1, #9eca3f)',
               '&:hover': {
                 background: 'linear-gradient(to right, #0d8dc7, #8ab637)',
               },
+              '&:disabled': {
+                background: '#ccc',
+                color: '#666'
+              }
             }}
           >
             Pagar
