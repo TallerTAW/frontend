@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { espaciosApi } from '../api/espacios';
@@ -32,6 +32,7 @@ export const useReserva = () => {
   const [selectedCoupon, setSelectedCoupon] = useState('');
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [asistentes, setAsistentes] = useState([]);
   
   const [reservationData, setReservationData] = useState({
     fecha_reserva: '',
@@ -50,31 +51,6 @@ export const useReserva = () => {
     'Seleccionar Cancha',
     'Confirmar Reserva'
   ];
-
-  // Obtener bloques ocupados
-  const getOcupiedBlocks = useCallback(() => {
-    return getOcupiedTimeBlocks(horariosDisponibles);
-  }, [horariosDisponibles]);
-
-  // Verificar si hora inicio está disponible
-  const isHoraInicioValida = useCallback((hora) => {
-    return isHoraInicioDisponible(hora, horariosDisponibles, getOcupiedBlocks());
-  }, [horariosDisponibles, getOcupiedBlocks]);
-
-  // Verificar si hora fin está disponible
-  const isHoraFinValida = useCallback((hora) => {
-    return isHoraFinDisponible(hora, horariosDisponibles, getOcupiedBlocks());
-  }, [horariosDisponibles, getOcupiedBlocks]);
-
-  // Obtener horas disponibles para inicio
-  const getHorasInicioDisponiblesList = useCallback(() => {
-    return getHorasInicioDisponibles(horariosDisponibles, getOcupiedBlocks());
-  }, [horariosDisponibles, getOcupiedBlocks]);
-
-  // Obtener horas disponibles para fin
-  const getHorasFinDisponiblesList = useCallback((horaInicio) => {
-    return getHorasFinDisponibles(horariosDisponibles, getOcupiedBlocks(), horaInicio);
-  }, [horariosDisponibles, getOcupiedBlocks]);
 
   // Fetch functions
   const fetchEspacios = useCallback(async () => {
@@ -221,13 +197,41 @@ export const useReserva = () => {
   }, []);
 
   const handleCanchaSelect = useCallback((cancha) => {
-    setSelectedCancha(cancha);
-    setReservationData(prev => ({ 
-      ...prev, 
-      id_cancha: cancha.id_cancha 
-    }));
-    setActiveStep(3);
-  }, []);
+  setSelectedCancha(cancha);
+  setReservationData(prev => ({ 
+    ...prev, 
+    id_cancha: cancha.id_cancha,
+    cantidad_asistentes: 1 // Reiniciar a 1 asistente por defecto
+  }));
+  setActiveStep(3);
+  // Reiniciar asistentes cuando se selecciona nueva cancha
+  setAsistentes([]);
+}, []);
+
+  // Obtener bloques ocupados
+  const getOcupiedBlocks = useCallback(() => {
+    return getOcupiedTimeBlocks(horariosDisponibles);
+  }, [horariosDisponibles]);
+
+  // Verificar si hora inicio está disponible
+  const isHoraInicioValida = useCallback((hora) => {
+    return isHoraInicioDisponible(hora, horariosDisponibles, getOcupiedBlocks());
+  }, [horariosDisponibles, getOcupiedBlocks]);
+
+  // Verificar si hora fin está disponible
+  const isHoraFinValida = useCallback((hora) => {
+    return isHoraFinDisponible(hora, horariosDisponibles, getOcupiedBlocks());
+  }, [horariosDisponibles, getOcupiedBlocks]);
+
+  // Obtener horas disponibles para inicio
+  const getHorasInicioDisponiblesList = useCallback(() => {
+    return getHorasInicioDisponibles(horariosDisponibles, getOcupiedBlocks());
+  }, [horariosDisponibles, getOcupiedBlocks]);
+
+  // Obtener horas disponibles para fin
+  const getHorasFinDisponiblesList = useCallback((horaInicio) => {
+    return getHorasFinDisponibles(horariosDisponibles, getOcupiedBlocks(), horaInicio);
+  }, [horariosDisponibles, getOcupiedBlocks]);
 
   // Validation functions
   const isHorarioDisponible = useCallback(() => {
@@ -300,8 +304,73 @@ export const useReserva = () => {
       .map(slot => slot.hora_inicio);
   }, [horariosDisponibles]);
 
+  // Validar asistentes
+  const validarAsistentes = useCallback(() => {
+  console.log('=== VALIDANDO ASISTENTES ===');
+  console.log('Cantidad esperada:', reservationData.cantidad_asistentes);
+  console.log('Array asistentes:', asistentes);
+  console.log('Longitud array:', asistentes.length);
+  
+  const cantidadAsistentes = reservationData.cantidad_asistentes || 1;
+  
+  // Si solo hay 1 asistente (el que hace la reserva), no necesita completar formulario
+  if (cantidadAsistentes <= 1) {
+    console.log('Solo 1 asistente, validación automática OK');
+    return true;
+  }
+  
+  // Verificar que tengamos el array de asistentes
+  if (!Array.isArray(asistentes) || asistentes.length !== cantidadAsistentes) {
+    console.log('Error: Cantidad de asistentes no coincide', {
+      esperado: cantidadAsistentes,
+      obtenido: asistentes.length,
+      asistentes
+    });
+    return false;
+  }
+  
+  // Validar cada asistente
+  const todosValidos = asistentes.every((asistente, index) => {
+    // Verificar que el objeto asistente exista
+    if (!asistente) {
+      console.log(`Asistente ${index + 1} no definido`);
+      return false;
+    }
+    
+    const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
+    const emailValido = asistente.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asistente.email.trim());
+    
+    if (!nombreValido || !emailValido) {
+      console.log(`Asistente ${index + 1} inválido:`, { 
+        nombre: asistente.nombre, 
+        email: asistente.email,
+        nombreValido, 
+        emailValido 
+      });
+    }
+    
+    return nombreValido && emailValido;
+  });
+  
+  console.log('Resultado validación:', { todosValidos });
+  return todosValidos;
+}, [asistentes, reservationData.cantidad_asistentes]);
+
+const handleAsistentesChange = useCallback((nuevosAsistentes) => {
+  console.log('=== ACTUALIZANDO ASISTENTES EN HOOK ===');
+  console.log('Nuevos asistentes:', nuevosAsistentes);
+  console.log('Cantidad esperada:', reservationData.cantidad_asistentes);
+  setAsistentes(nuevosAsistentes);
+}, [reservationData.cantidad_asistentes]);
+
   // Reservation handler
   const handleConfirmReservation = useCallback(async () => {
+    console.log('=== INICIANDO CONFIRMACIÓN DE RESERVA ===');
+    console.log('Datos de reserva:', reservationData);
+    console.log('Asistentes:', asistentes);
+    console.log('Validación horario:', isHorarioDisponible());
+    console.log('Validación asistentes:', validarAsistentes());
+    
     if (!profile) {
       toast.info('Por favor, inicia sesión para completar tu reserva');
       navigate('/login', { 
@@ -323,26 +392,48 @@ export const useReserva = () => {
       return;
     }
 
+    // Validar asistentes
+    if (!validarAsistentes()) {
+      console.log('Error: Asistentes no válidos');
+      toast.error('Por favor completa la información de todos los asistentes correctamente.');
+      return;
+    }
+
     try {
       const codigoCupon = selectedCoupon 
         ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
         : null;
       
+      // Preparar datos para enviar
       const reservaData = {
         ...reservationData,
         id_usuario: profile.id,
-        codigo_cupon: codigoCupon 
+        codigo_cupon: codigoCupon,
+        // Si solo hay 1 asistente (el reservante), no enviar array de asistentes
+        asistentes: (reservationData.cantidad_asistentes > 1) ? asistentes : []
       };
       
-      const nuevaReserva = await reservasApi.createCompleta(reservaData);
-      const mensaje = codigoCupon 
-        ? `Reserva creada exitosamente con cupón aplicado! Total: $${nuevaReserva.costo_total}`
-        : `Reserva creada exitosamente! Total: $${nuevaReserva.costo_total}`;
-
-      toast.success(mensaje);
+      console.log('Enviando datos al backend:', reservaData);
+      
+      // Usar el endpoint correcto según si hay asistentes o no
+      let nuevaReserva;
+      if (reservationData.cantidad_asistentes > 1 && asistentes.length > 0) {
+        nuevaReserva = await reservasApi.crearReservaConAsistentes(reservaData);
+      } else {
+        nuevaReserva = await reservasApi.create(reservaData);
+      }
+      
+      const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
+      
+      if (reservationData.cantidad_asistentes > 1) {
+        toast.success(`${mensaje} Se enviarán códigos QR a los asistentes.`);
+      } else {
+        toast.success(mensaje);
+      }
       
       setConfirmOpen(false);
       resetForm();
+      
     } catch (error) {
       console.error('Error creando reserva:', error);
       
@@ -358,9 +449,11 @@ export const useReserva = () => {
     profile, 
     navigate, 
     isHorarioDisponible, 
+    validarAsistentes,
     selectedCoupon, 
     cupones, 
     reservationData, 
+    asistentes,
     selectedEspacio, 
     selectedDisciplina, 
     selectedCancha
@@ -385,6 +478,7 @@ export const useReserva = () => {
     setDisciplinas([]);
     setCanchas([]);
     setHorariosDisponibles([]);
+    setAsistentes([]);
     
     if (profile) {
       fetchCuponesUsuario();
@@ -406,6 +500,7 @@ export const useReserva = () => {
     reservationData,
     confirmOpen,
     horariosDisponibles,
+    asistentes,
     loading,
     isLoading,
     
@@ -413,10 +508,11 @@ export const useReserva = () => {
     setActiveStep,
     setSelectedCoupon,
     setReservationData,
-    setReservationData: (data) => setReservationData(data),
     setConfirmOpen,
+    setAsistentes,
+    handleAsistentesChange,
     
-    // Methods - TODAS LAS FUNCIONES EXPORTADAS
+    // Methods
     fetchEspacios,
     fetchDisciplinas,
     fetchCanchas,
@@ -430,7 +526,9 @@ export const useReserva = () => {
     isHorarioDisponible,
     calcularCostoTotal,
     getOccupiedHours,
-
+    validarAsistentes,
+    
+    // Nuevas funciones para manejo de horas
     getOcupiedBlocks,
     isHoraInicioValida,
     isHoraFinValida,
