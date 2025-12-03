@@ -1,13 +1,5 @@
 import api from './index';
 
-
-/**
- * Obtiene los espacios deportivos cercanos a una ubicación dada.
- * @param {number} lat - Latitud actual del usuario
- * @param {number} lon - Longitud actual del usuario
- * @param {number} radiusKm - Radio en kilómetros (por defecto 5)
- * @returns {Promise<Array>} Lista de espacios cercanos con su distancia
- */
 const getNearby = async (lat, lon, radiusKm = 5) => {
   const response = await api.get('/espacios/nearby', {
     params: { lat, lon, radius_km: radiusKm },
@@ -15,9 +7,7 @@ const getNearby = async (lat, lon, radiusKm = 5) => {
   return response.data;
 };
 
-
 export const espaciosApi = {
-  
   getAll: async (includeInactive = false) => {
     const response = await api.get(`/espacios/?include_inactive=${includeInactive}`);
     return response.data;
@@ -75,5 +65,27 @@ export const espaciosApi = {
     const response = await api.get(`/espacios/${espacioId}/gestor-asignado`);
     return response.data;
   },
+
   getNearby,
+
+  // NUEVOS MÉTODOS PARA CONTROLES DE ACCESO
+  getControlesAccesoDisponibles: async () => {
+    const response = await api.get('/espacios/controles-acceso/disponibles');
+    return response.data;
+  },
+
+  getControlAccesoAsignado: async (espacioId) => {
+    const response = await api.get(`/espacios/${espacioId}/control-acceso-asignado`);
+    return response.data;
+  },
+
+  asignarControlAcceso: async (espacioId, controlId) => {
+    const response = await api.post(`/espacios/${espacioId}/asignar-control-acceso/${controlId}`);
+    return response.data;
+  },
+
+  asignarGestor: async (espacioId, gestorId) => {
+    const response = await api.post(`/espacios/${espacioId}/asignar-gestor/${gestorId}`);
+    return response.data;
+  }
 };
