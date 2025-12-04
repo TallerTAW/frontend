@@ -19,7 +19,21 @@ import {
   IconButton,
   Avatar,
   Divider,
-  CircularProgress
+  CircularProgress,
+  useMediaQuery,
+  useTheme,
+  Fab,
+  Badge,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Paper
 } from '@mui/material';
 import { 
   CalendarMonth,
@@ -30,7 +44,16 @@ import {
   SportsSoccer,
   AccessTime,
   AttachMoney,
-  Star
+  Star,
+  ExpandMore,
+  Schedule,
+  LocationOn,
+  Sports,
+  Receipt,
+  Info,
+  RateReview,
+  ArrowForward,
+  MoreVert
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { usuariosApi } from '../api/usuarios';
@@ -47,10 +70,15 @@ const COLOR_NARANJA_VIBRANTE = '#FD7E14';
 const COLOR_ROJO = '#f44336';
 const COLOR_BLANCO = '#FFFFFF';
 const COLOR_NEGRO_SUAVE = '#212121';
+const COLOR_AMARILLO = '#FFD700';
 
 export default function Reservations() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   // Estados principales de reservas
   const [reservas, setReservas] = useState([]);
@@ -58,16 +86,14 @@ export default function Reservations() {
   const [editDialog, setEditDialog] = useState(null);
   const [cancelDialog, setCancelDialog] = useState(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
+  const [expandedCard, setExpandedCard] = useState(null);
   
   // Estados de cache
   const [usuariosCache, setUsuariosCache] = useState({});
-  const [usuariosFetching, setUsuariosFetching] = useState({});
   const [canchasCache, setCanchasCache] = useState({});
-  const [canchasFetching, setCanchasFetching] = useState({});
   const [disciplinasCache, setDisciplinasCache] = useState({});
-  const [disciplinasFetching, setDisciplinasFetching] = useState({});
   const [espaciosCache, setEspaciosCache] = useState({});
-  const [espaciosFetching, setEspaciosFetching] = useState({});
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Hook para reservas pendientes de calificar
   const { 
@@ -78,30 +104,29 @@ export default function Reservations() {
 
   useEffect(() => {
     const loadData = async () => {
-        await fetchReservas();
-        // Solo cargar reservas pendientes si es cliente
-        if (profile && profile.rol === 'cliente' && fetchReservasPendientes) {
-            await fetchReservasPendientes();
-        }
+      await fetchReservas();
+      if (profile?.rol === 'cliente' && fetchReservasPendientes) {
+        await fetchReservasPendientes();
+      }
     };
     
     loadData();
-}, [profile, fetchReservasPendientes]);
+  }, [profile, fetchReservasPendientes]);
 
   const fetchReservas = async () => {
     try {
       setLoading(true);
       let data;
       
-      if (profile.rol === 'cliente') {
+      if (profile?.rol === 'cliente') {
         data = await reservasApi.getByUsuario(profile.id);
-      } else if (profile.rol === 'gestor') {
+      } else if (profile?.rol === 'gestor') {
         data = await reservasApi.getByGestor(profile.id);
       } else {
         data = await reservasApi.getAll();
       }
       
-      setReservas(data);
+      setReservas(data || []);
     } catch (error) {
       console.error('Error al cargar reservas:', error);
       toast.error('Error al cargar reservas');
@@ -110,195 +135,119 @@ export default function Reservations() {
     }
   };
 
-  // Pre-fetch usuarios, canchas, disciplinas y espacios cuando tengamos reservas
+  // Cargar detalles adicionales
   useEffect(() => {
     const fetchAdditionalData = async () => {
       if (reservas.length === 0) return;
 
-      // IDs únicos para cada entidad
-      const userIds = [...new Set(reservas
-        .map(r => r.usuario?.id || r.id_usuario || r.id_cliente || r.idUsuario || r.id)
-        .filter(Boolean)
-      )];
-
-      const canchaIds = [...new Set(reservas
-        .map(r => r.cancha?.id || r.id_cancha)
-        .filter(Boolean)
-      )];
-
-      const disciplinaIds = [...new Set(reservas
-        .map(r => r.disciplina?.id || r.id_disciplina)
-        .filter(Boolean)
-      )];
-
-      const espacioIds = [...new Set(reservas
-        .map(r => r.cancha?.id_espacio_deportivo || r.espacio_deportivo?.id || r.id_espacio)
-        .filter(Boolean)
-      )];
-
-      // Fetch usuarios (solo para admin y gestor)
-      if (profile.rol === 'admin' || profile.rol === 'gestor') {
-        const usuariosToFetch = userIds.filter(id => 
-          !(id in usuariosCache) && !(id in usuariosFetching)
-        );
+      try {
+        setLoadingDetails(true);
         
-        if (usuariosToFetch.length > 0) {
-          const newFetching = { ...usuariosFetching };
-          usuariosToFetch.forEach(id => { newFetching[id] = true; });
-          setUsuariosFetching(newFetching);
+        // Obtener IDs únicos
+        const userIds = [...new Set(reservas
+          .map(r => r.usuario?.id || r.id_usuario || r.id_cliente || r.idUsuario || r.id)
+          .filter(Boolean)
+        )];
 
-          try {
-            const usuariosPromises = usuariosToFetch.map(async (id) => {
+        const canchaIds = [...new Set(reservas
+          .map(r => r.cancha?.id || r.id_cancha)
+          .filter(Boolean)
+        )];
+
+        const disciplinaIds = [...new Set(reservas
+          .map(r => r.disciplina?.id || r.id_disciplina)
+          .filter(Boolean)
+        )];
+
+        const espacioIds = [...new Set(reservas
+          .map(r => r.cancha?.id_espacio_deportivo || r.espacio_deportivo?.id || r.id_espacio)
+          .filter(Boolean)
+        )];
+
+        // Fetch usuarios (solo para admin y gestor)
+        if (profile?.rol === 'admin' || profile?.rol === 'gestor') {
+          const newUsuariosCache = { ...usuariosCache };
+          await Promise.all(
+            userIds.filter(id => !usuariosCache[id]).map(async (id) => {
               try {
                 const userData = await usuariosApi.getById(id);
-                return { id, data: userData };
+                newUsuariosCache[id] = userData;
               } catch (error) {
                 console.error(`Error al obtener usuario ${id}:`, error);
-                return { id, data: null };
+                newUsuariosCache[id] = null;
               }
-            });
-
-            const usuariosResults = await Promise.all(usuariosPromises);
-            const newCache = { ...usuariosCache };
-            usuariosResults.forEach(({ id, data }) => {
-              newCache[id] = data;
-            });
-            setUsuariosCache(newCache);
-          } finally {
-            const cleanedFetching = { ...usuariosFetching };
-            usuariosToFetch.forEach(id => { delete cleanedFetching[id]; });
-            setUsuariosFetching(cleanedFetching);
-          }
+            })
+          );
+          setUsuariosCache(newUsuariosCache);
         }
-      }
 
-      // Fetch canchas - PARA TODOS LOS ROLES (incluyendo clientes)
-      const canchasToFetch = canchaIds.filter(id => 
-        !(id in canchasCache) && !(id in canchasFetching)
-      );
-      
-      if (canchasToFetch.length > 0) {
-        const newFetching = { ...canchasFetching };
-        canchasToFetch.forEach(id => { newFetching[id] = true; });
-        setCanchasFetching(newFetching);
-
-        try {
-          const canchasPromises = canchasToFetch.map(async (id) => {
+        // Fetch canchas
+        const newCanchasCache = { ...canchasCache };
+        await Promise.all(
+          canchaIds.filter(id => !canchasCache[id]).map(async (id) => {
             try {
-              // Para clientes usar endpoint público, para otros roles usar endpoint normal
-              const canchaData = profile.rol === 'cliente' 
+              const canchaData = profile?.rol === 'cliente' 
                 ? await canchasApi.getByIdPublic(id)
                 : await canchasApi.getById(id);
-              return { id, data: canchaData };
+              newCanchasCache[id] = canchaData;
             } catch (error) {
               console.error(`Error al obtener cancha ${id}:`, error);
-              // Si falla, intentar con endpoint público como fallback
-              try {
-                const canchaDataPublic = await canchasApi.getByIdPublic(id);
-                return { id, data: canchaDataPublic };
-              } catch (error2) {
-                console.error(`Error al obtener cancha pública ${id}:`, error2);
-                return { id, data: null };
-              }
+              newCanchasCache[id] = null;
             }
-          });
+          })
+        );
+        setCanchasCache(newCanchasCache);
 
-          const canchasResults = await Promise.all(canchasPromises);
-          const newCache = { ...canchasCache };
-          canchasResults.forEach(({ id, data }) => {
-            newCache[id] = data;
-          });
-          setCanchasCache(newCache);
-        } finally {
-          const cleanedFetching = { ...canchasFetching };
-          canchasToFetch.forEach(id => { delete cleanedFetching[id]; });
-          setCanchasFetching(cleanedFetching);
-        }
-      }
-
-      // Fetch disciplinas - PARA TODOS LOS ROLES
-      const disciplinasToFetch = disciplinaIds.filter(id => 
-        !(id in disciplinasCache) && !(id in disciplinasFetching)
-      );
-      
-      if (disciplinasToFetch.length > 0) {
-        const newFetching = { ...disciplinasFetching };
-        disciplinasToFetch.forEach(id => { newFetching[id] = true; });
-        setDisciplinasFetching(newFetching);
-
-        try {
-          const disciplinasPromises = disciplinasToFetch.map(async (id) => {
+        // Fetch disciplinas
+        const newDisciplinasCache = { ...disciplinasCache };
+        await Promise.all(
+          disciplinaIds.filter(id => !disciplinasCache[id]).map(async (id) => {
             try {
               const disciplinaData = await disciplinasApi.getById(id);
-              return { id, data: disciplinaData };
+              newDisciplinasCache[id] = disciplinaData;
             } catch (error) {
               console.error(`Error al obtener disciplina ${id}:`, error);
-              return { id, data: null };
+              newDisciplinasCache[id] = null;
             }
-          });
-
-          const disciplinasResults = await Promise.all(disciplinasPromises);
-          const newCache = { ...disciplinasCache };
-          disciplinasResults.forEach(({ id, data }) => {
-            newCache[id] = data;
-          });
-          setDisciplinasCache(newCache);
-        } finally {
-          const cleanedFetching = { ...disciplinasFetching };
-          disciplinasToFetch.forEach(id => { delete cleanedFetching[id]; });
-          setDisciplinasFetching(cleanedFetching);
-        }
-      }
-
-      // Fetch espacios deportivos (solo para admin y gestor)
-      if (profile.rol === 'admin' || profile.rol === 'gestor') {
-        const espaciosToFetch = espacioIds.filter(id => 
-          !(id in espaciosCache) && !(id in espaciosFetching)
+          })
         );
-        
-        if (espaciosToFetch.length > 0) {
-          const newFetching = { ...espaciosFetching };
-          espaciosToFetch.forEach(id => { newFetching[id] = true; });
-          setEspaciosFetching(newFetching);
+        setDisciplinasCache(newDisciplinasCache);
 
-          try {
-            const espaciosPromises = espaciosToFetch.map(async (id) => {
+        // Fetch espacios (solo para admin y gestor)
+        if (profile?.rol === 'admin' || profile?.rol === 'gestor') {
+          const newEspaciosCache = { ...espaciosCache };
+          await Promise.all(
+            espacioIds.filter(id => !espaciosCache[id]).map(async (id) => {
               try {
                 const espacioData = await espaciosApi.getById(id);
-                return { id, data: espacioData };
+                newEspaciosCache[id] = espacioData;
               } catch (error) {
                 console.error(`Error al obtener espacio ${id}:`, error);
-                return { id, data: null };
+                newEspaciosCache[id] = null;
               }
-            });
-
-            const espaciosResults = await Promise.all(espaciosPromises);
-            const newCache = { ...espaciosCache };
-            espaciosResults.forEach(({ id, data }) => {
-              newCache[id] = data;
-            });
-            setEspaciosCache(newCache);
-          } finally {
-            const cleanedFetching = { ...espaciosFetching };
-            espaciosToFetch.forEach(id => { delete cleanedFetching[id]; });
-            setEspaciosFetching(cleanedFetching);
-          }
+            })
+          );
+          setEspaciosCache(newEspaciosCache);
         }
+
+      } catch (error) {
+        console.error('Error al cargar detalles adicionales:', error);
+      } finally {
+        setLoadingDetails(false);
       }
     };
 
     fetchAdditionalData();
   }, [reservas]);
 
-  // Función segura para obtener información del usuario (solo para admin/gestor)
+  // Helper functions
   const getInfoUsuario = (reserva) => {
-    if (profile.rol === 'cliente') {
-      // Cliente no necesita info de otros usuarios
+    if (profile?.rol === 'cliente') {
       return {
-        nombre: 'Tu información',
-        apellido: '',
-        email: profile.email || 'No disponible',
-        telefono: 'No disponible'
+        nombre: profile?.nombre || 'Tú',
+        apellido: profile?.apellido || '',
+        email: profile?.email || 'No disponible',
+        telefono: profile?.telefono || 'No disponible'
       };
     }
 
@@ -332,7 +281,6 @@ export default function Reservations() {
     };
   };
 
-  // Función segura para obtener información de la cancha (PARA TODOS LOS ROLES)
   const getInfoCancha = (reserva) => {
     const canchaId = reserva.cancha?.id || reserva.id_cancha;
     
@@ -341,7 +289,8 @@ export default function Reservations() {
         nombre: 'Cancha no disponible',
         tipo: 'No especificado',
         espacio: 'Espacio no disponible',
-        disciplina: 'No especificada'
+        disciplina: 'No especificada',
+        precio_por_hora: 'N/A'
       };
     }
 
@@ -352,22 +301,20 @@ export default function Reservations() {
         nombre: 'Cargando...',
         tipo: 'Cargando...',
         espacio: 'Cargando...',
-        disciplina: 'Cargando...'
+        disciplina: 'Cargando...',
+        precio_por_hora: 'N/A'
       };
     }
 
-    // Obtener información del espacio deportivo (solo si está disponible)
     let espacioNombre = 'Espacio no disponible';
-    if (profile.rol === 'admin' || profile.rol === 'gestor') {
+    if (profile?.rol === 'admin' || profile?.rol === 'gestor') {
       const espacioId = cancha.id_espacio_deportivo;
       const espacio = espaciosCache[espacioId];
       espacioNombre = espacio?.nombre || 'Espacio no disponible';
     } else {
-      // Para clientes, usar el nombre del espacio si viene en los datos de la cancha
       espacioNombre = cancha.espacio_deportivo?.nombre || 'Espacio no disponible';
     }
 
-    // Obtener información de la disciplina
     const disciplinaId = reserva.disciplina?.id || reserva.id_disciplina;
     const disciplina = disciplinasCache[disciplinaId];
     const disciplinaNombre = disciplina?.nombre || 'No especificada';
@@ -383,21 +330,26 @@ export default function Reservations() {
     };
   };
 
-  // Función segura para obtener información de la disciplina
-  const getInfoDisciplina = (reserva) => {
-    const disciplinaId = reserva.disciplina?.id || reserva.id_disciplina;
-    
-    if (!disciplinaId) {
-      return 'No especificada';
-    }
+  const getEstadoColor = (estado) => {
+    const colores = {
+      pendiente: '#ff9800',
+      confirmada: COLOR_VERDE_LIMA,
+      en_curso: COLOR_AZUL_ELECTRICO,
+      completada: '#4caf50',
+      cancelada: COLOR_ROJO
+    };
+    return colores[estado] || '#9e9e9e';
+  };
 
-    const disciplina = disciplinasCache[disciplinaId];
-    
-    if (!disciplina) {
-      return 'Cargando...';
-    }
-
-    return disciplina.nombre || 'No especificada';
+  const getEstadoTexto = (estado) => {
+    const textos = {
+      pendiente: 'PENDIENTE',
+      confirmada: 'CONFIRMADA',
+      en_curso: 'EN CURSO',
+      completada: 'COMPLETADA',
+      cancelada: 'CANCELADA'
+    };
+    return textos[estado] || estado.toUpperCase();
   };
 
   const handleEstadoChange = async (reservaId, nuevoEstado) => {
@@ -427,43 +379,12 @@ export default function Reservations() {
     }
   };
 
-  // Función segura para obtener el código de reserva
   const getCodigoReserva = (reserva) => {
     return reserva.codigo_reserva || `TEMP-${reserva.id_reserva}`;
   };
 
-  const getEstadoColor = (estado) => {
-    const colores = {
-      pendiente: '#ff9800',
-      confirmada: COLOR_VERDE_LIMA,
-      en_curso: COLOR_AZUL_ELECTRICO,
-      completada: '#4caf50',
-      cancelada: COLOR_ROJO
-    };
-    return colores[estado] || '#9e9e9e';
-  };
-
-  const getEstadoTexto = (estado) => {
-    const textos = {
-      pendiente: 'PENDIENTE',
-      confirmada: 'CONFIRMADA',
-      en_curso: 'EN CURSO',
-      completada: 'COMPLETADA',
-      cancelada: 'CANCELADA'
-    };
-    return textos[estado] || estado;
-  };
-
-  const puedeEditar = (reserva) => {
-    if (profile.rol === 'cliente') return false;
-    if (profile.rol === 'admin') return true;
-    if (profile.rol === 'gestor') {
-      return true;
-    }
-    return false;
-  };
-
   const formatFecha = (fecha) => {
+    if (!fecha) return 'Fecha no disponible';
     return new Date(fecha).toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',
@@ -472,412 +393,720 @@ export default function Reservations() {
     });
   };
 
+  const formatFechaCorta = (fecha) => {
+    if (!fecha) return 'N/D';
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   const formatHora = (hora) => {
+    if (!hora) return '--:--';
     if (typeof hora === 'string') {
       return hora.slice(0, 5);
     }
     return hora;
   };
 
+  const puedeEditar = (reserva) => {
+    if (profile?.rol === 'cliente') return false;
+    if (profile?.rol === 'admin') return true;
+    if (profile?.rol === 'gestor') {
+      return true;
+    }
+    return false;
+  };
+
   const redirectToRatings = () => {
     navigate('/calificaciones');
   };
 
+  const toggleCardExpansion = (id) => {
+    setExpandedCard(expandedCard === id ? null : id);
+  };
+
+  // Estadísticas para admin/gestor
+  const estadisticas = {
+    total: reservas.length,
+    confirmadas: reservas.filter(r => r.estado === 'confirmada').length,
+    pendientes: reservas.filter(r => r.estado === 'pendiente').length,
+    canceladas: reservas.filter(r => r.estado === 'cancelada').length,
+    en_curso: reservas.filter(r => r.estado === 'en_curso').length,
+    completadas: reservas.filter(r => r.estado === 'completada').length
+  };
+
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress />
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '60vh' 
+      }}>
+        <CircularProgress sx={{ color: COLOR_AZUL_ELECTRICO }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: COLOR_AZUL_ELECTRICO, mb: 2 }}>
-          {profile?.rol === 'cliente' ? 'Mis Reservas' : 'Gestión de Reservas'}
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-          {profile?.rol === 'cliente' 
-            ? 'Consulta y gestiona tus reservas' 
-            : 'Administra todas las reservas del sistema'
-          }
-        </Typography>
-      </motion.div>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+      {/* Header Responsive */}
+      <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Typography
+            variant={isMobile ? "h5" : isTablet ? "h4" : "h4"}
+            sx={{
+              fontWeight: 'bold',
+              color: COLOR_AZUL_ELECTRICO,
+              mb: 1,
+              fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' }
+            }}
+          >
+            {profile?.rol === 'cliente' ? 'Mis Reservas' : 'Gestión de Reservas'}
+          </Typography>
+          <Typography 
+            variant={isMobile ? "body2" : "body1"} 
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+          >
+            {profile?.rol === 'cliente' 
+              ? 'Consulta y gestiona tus reservas' 
+              : 'Administra todas las reservas del sistema'
+            }
+          </Typography>
+        </motion.div>
+      </Box>
 
-      {/* NUEVA SECCIÓN: Reservas Pendientes de Calificar (SOLO PARA CLIENTES) */}
+      {/* SECCIÓN: Reservas Pendientes de Calificar (SOLO CLIENTES) */}
       {profile?.rol === 'cliente' && (
-        <Card sx={{ 
-          borderRadius: 2, 
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
-          p: 3, 
-          mb: 4,
-          border: `2px solid ${COLOR_NARANJA_VIBRANTE}` 
-        }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: COLOR_NARANJA_VIBRANTE }}>
-                Reservas Pendientes de Calificar ({reservasPendientes.length})
-              </Typography>
-              <Button
-                variant="text"
-                onClick={redirectToRatings}
-                sx={{ color: COLOR_NARANJA_VIBRANTE, fontWeight: 'bold' }}
-              >
-                Ir a Calificar
-              </Button>
-            </Box>
-            
-            {loadingReservas ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={30} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card sx={{ 
+            borderRadius: 2, 
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+            p: { xs: 2, sm: 3 },
+            mb: 4,
+            border: `2px solid ${COLOR_NARANJA_VIBRANTE}`,
+            backgroundColor: `${COLOR_NARANJA_VIBRANTE}08`
+          }}>
+            <CardContent sx={{ p: 0 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                mb: 2,
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 0 }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Star sx={{ color: COLOR_NARANJA_VIBRANTE, fontSize: { xs: 24, sm: 28 } }} />
+                  <Typography 
+                    variant={isMobile ? "h6" : "h5"} 
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      color: COLOR_NARANJA_VIBRANTE 
+                    }}
+                  >
+                    Pendientes de Calificar ({reservasPendientes?.length || 0})
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  onClick={redirectToRatings}
+                  size={isMobile ? "small" : "medium"}
+                  startIcon={<RateReview />}
+                  endIcon={<ArrowForward />}
+                  sx={{ 
+                    color: COLOR_NARANJA_VIBRANTE, 
+                    borderColor: COLOR_NARANJA_VIBRANTE,
+                    fontWeight: 'bold',
+                    '&:hover': {
+                      borderColor: COLOR_NARANJA_VIBRANTE,
+                      backgroundColor: `${COLOR_NARANJA_VIBRANTE}10`
+                    }
+                  }}
+                >
+                  {isMobile ? 'Calificar' : 'Ir a Calificar'}
+                </Button>
               </Box>
-            ) : reservasPendientes.length > 0 ? (
-              <Grid container spacing={2}>
-                {reservasPendientes.slice(0, 3).map((reserva) => (
-                  <Grid item xs={12} md={4} key={reserva.id_reserva}>
-                    <Card 
-                      onClick={redirectToRatings}
-                      sx={{ 
-                        borderRadius: 2,
-                        cursor: 'pointer',
-                        bgcolor: 'warning.light',
-                        transition: 'all 0.3s',
-                        '&:hover': { bgcolor: 'warning.main', color: 'white' }
-                      }}
-                    >
-                      <CardContent sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Star sx={{ color: COLOR_BLANCO }} />
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {reserva.cancha?.nombre || `Cancha ${reserva.id_cancha}`}
-                          </Typography>
-                        </Box>
-                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                          {new Date(reserva.fecha_reserva).toLocaleDateString('es-ES')}
-                        </Typography>
-                        <Chip 
-                          label="PENDIENTE" 
-                          size="small" 
-                          sx={{ 
-                            mt: 1,
-                            backgroundColor: COLOR_NARANJA_VIBRANTE,
-                            color: COLOR_BLANCO,
-                            fontWeight: 'bold',
-                            fontSize: '0.7rem'
-                          }}
-                        />
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-                {reservasPendientes.length > 3 && (
-                  <Grid item xs={12} sx={{ textAlign: 'center' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      +{reservasPendientes.length - 3} más. {' '}
-                      <Button onClick={redirectToRatings} size="small">Ver todas</Button>
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-                <Star sx={{ fontSize: 40, color: COLOR_VERDE_LIMA, opacity: 0.5, mb: 1 }} />
-                <Typography color="text.secondary">
-                  ¡Genial! No tienes reservas pendientes de calificar.
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Estadísticas rápidas para admin/gestor */}
-      {(profile.rol === 'admin' || profile.rol === 'gestor') && (
-        <Grid container spacing={2} sx={{ mb: 4 }}>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.light', color: 'white' }}>
-              <Typography variant="h4">{reservas.length}</Typography>
-              <Typography variant="body2">Total</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'success.light', color: 'white' }}>
-              <Typography variant="h4">
-                {reservas.filter(r => r.estado === 'confirmada').length}
-              </Typography>
-              <Typography variant="body2">Confirmadas</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'warning.light', color: 'white' }}>
-              <Typography variant="h4">
-                {reservas.filter(r => r.estado === 'pendiente').length}
-              </Typography>
-              <Typography variant="body2">Pendientes</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'error.light', color: 'white' }}>
-              <Typography variant="h4">
-                {reservas.filter(r => r.estado === 'cancelada').length}
-              </Typography>
-              <Typography variant="body2">Canceladas</Typography>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* LISTA PRINCIPAL DE RESERVAS */}
-      <Grid container spacing={3}>
-        {reservas.map((reserva, index) => {
-          const infoUsuario = getInfoUsuario(reserva);
-          const infoCancha = getInfoCancha(reserva);
-          const infoDisciplina = getInfoDisciplina(reserva);
-          
-          return (
-            <Grid item xs={12} key={reserva.id_reserva}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                        <Avatar sx={{ bgcolor: COLOR_AZUL_ELECTRICO }}>
-                          <CalendarMonth />
-                        </Avatar>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                            Reserva #{getCodigoReserva(reserva)}
-                            {!reserva.codigo_reserva && (
-                              <Chip 
-                                label="Temporal" 
-                                size="small" 
-                                color="warning"
-                                sx={{ ml: 1, fontSize: '0.6rem' }}
-                              />
-                            )}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {formatFecha(reserva.fecha_reserva)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip 
-                          label={getEstadoTexto(reserva.estado)}
-                          sx={{ 
-                            backgroundColor: getEstadoColor(reserva.estado),
-                            color: COLOR_BLANCO,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                        
-                        {/* Botones de acción */}
-                        {puedeEditar(reserva) && reserva.estado !== 'cancelada' && reserva.estado !== 'completada' && (
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton
-                              onClick={() => setEditDialog(reserva)}
-                              sx={{ color: COLOR_AZUL_ELECTRICO }}
+              
+              {loadingReservas ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                  <CircularProgress size={30} sx={{ color: COLOR_NARANJA_VIBRANTE }} />
+                </Box>
+              ) : reservasPendientes?.length > 0 ? (
+                <Grid container spacing={1.5}>
+                  {reservasPendientes.slice(0, isMobile ? 2 : 3).map((reserva, index) => (
+                    <Grid item xs={6} sm={4} key={index}>
+                      <Card 
+                        onClick={redirectToRatings}
+                        sx={{ 
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          backgroundColor: `${COLOR_NARANJA_VIBRANTE}15`,
+                          border: `1px solid ${COLOR_NARANJA_VIBRANTE}40`,
+                          transition: 'all 0.3s',
+                          height: '100%',
+                          '&:hover': { 
+                            backgroundColor: `${COLOR_NARANJA_VIBRANTE}25`,
+                            transform: 'translateY(-2px)'
+                          }
+                        }}
+                      >
+                        <CardContent sx={{ p: 1.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Star sx={{ fontSize: 20, color: COLOR_NARANJA_VIBRANTE }} />
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 'bold',
+                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                              }}
+                              noWrap
                             >
-                              <Edit />
-                            </IconButton>
-                            <IconButton
-                              onClick={() => setCancelDialog(reserva)}
-                              sx={{ color: COLOR_ROJO }}
-                            >
-                              <Cancel />
-                            </IconButton>
+                              {reserva.cancha?.nombre || `Cancha ${reserva.id_cancha}`}
+                            </Typography>
                           </Box>
-                        )}
-                      </Box>
-                    </Box>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    <Grid container spacing={3}>
-                      {/* Información del Cliente (solo para admin/gestor) */}
-                      {(profile.rol === 'admin' || profile.rol === 'gestor') && (
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="h6" sx={{ mb: 2, color: COLOR_AZUL_ELECTRICO, fontWeight: 'bold' }}>
-                            Información del Cliente
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              display: 'block', 
+                              color: 'text.secondary',
+                              fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                            }}
+                          >
+                            {reserva.fecha_reserva ? 
+                              formatFechaCorta(reserva.fecha_reserva) : 
+                              'Fecha no disponible'
+                            }
                           </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                            <Person sx={{ color: COLOR_VERDE_LIMA }} />
-                            <Box>
-                              <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                                {infoUsuario.nombre} {infoUsuario.apellido}
+                          <Chip 
+                            label="PENDIENTE" 
+                            size="small" 
+                            sx={{ 
+                              mt: 0.5,
+                              backgroundColor: COLOR_NARANJA_VIBRANTE,
+                              color: COLOR_BLANCO,
+                              fontWeight: 'bold',
+                              fontSize: '0.6rem',
+                              height: 20
+                            }}
+                          />
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                  {reservasPendientes.length > (isMobile ? 2 : 3) && (
+                    <Grid item xs={12}>
+                      <Box sx={{ textAlign: 'center', mt: 1 }}>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                        >
+                          +{reservasPendientes.length - (isMobile ? 2 : 3)} más
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3, 
+                  backgroundColor: `${COLOR_VERDE_LIMA}15`, 
+                  borderRadius: 2 
+                }}>
+                  <Star sx={{ 
+                    fontSize: { xs: 40, sm: 48 }, 
+                    color: COLOR_VERDE_LIMA, 
+                    opacity: 0.5, 
+                    mb: 1 
+                  }} />
+                  <Typography 
+                    variant={isMobile ? "body2" : "body1"} 
+                    color="text.secondary"
+                  >
+                    ¡Genial! No tienes reservas pendientes de calificar.
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* ESTADÍSTICAS RÁPIDAS (Admin/Gestor) */}
+      {(profile?.rol === 'admin' || profile?.rol === 'gestor') && reservas.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 4 }}>
+            {[
+              { label: 'Total', value: estadisticas.total, color: COLOR_AZUL_ELECTRICO, icon: <CalendarMonth /> },
+              { label: 'Confirmadas', value: estadisticas.confirmadas, color: COLOR_VERDE_LIMA, icon: <CheckCircle /> },
+              { label: 'Pendientes', value: estadisticas.pendientes, color: COLOR_AMARILLO, icon: <Schedule /> },
+              { label: 'Canceladas', value: estadisticas.canceladas, color: COLOR_ROJO, icon: <Cancel /> },
+            ].map((stat, index) => (
+              <Grid item xs={6} sm={3} key={index}>
+                <Card sx={{ 
+                  textAlign: 'center', 
+                  p: { xs: 1.5, sm: 2 },
+                  backgroundColor: `${stat.color}15`,
+                  border: `2px solid ${stat.color}`,
+                  borderRadius: 2,
+                  height: '100%'
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    mb: 1 
+                  }}>
+                    <Box sx={{ 
+                      backgroundColor: stat.color, 
+                      color: COLOR_BLANCO, 
+                      borderRadius: '50%',
+                      p: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {stat.icon}
+                    </Box>
+                  </Box>
+                  <Typography 
+                    variant={isMobile ? "h5" : "h4"} 
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      color: stat.color,
+                      fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2rem' }
+                    }}
+                  >
+                    {stat.value}
+                  </Typography>
+                  <Typography 
+                    variant={isMobile ? "caption" : "body2"} 
+                    sx={{ 
+                      fontWeight: 'medium',
+                      color: 'text.secondary',
+                      fontSize: { xs: '0.7rem', sm: '0.875rem' }
+                    }}
+                  >
+                    {stat.label}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </motion.div>
+      )}
+
+      {/* LISTA DE RESERVAS */}
+      {loadingDetails && reservas.length > 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <CircularProgress size={40} sx={{ color: COLOR_AZUL_ELECTRICO }} />
+          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+            Cargando detalles de reservas...
+          </Typography>
+        </Box>
+      ) : reservas.length > 0 ? (
+        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
+          {reservas.map((reserva, index) => {
+            const infoUsuario = getInfoUsuario(reserva);
+            const infoCancha = getInfoCancha(reserva);
+            const isExpanded = expandedCard === reserva.id_reserva;
+
+            return (
+              <Grid item xs={12} key={reserva.id_reserva || index}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                >
+                  <Card sx={{ 
+                    borderRadius: 2, 
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    borderLeft: `4px solid ${getEstadoColor(reserva.estado)}`
+                  }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                      {/* Header de la reserva */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'flex-start',
+                        mb: 2,
+                        gap: 1
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flex: 1 }}>
+                          <Avatar sx={{ 
+                            bgcolor: COLOR_AZUL_ELECTRICO,
+                            width: { xs: 40, sm: 48 },
+                            height: { xs: 40, sm: 48 }
+                          }}>
+                            <CalendarMonth />
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography 
+                              variant={isMobile ? "subtitle1" : "h6"} 
+                              sx={{ fontWeight: 'bold' }}
+                            >
+                              Reserva #{getCodigoReserva(reserva)}
+                            </Typography>
+                            <Typography 
+                              variant={isMobile ? "caption" : "body2"} 
+                              color="text.secondary"
+                              sx={{ display: 'block', mt: 0.5 }}
+                            >
+                              {formatFecha(reserva.fecha_reserva)}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                              <AccessTime sx={{ fontSize: 14, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary">
+                                {formatHora(reserva.hora_inicio)} - {formatHora(reserva.hora_fin)}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {infoUsuario.email}
+                            </Box>
+                          </Box>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip 
+                            label={getEstadoTexto(reserva.estado)}
+                            size={isMobile ? "small" : "medium"}
+                            sx={{ 
+                              backgroundColor: getEstadoColor(reserva.estado),
+                              color: COLOR_BLANCO,
+                              fontWeight: 'bold',
+                              fontSize: { xs: '0.7rem', sm: '0.875rem' }
+                            }}
+                          />
+                          
+                          {/* Botón de acciones en móvil */}
+                          {isMobile && puedeEditar(reserva) && reserva.estado !== 'cancelada' && reserva.estado !== 'completada' && (
+                            <IconButton
+                              size="small"
+                              onClick={() => toggleCardExpansion(reserva.id_reserva)}
+                            >
+                              <MoreVert />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </Box>
+
+                      {/* Información básica */}
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={12} sm={profile?.rol === 'cliente' ? 12 : 6}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <SportsSoccer sx={{ color: COLOR_NARANJA_VIBRANTE, fontSize: 20 }} />
+                            <Box>
+                              <Typography variant={isMobile ? "body2" : "body1"} sx={{ fontWeight: 'medium' }}>
+                                {infoCancha.nombre}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Tel: {infoUsuario.telefono}
+                                {infoCancha.tipo} • {infoCancha.espacio}
                               </Typography>
                             </Box>
                           </Box>
                         </Grid>
+                        
+                        <Grid item xs={12} sm={profile?.rol === 'cliente' ? 12 : 6}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Person sx={{ color: COLOR_VERDE_LIMA, fontSize: 20 }} />
+                            <Box>
+                              <Typography variant={isMobile ? "body2" : "body1"} sx={{ fontWeight: 'medium' }}>
+                                {infoUsuario.nombre} {infoUsuario.apellido}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {infoUsuario.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {/* Información expandida (acordeón en móvil) */}
+                      {isMobile ? (
+                        <Accordion 
+                          expanded={isExpanded}
+                          onChange={() => toggleCardExpansion(reserva.id_reserva)}
+                          sx={{ 
+                            boxShadow: 'none',
+                            backgroundColor: 'transparent',
+                            '&:before': { display: 'none' }
+                          }}
+                        >
+                          <AccordionSummary 
+                            expandIcon={<ExpandMore />}
+                            sx={{ 
+                              p: 0,
+                              minHeight: 'auto',
+                              '& .MuiAccordionSummary-content': { 
+                                my: 1,
+                                justifyContent: 'space-between'
+                              }
+                            }}
+                          >
+                            <Typography variant="caption" color="text.secondary">
+                              Ver detalles
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ p: 0, mt: 2 }}>
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
+                              <Table size="small">
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                                      Disciplina
+                                    </TableCell>
+                                    <TableCell>{infoCancha.disciplina}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                                      Costo
+                                    </TableCell>
+                                    <TableCell>${reserva.costo_total}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                                      Asistentes
+                                    </TableCell>
+                                    <TableCell>{reserva.cantidad_asistentes || 0} personas</TableCell>
+                                  </TableRow>
+                                  {reserva.material_prestado && (
+                                    <TableRow>
+                                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                                        Material
+                                      </TableCell>
+                                      <TableCell>{reserva.material_prestado}</TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </AccordionDetails>
+                        </Accordion>
+                      ) : (
+                        /* Detalles en desktop/tablet */
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Sports sx={{ fontSize: 16, color: COLOR_AZUL_ELECTRICO }} />
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                Disciplina:
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2">{infoCancha.disciplina}</Typography>
+                          </Grid>
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <AttachMoney sx={{ fontSize: 16, color: COLOR_VERDE_LIMA }} />
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                Costo:
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2">${reserva.costo_total}</Typography>
+                          </Grid>
+                          <Grid item xs={6} md={3}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Person sx={{ fontSize: 16, color: COLOR_NARANJA_VIBRANTE }} />
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                Asistentes:
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2">{reserva.cantidad_asistentes || 0} personas</Typography>
+                          </Grid>
+                          {reserva.material_prestado && (
+                            <Grid item xs={6} md={3}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Info sx={{ fontSize: 16, color: '#9c27b0' }} />
+                                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                  Material:
+                                </Typography>
+                              </Box>
+                              <Typography variant="body2">{reserva.material_prestado}</Typography>
+                            </Grid>
+                          )}
+                        </Grid>
                       )}
 
-                      {/* Información de la Cancha (PARA TODOS LOS ROLES) */}
-                      <Grid item xs={12} md={profile.rol === 'cliente' ? 12 : 6}>
-                        <Typography variant="h6" sx={{ mb: 2, color: COLOR_AZUL_ELECTRICO, fontWeight: 'bold' }}>
-                          Información de la Cancha
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                          <SportsSoccer sx={{ color: COLOR_NARANJA_VIBRANTE }} />
-                          <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                              {infoCancha.nombre}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Tipo: {infoCancha.tipo}
-                            </Typography>
-                            {infoCancha.precio_por_hora && (
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                Precio/hora: ${infoCancha.precio_por_hora}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
-                      </Grid>
+                      {/* Acciones (visible según tamaño de pantalla) */}
+                      {puedeEditar(reserva) && reserva.estado !== 'cancelada' && reserva.estado !== 'completada' && (
+                        <>
+                          {!isMobile || isExpanded ? (
+                            <Box sx={{ 
+                              display: 'flex', 
+                              gap: 1, 
+                              flexWrap: 'wrap',
+                              pt: 2,
+                              borderTop: '1px solid #eee'
+                            }}>
+                              {reserva.estado === 'pendiente' && (
+                                <Button
+                                  variant="contained"
+                                  startIcon={<CheckCircle />}
+                                  onClick={() => handleEstadoChange(reserva.id_reserva, 'confirmada')}
+                                  size={isMobile ? "small" : "medium"}
+                                  sx={{
+                                    backgroundColor: COLOR_VERDE_LIMA,
+                                    color: COLOR_NEGRO_SUAVE,
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                      backgroundColor: COLOR_VERDE_LIMA,
+                                      opacity: 0.9,
+                                    },
+                                  }}
+                                >
+                                  Confirmar
+                                </Button>
+                              )}
+                              {reserva.estado === 'confirmada' && (
+                                <Button
+                                  variant="contained"
+                                  onClick={() => handleEstadoChange(reserva.id_reserva, 'en_curso')}
+                                  size={isMobile ? "small" : "medium"}
+                                  sx={{
+                                    backgroundColor: COLOR_AZUL_ELECTRICO,
+                                    color: COLOR_BLANCO,
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                      backgroundColor: COLOR_AZUL_ELECTRICO,
+                                      opacity: 0.9,
+                                    },
+                                  }}
+                                >
+                                  Iniciar
+                                </Button>
+                              )}
+                              {reserva.estado === 'en_curso' && (
+                                <Button
+                                  variant="contained"
+                                  onClick={() => handleEstadoChange(reserva.id_reserva, 'completada')}
+                                  size={isMobile ? "small" : "medium"}
+                                  sx={{
+                                    backgroundColor: '#4caf50',
+                                    color: COLOR_BLANCO,
+                                    fontWeight: 'bold',
+                                    '&:hover': {
+                                      backgroundColor: '#388e3c',
+                                    },
+                                  }}
+                                >
+                                  Completar
+                                </Button>
+                              )}
+                              <Button
+                                variant="outlined"
+                                startIcon={<Edit />}
+                                onClick={() => setEditDialog(reserva)}
+                                size={isMobile ? "small" : "medium"}
+                                sx={{
+                                  color: COLOR_AZUL_ELECTRICO,
+                                  borderColor: COLOR_AZUL_ELECTRICO,
+                                  '&:hover': {
+                                    borderColor: COLOR_AZUL_ELECTRICO,
+                                    backgroundColor: `${COLOR_AZUL_ELECTRICO}10`
+                                  }
+                                }}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                startIcon={<Cancel />}
+                                onClick={() => setCancelDialog(reserva)}
+                                size={isMobile ? "small" : "medium"}
+                                sx={{
+                                  color: COLOR_ROJO,
+                                  borderColor: COLOR_ROJO,
+                                  '&:hover': {
+                                    borderColor: COLOR_ROJO,
+                                    backgroundColor: `${COLOR_ROJO}10`
+                                  }
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                            </Box>
+                          ) : null}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Grid>
+            );
+          })}
+        </Grid>
+      ) : !loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: { xs: 6, sm: 8, md: 10 },
+            backgroundColor: `${COLOR_AZUL_ELECTRICO}05`,
+            borderRadius: 3
+          }}>
+            <CalendarMonth sx={{ 
+              fontSize: { xs: 60, sm: 80, md: 100 }, 
+              color: 'grey.400', 
+              mb: 2 
+            }} />
+            <Typography 
+              variant={isMobile ? "h6" : "h5"} 
+              color="text.secondary"
+              sx={{ mb: 1 }}
+            >
+              No hay reservas {profile?.rol === 'cliente' ? 'tuyas' : 'en el sistema'}
+            </Typography>
+            <Typography 
+              variant={isMobile ? "body2" : "body1"} 
+              color="text.secondary"
+              sx={{ maxWidth: 400, mx: 'auto' }}
+            >
+              {profile?.rol === 'cliente' 
+                ? 'Tus reservas aparecerán aquí cuando las realices' 
+                : 'Las reservas de los usuarios aparecerán aquí'
+              }
+            </Typography>
+          </Box>
+        </motion.div>
+      )}
 
-                      {/* Detalles de la Reserva */}
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="h6" sx={{ mb: 2, color: COLOR_AZUL_ELECTRICO, fontWeight: 'bold' }}>
-                          Detalles de la Reserva
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AccessTime sx={{ fontSize: 20, color: COLOR_VERDE_LIMA }} />
-                            <Typography variant="body2">
-                              <strong>Horario:</strong> {formatHora(reserva.hora_inicio)} - {formatHora(reserva.hora_fin)}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AttachMoney sx={{ fontSize: 20, color: COLOR_VERDE_LIMA }} />
-                            <Typography variant="body2">
-                              <strong>Costo:</strong> ${reserva.costo_total}
-                            </Typography>
-                          </Box>
-                          <Typography variant="body2">
-                            <strong>Disciplina:</strong> {infoDisciplina}
-                          </Typography>
-                          {reserva.cantidad_asistentes && (
-                            <Typography variant="body2">
-                              <strong>Asistentes:</strong> {reserva.cantidad_asistentes} personas
-                            </Typography>
-                          )}
-                          {reserva.material_prestado && (
-                            <Typography variant="body2">
-                              <strong>Material:</strong> {reserva.material_prestado}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Grid>
-
-                      {/* Información Adicional */}
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="h6" sx={{ mb: 2, color: COLOR_AZUL_ELECTRICO, fontWeight: 'bold' }}>
-                          Información Adicional
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <Typography variant="body2">
-                            <strong>Creada:</strong> {new Date(reserva.fecha_creacion).toLocaleString('es-ES')}
-                          </Typography>
-                          {reserva.fecha_actualizacion && (
-                            <Typography variant="body2">
-                              <strong>Actualizada:</strong> {new Date(reserva.fecha_actualizacion).toLocaleString('es-ES')}
-                            </Typography>
-                          )}
-                          <Typography variant="body2">
-                            <strong>ID Reserva:</strong> {reserva.id_reserva}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-
-                    {/* Acciones rápidas para admin/gestor */}
-                    {puedeEditar(reserva) && reserva.estado !== 'cancelada' && reserva.estado !== 'completada' && (
-                      <>
-                        <Divider sx={{ my: 2 }} />
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          {reserva.estado === 'pendiente' && (
-                            <Button
-                              variant="contained"
-                              startIcon={<CheckCircle />}
-                              onClick={() => handleEstadoChange(reserva.id_reserva, 'confirmada')}
-                              sx={{
-                                backgroundColor: COLOR_VERDE_LIMA,
-                                color: COLOR_NEGRO_SUAVE,
-                                fontWeight: 'bold',
-                                '&:hover': {
-                                  backgroundColor: COLOR_VERDE_LIMA,
-                                  opacity: 0.9,
-                                },
-                              }}
-                            >
-                              Confirmar
-                            </Button>
-                          )}
-                          {reserva.estado === 'confirmada' && (
-                            <Button
-                              variant="contained"
-                              onClick={() => handleEstadoChange(reserva.id_reserva, 'en_curso')}
-                              sx={{
-                                backgroundColor: COLOR_AZUL_ELECTRICO,
-                                color: COLOR_BLANCO,
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              Marcar en Curso
-                            </Button>
-                          )}
-                          {reserva.estado === 'en_curso' && (
-                            <Button
-                              variant="contained"
-                              onClick={() => handleEstadoChange(reserva.id_reserva, 'completada')}
-                              sx={{
-                                backgroundColor: '#4caf50',
-                                color: COLOR_BLANCO,
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              Marcar Completada
-                            </Button>
-                          )}
-                        </Box>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </Grid>
-          );
-        })}
-      </Grid>
-
-      {reservas.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <CalendarMonth sx={{ fontSize: 80, color: 'grey.400', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            No hay reservas {profile.rol === 'cliente' ? 'tuyas' : 'en el sistema'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {profile.rol === 'cliente' 
-              ? 'Tus reservas aparecerán aquí cuando las realices' 
-              : 'Las reservas de los usuarios aparecerán aquí'
-            }
-          </Typography>
-        </Box>
+      {/* FAB para acciones rápidas en móvil */}
+      {isMobile && (profile?.rol === 'admin' || profile?.rol === 'gestor') && (
+        <Fab
+          color="primary"
+          onClick={() => {
+            // Acción por defecto
+          }}
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000,
+            backgroundColor: COLOR_AZUL_ELECTRICO,
+            '&:hover': {
+              backgroundColor: COLOR_AZUL_ELECTRICO,
+              opacity: 0.9,
+            },
+          }}
+        >
+          <Edit />
+        </Fab>
       )}
 
       {/* Dialog para editar estado */}
@@ -886,18 +1115,26 @@ export default function Reservations() {
         onClose={() => setEditDialog(null)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 2 } }}
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 2 },
+            m: { xs: 0, sm: 2 }
+          }
+        }}
       >
         <DialogTitle 
           sx={{ 
             backgroundColor: COLOR_AZUL_ELECTRICO, 
             color: COLOR_BLANCO, 
-            fontWeight: 'bold' 
+            fontWeight: 'bold',
+            fontSize: { xs: '1.25rem', sm: '1.5rem' },
+            py: { xs: 2, sm: 3 }
           }}
         >
           Cambiar Estado de Reserva
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: { xs: 2, sm: 3 } }}>
           {editDialog && (
             <Box>
               <Typography variant="body1" sx={{ mb: 2 }}>
@@ -909,6 +1146,7 @@ export default function Reservations() {
                 label="Nuevo Estado"
                 value={editDialog.estado}
                 onChange={(e) => setEditDialog({...editDialog, estado: e.target.value})}
+                size={isMobile ? "small" : "medium"}
               >
                 <MenuItem value="pendiente">Pendiente</MenuItem>
                 <MenuItem value="confirmada">Confirmada</MenuItem>
@@ -919,20 +1157,32 @@ export default function Reservations() {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ 
+          p: { xs: 2, sm: 3 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 0 }
+        }}>
           <Button 
             onClick={() => setEditDialog(null)} 
-            sx={{ color: 'text.secondary' }}
+            sx={{ 
+              color: 'text.secondary',
+              width: { xs: '100%', sm: 'auto' },
+              order: { xs: 2, sm: 1 }
+            }}
+            size={isMobile ? "medium" : "large"}
           >
             Cancelar
           </Button>
           <Button
             onClick={() => handleEstadoChange(editDialog.id_reserva, editDialog.estado)}
             variant="contained"
+            size={isMobile ? "medium" : "large"}
             sx={{
               backgroundColor: COLOR_NARANJA_VIBRANTE,
               color: COLOR_BLANCO,
               fontWeight: 'bold',
+              width: { xs: '100%', sm: 'auto' },
+              order: { xs: 1, sm: 2 },
               '&:hover': {
                 backgroundColor: '#CC6A11',
               },
@@ -949,18 +1199,26 @@ export default function Reservations() {
         onClose={() => setCancelDialog(null)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 2 } }}
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 2 },
+            m: { xs: 0, sm: 2 }
+          }
+        }}
       >
         <DialogTitle 
           sx={{ 
             backgroundColor: COLOR_ROJO, 
             color: COLOR_BLANCO, 
-            fontWeight: 'bold' 
+            fontWeight: 'bold',
+            fontSize: { xs: '1.25rem', sm: '1.5rem' },
+            py: { xs: 2, sm: 3 }
           }}
         >
           Cancelar Reserva
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: { xs: 2, sm: 3 } }}>
           {cancelDialog && (
             <Box>
               <Typography variant="body1" sx={{ mb: 2 }}>
@@ -969,37 +1227,53 @@ export default function Reservations() {
               <TextField
                 fullWidth
                 multiline
-                rows={3}
+                rows={isMobile ? 2 : 3}
                 label="Motivo de cancelación"
                 value={motivoCancelacion}
                 onChange={(e) => setMotivoCancelacion(e.target.value)}
                 placeholder="Describe el motivo de la cancelación..."
                 required
+                size={isMobile ? "small" : "medium"}
               />
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ 
+          p: { xs: 2, sm: 3 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 0 }
+        }}>
           <Button 
             onClick={() => {
               setCancelDialog(null);
               setMotivoCancelacion('');
             }} 
-            sx={{ color: 'text.secondary' }}
+            sx={{ 
+              color: 'text.secondary',
+              width: { xs: '100%', sm: 'auto' },
+              order: { xs: 2, sm: 1 }
+            }}
+            size={isMobile ? "medium" : "large"}
           >
-            Cancelar
+            Volver
           </Button>
           <Button
             onClick={handleCancelarReserva}
             variant="contained"
             disabled={!motivoCancelacion.trim()}
+            size={isMobile ? "medium" : "large"}
             sx={{
               backgroundColor: COLOR_ROJO,
               color: COLOR_BLANCO,
               fontWeight: 'bold',
+              width: { xs: '100%', sm: 'auto' },
+              order: { xs: 1, sm: 2 },
               '&:hover': {
                 backgroundColor: '#d32f2f',
               },
+              '&.Mui-disabled': {
+                backgroundColor: 'rgba(244, 67, 54, 0.5)'
+              }
             }}
           >
             Confirmar Cancelación
