@@ -27,7 +27,8 @@ export default function HeaderHome() {
   }
 
   // Valores por defecto en caso de error o carga
-  const logoUrl = content.header_logo || '/static/uploads/team.jpg';
+  const logoUrl = content.header_logo ||
+  '/static/uploads/team.jpg';
   const siteName = content.site_name || 'OLYMPIAHUB';
 
   if (loading) {
@@ -44,7 +45,15 @@ export default function HeaderHome() {
   return (
     // Aplicamos el color oscuro al fondo del AppBar
     <AppBar position="fixed" elevation={0} sx={{ backgroundColor: COLOR_DARK }}>
-      <Toolbar sx={{ display: "flex", alignItems: "center", minHeight: '64px', padding: '0 40px' }}>
+      <Toolbar 
+        sx={{ 
+          display: "flex", 
+          alignItems: "center", 
+          minHeight: '64px', 
+          // RESPONSIVE: Padding reducido en móvil (xs)
+          px: { xs: 2, sm: 4, md: 5 } 
+        }}
+      >
         
         {/* Logo + Texto OLYMPIAHUB */}
         <Box 
@@ -78,40 +87,24 @@ export default function HeaderHome() {
           </Typography>
         </Box>
 
-        {/* Enlaces de Navegación */}
-        <Box sx={{ display: { xs: 'none', sm: 'flex' }, mr: 3 }}>
-          <Button color="inherit" sx={{ textTransform: 'none', color: COLOR_LIGHT, '&:hover': { color: COLOR_PRIMARY } }}>Complejos</Button>
-          <Button color="inherit" sx={{ textTransform: 'none', color: COLOR_LIGHT, '&:hover': { color: COLOR_PRIMARY } }}>Acerca de</Button>
-          <Button color="inherit" sx={{ textTransform: 'none', color: COLOR_LIGHT, '&:hover': { color: COLOR_PRIMARY } }}>Deportes</Button>
-        </Box>
+        
 
         {/* Botones de Explorar, Registro y Login */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            // RESPONSIVE: Gap ajustado para móvil
+            gap: { xs: 1, sm: 1.5 } 
+          }}
+        >
           
-          {/* 1. Botón EXPLORAR NUESTRA APP (Outlined con borde Azul Eléctrico) */}
-          {/*<Button 
-            variant="outlined" 
-            onClick={handleAppExploreClick}
-            sx={{ 
-              borderColor: COLOR_PRIMARY,
-              color: COLOR_PRIMARY,
-              fontWeight: 'bold',
-              borderRadius: '20px',
-              textTransform: 'none',
-              px: 2,
-              '&:hover': {
-                borderColor: COLOR_PRIMARY,
-                backgroundColor: 'rgba(0, 191, 255, 0.1)' // Azul Eléctrico ligero
-              }
-            }}
-          >
-            Explora Nuestra App
-          </Button>*/}
-
+          {/* 1. Botón EXPLORAR NUESTRA APP (Oculto en xs para ahorrar espacio en móvil) */}
           <Button 
             variant="outlined" 
             onClick={handleAppExploreClick}
             sx={{ 
+              // RESPONSIVE: Ocultar en xs, mostrar a partir de sm
+              display: { xs: 'none', sm: 'flex' },
               borderColor: COLOR_PRIMARY,
               color: COLOR_PRIMARY,
               fontWeight: 'bold',

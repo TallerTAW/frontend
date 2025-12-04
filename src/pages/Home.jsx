@@ -16,7 +16,7 @@ const COLOR_PRIMARY = '#00BFFF';     // Azul Eléctrico
 const COLOR_DARK = '#333333';        // Gris Oscuro
 const COLOR_LIGHT = '#FFFFFF';       // Blanco
 const COLOR_ACCENT_LIME = '#A2E831'; // Verde Lima
-const COLOR_ACCENT_RED = '#FD7E14';  // Naranja/Rojo 
+const COLOR_ACCENT_RED = '#FD7E14';  // Naranja/Rojo
 
 
 const IMAGEN_BALON = 'https://cdn.pixabay.com/photo/2013/07/13/10/51/football-157930_1280.png'; // Cambia esto por la URL real de tu imagen en tu proyecto
@@ -51,7 +51,6 @@ const OBJETIVO_TEXTO1 = `
 const renderObjectives = (text) => {
     // Asumimos que los objetivos vienen separados por saltos de línea (\n) o viñetas (•)
     const items = text.split('\n').map(item => item.trim()).filter(item => item.length > 0);
-    
     const icons = [
         <span style={{ color: COLOR_ACCENT_LIME, fontSize: '1.2em' }}>•</span>,
         <span style={{ color: COLOR_ACCENT_LIME, fontSize: '1.2em' }}>•</span>,
@@ -59,17 +58,16 @@ const renderObjectives = (text) => {
         <span style={{ color: COLOR_ACCENT_LIME, fontSize: '1.2em' }}>•</span>,
         <span style={{ color: COLOR_ACCENT_LIME, fontSize: '1.2em' }}>•</span>,
     ];
-
     return (
         <List sx={{ color: COLOR_DARK, px: 0 }}>
             {items.map((item, index) => (
                 <ListItem key={index} disableGutters sx={{ py: 0.5 }}>
                     <ListItemIcon sx={{ minWidth: '30px' }}>
-                        {icons[index % icons.length]} 
+                        {icons[index % icons.length]}
                     </ListItemIcon>
                     <ListItemText primary={item.replace(/^[•\s]*/, '')} sx={{ 
                         '& .MuiListItemText-primary': { 
-                            fontFamily: 'Roboto, sans-serif'
+                          fontFamily: 'Roboto, sans-serif'
                         }
                     }} />
                 </ListItem>
@@ -79,142 +77,155 @@ const renderObjectives = (text) => {
 };
 
 export default function Home() {
-  const { content, loading, error } = useContent();
+  const { content, loading, error } = useContent();
+  // Valores por defecto 
+  const aboutImageTenis = content.about_image_tenis || '/static/uploads/bannercancha.jpg';
+  const aboutUsText = content.about_us ||
+    'Somos una plataforma que conecta personas con espacios deportivos de forma rápida, segura y accesible. Promovemos el deporte, la vida activa, el bienestar y la creación de comunidades saludables y mejor conectadas.';
+  const servicesText = content.services || 'Ofrecemos productos y servicios de calidad en todo el mundo.';
+  const missionText = content.mission ||
+    'Brindar una solución tecnológica confiable y sencilla que conecte a los usuarios con los centros deportivos, facilitando el acceso a espacios recreativos y optimizando el tiempo y los recursos de quienes disfrutan de la actividad física.';
+  const visionText = content.vision || 'Transformar la manera en que las personas acceden al deporte, consolidándonos como una plataforma de referencia que fomente comunidades activas, saludables y mejor conectadas.';
+  const objectivesText = content.objectives || '• Promover la vida activa y el bienestar en la comunidad.\n• Facilitar el acceso a instalaciones deportivas de forma práctica y segura.\n• Fomentar el trabajo en equipo y la creación de comunidades deportivas.\n• Impulsar la innovación tecnológica aplicada al deporte.\n• Convertirnos en un referente regional en la gestión de espacios deportivos.';
+  
+  if (loading) {
+    return (
+      <Box>
+        <HeaderHome />
+        <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography variant="h6">Cargando contenido...</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
-  // Valores por defecto 
-  const aboutImageTenis = content.about_image_tenis || '/static/uploads/bannercancha.jpg';
-  const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas con espacios deportivos de forma rápida, segura y accesible. Promovemos el deporte, la vida activa, el bienestar y la creación de comunidades saludables y mejor conectadas.';
-  const servicesText = content.services || 'Ofrecemos productos y servicios de calidad en todo el mundo.';
-  const missionText = content.mission || 'Brindar una solución tecnológica confiable y sencilla que conecte a los usuarios con los centros deportivos, facilitando el acceso a espacios recreativos y optimizando el tiempo y los recursos de quienes disfrutan de la actividad física.';
-  const visionText = content.vision || 'Transformar la manera en que las personas acceden al deporte, consolidándonos como una plataforma de referencia que fomente comunidades activas, saludables y mejor conectadas.';
-  const objectivesText = content.objectives || '• Promover la vida activa y el bienestar en la comunidad.\n• Facilitar el acceso a instalaciones deportivas de forma práctica y segura.\n• Fomentar el trabajo en equipo y la creación de comunidades deportivas.\n• Impulsar la innovación tecnológica aplicada al deporte.\n• Convertirnos en un referente regional en la gestión de espacios deportivos.';
-
-  if (loading) {
-    return (
-      <Box>
-        <HeaderHome />
-        <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="h6">Cargando contenido...</Typography>
-        </Box>
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      <HeaderHome /> 
-      
-      {/* 1. SECCIÓN HERO */}
-      <Box
-        sx={{
+  return (
+    <Box>
+      <HeaderHome /> 
+      
+      {/* 1. SECCIÓN HERO */}
+      <Box
+        sx={{
             pt: '64px', 
-            height: "75vh", 
-            backgroundImage: `url(${aboutImageTenis})`, 
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            position: 'relative',
+            // RESPONSIVE: Altura ajustada para móvil
+            height: { xs: '50vh', sm: '65vh', md: '75vh' }, 
+            backgroundImage: `url(${aboutImageTenis})`, 
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            position: 'relative',
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'flex-start',
             textAlign: 'left',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0, left: 0, width: '100%', height: '100%',
-              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)', 
-            }
-        }}
-      >
+            '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0, left: 0, width: '100%', height: '100%',
+                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)',
+            }
+        }}
+      >
         <Container maxWidth="xl" sx={{ zIndex: 2, mb: 4 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-          >
-            <Typography 
-                variant="h2" 
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+          >
+            <Typography 
+                variant="h2"
                 fontWeight="bold" 
                 sx={{ 
                     color: COLOR_LIGHT, 
+                    // Ya era responsive: 
                     fontSize: { xs: '2.5rem', md: '4rem' },
                     fontFamily: 'Montserrat, sans-serif'
                 }}
             >
-              ESPACIO DEPORTIVO A TU DISPOSICIÓN
-            </Typography>
-          </motion.div>
+              ESPACIO DEPORTIVO A TU DISPOSICIÓN
+            </Typography>
+          </motion.div>
         </Container>
-      </Box>
+      </Box>
 
-      {/* 2. SECCIÓN QUIÉNES SOMOS (Fondo Oscuro) */}
-      <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT }}>
-        <Container maxWidth="xl" sx={{ py: 6 }}>
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ color: COLOR_PRIMARY, fontFamily: 'Montserrat, sans-serif' }}>
-              Quiénes somos
-            </Typography>
-            <Typography variant="body1" sx={{ maxWidth: '800px', lineHeight: 1.8, fontFamily: 'Roboto, sans-serif', opacity: 0.8 }}>
-              {aboutUsText}
-            </Typography>
-          </motion.div>
-        </Container>
-      </Box>
-      
-      {/* 3. SECCIÓN SERVICIOS Y MISIÓN (Fondo Azul Eléctrico) */}
-      <Box sx={{ backgroundColor: COLOR_PRIMARY, color: COLOR_LIGHT }}>
-        <Container maxWidth="xl" sx={{ py: 8 }}>
-          
-          {/* Servicios */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5, textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.8 }}>
-              SERVICIOS
-            </Typography>
-            <Typography 
+      {/* 2. SECCIÓN QUIÉNES SOMOS (Fondo Oscuro) */}
+      <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT }}>
+        <Container maxWidth="xl" sx={{ py: 6 }}>
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.8 }}
+          >
+            <Typography 
+                variant="h4" 
+                gutterBottom 
+                fontWeight="bold" 
+                sx={{ 
+                    color: COLOR_PRIMARY, 
+                    fontFamily: 'Montserrat, sans-serif',
+                    // RESPONSIVE: Reducción de tamaño en móvil
+                    fontSize: { xs: '1.75rem', sm: '2.25rem' } 
+                }}
+            >
+              Quiénes somos
+            </Typography>
+            <Typography variant="body1" sx={{ maxWidth: '800px', lineHeight: 1.8, fontFamily: 'Roboto, sans-serif', opacity: 0.8 }}>
+              {aboutUsText}
+            </Typography>
+          </motion.div>
+        </Container>
+      </Box>
+      
+      {/* 3. SECCIÓN SERVICIOS Y MISIÓN (Fondo Azul Eléctrico) */}
+      <Box sx={{ backgroundColor: COLOR_PRIMARY, color: COLOR_LIGHT }}>
+        <Container maxWidth="xl" sx={{ py: 8 }}>
+          
+          {/* Servicios */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5, textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.8 }}>
+              SERVICIOS
+            </Typography>
+            <Typography 
                 variant="h4" 
                 fontWeight="bold" 
-                sx={{ mb: 4, fontFamily: 'Montserrat, sans-serif' }}
+                sx={{ 
+                    mb: 4, 
+                    fontFamily: 'Montserrat, sans-serif',
+                    // RESPONSIVE: Reducción de tamaño en móvil
+                    fontSize: { xs: '1.75rem', sm: '2.25rem' } 
+                }}
             >
-              {servicesText}
-            </Typography>
-          </motion.div>
+              {servicesText}
+            </Typography>
+          </motion.div>
 
-      {/* Misión */}
-        
-        </Container>
-      </Box>
-        <Bannerizq 
-            titulo={"MISION"}
-            texto={MISION_TEXTO.trim()} 
-            imagenURL={IMAGEN_BALON} 
-        />
+        </Container>
+      </Box>
 
-      {/* Visión */}
-        <Bannerizq 
-            titulo={"VISION"}
-            texto={VISION_TEXTO1.trim()} 
-            imagenURL={IMAGEN_BALON1} 
-        />
+      {/* Uso del componente Bannerizq para Misión, Visión y Objetivos */}
+      <Bannerizq 
+          titulo={"MISION"}
+          texto={MISION_TEXTO.trim()} 
+          imagenURL={IMAGEN_BALON}
+      />
 
-      {/* Objetivos */}
-        <Bannerizq 
-            titulo={"OBJETIVOS"}
-            texto={OBJETIVO_TEXTO1.trim()} 
-            imagenURL={IMAGEN_BALON2} 
-        />
+      <Bannerizq 
+          titulo={"VISION"}
+          texto={VISION_TEXTO1.trim()} 
+          imagenURL={IMAGEN_BALON1} 
+      />
+
+      <Bannerizq 
+          titulo={"OBJETIVOS"}
+          texto={OBJETIVO_TEXTO1.trim()} 
+          imagenURL={IMAGEN_BALON2}
+      />
         
-      {/* 4. SECCIÓN VISIÓN Y OBJETIVOS (Fondo Blanco, Dividida) */}
-      
-
       {/* 5. FOOTER */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT, py: 3, textAlign: 'center' }}>
         
@@ -222,10 +233,11 @@ export default function Home() {
         <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center', 
-            gap: 3, 
+            // RESPONSIVE: Espacio ajustado para móvil
+            gap: { xs: 2, sm: 3 },
             mb: 2, 
             '& a': { color: COLOR_LIGHT, transition: 'color 0.3s' },
-            '& a:hover': { color: COLOR_ACCENT_RED } 
+            '& a:hover': { color: COLOR_ACCENT_RED }
         }}>
             <a href="URL_A_FACEBOOK" target="_blank" rel="noopener noreferrer">
                 <FacebookIcon fontSize="large" />
@@ -248,6 +260,6 @@ export default function Home() {
             © 2025 OLYMPIAHUB. Todos los derechos reservados.
         </Typography>
       </Box>
-    </Box>
-  );
+    </Box>
+  );
 }
