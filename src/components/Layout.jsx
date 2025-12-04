@@ -15,7 +15,10 @@ import {
     useTheme,
     Button,
     Typography,
-    Toolbar 
+    Toolbar,
+    IconButton,
+    SwipeableDrawer,
+    Badge
 } from '@mui/material';
 import {
     Dashboard,
@@ -30,20 +33,25 @@ import {
     QrCodeScanner,
     Assessment,
     Login,
-    PersonAdd
+    PersonAdd,
+    Menu as MenuIcon,
+    Close,
+    Home,
+    Sports
 } from '@mui/icons-material';
 
-import Header from './Header'; 
+import Header from './Header';
 
 // === PALETA DE COLORES Y TIPOGRAFÍA ===
-const COLOR_AZUL_ELECTRICO = '#00BFFF'; 
-const COLOR_VERDE_LIMA = '#A2E831';    
-const COLOR_NARANJA_VIBRANTE = '#FD7E14'; 
+const COLOR_AZUL_ELECTRICO = '#00BFFF';
+const COLOR_VERDE_LIMA = '#A2E831';
+const COLOR_NARANJA_VIBRANTE = '#FD7E14';
 const COLOR_GRIS_CLARO_FONDO = '#F9F9F9';
 const COLOR_GRIS_OSCURO = '#333333';
-const DRAWER_WIDTH = 240; 
+const DRAWER_WIDTH_MOBILE = 280;
+const DRAWER_WIDTH_DESKTOP = 240;
 const COLOR_BLANCO = '#FFFFFF';
-const COLOR_NEGRO_SUAVE = '#212121'; 
+const COLOR_NEGRO_SUAVE = '#212121';
 
 // Función de mapeo de roles
 const getRolDisplayName = (rol) => {
@@ -62,7 +70,8 @@ export default function Layout() {
     const { profile, user, signOut } = useAuth();
     const navigate = useNavigate();
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md')); 
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const location = useLocation();
 
     const handleLogout = async () => {
@@ -70,114 +79,243 @@ export default function Layout() {
         navigate('/login');
         setAnchorEl(null);
     };
-    
+
     const handleAvatarClick = (e) => setAnchorEl(e.currentTarget);
     const handleMenuClose = () => setAnchorEl(null);
-    const handleDrawerToggle = () => setDrawerOpen(!drawerOpen); 
+    const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
+    const handleDrawerClose = () => setDrawerOpen(false);
 
-    // Menú de navegación
+    // Menú de navegación optimizado para mobile
     const menuItems = [
-      { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin','gestor','control_acceso','cliente'], guest: true },
-      { text: 'Reservar Cancha', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente','gestor'], guest: true }, // cambiar a false si no debe verse en modo invitado
-      { text: 'Espacios Deportivos', icon: <Stadium />, path: '/espacios', roles: ['admin','gestor'] },
-      { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin','gestor'] },
-      { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin'] },
-      { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
-      { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente', 'admin'] },
-      { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
-      { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin','gestor','control_acceso'] },
-      { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
-      { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
-      { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
-      { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
+        { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'gestor', 'control_acceso', 'cliente'], guest: true },
+        { text: 'Reservar', icon: <CalendarMonth />, path: '/reservar', roles: ['cliente', 'gestor'], guest: true },
+        { text: 'Espacios', icon: <Stadium />, path: '/espacios', roles: ['admin', 'gestor'] },
+        { text: 'Canchas', icon: <SportsSoccer />, path: '/canchas', roles: ['admin', 'gestor'] },
+        { text: 'Disciplinas', icon: <Category />, path: '/disciplinas', roles: ['admin'] },
+        { text: 'Mis Reservas', icon: <CalendarMonth />, path: '/mis-reservas', roles: ['cliente'] },
+        { text: 'Calificaciones', icon: <Star />, path: '/calificaciones', roles: ['cliente', 'admin'] },
+        { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
+        { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
+        { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
+        { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
+        { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
+        { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
     ];
 
-    const filteredMenuItems = menuItems.filter(item =>
-      (!user && item.guest) ||
-      (user && profile && item.roles.includes(profile.rol))
-    );
+    // Versión mobile-friendly del menú (menos items visibles para roles específicos)
+    const getMobileMenuItems = () => {
+        if (isMobile) {
+            // En móvil, mostramos menos items para mejor UX
+            const essentialItems = menuItems.filter(item =>
+                (!user && item.guest) ||
+                (user && profile && item.roles.includes(profile.rol))
+            );
 
-    // Ruta del logo: Asegúrate de que tu logo se llame 'logo.png' y esté en la carpeta 'public'.
-    const logoUrl = '/logo.png'; 
+            // Para cliente en móvil, priorizar items clave
+            if (profile?.rol === 'cliente') {
+                return essentialItems.filter(item =>
+                    ['Dashboard', 'Reservar', 'Mis Reservas', 'Calificaciones', 'Mi Billetera'].includes(item.text)
+                );
+            }
+
+            // Para admin en móvil, agrupar algunos items
+            if (profile?.rol === 'admin') {
+                return essentialItems.filter(item =>
+                    !['Cupones', 'Reportes'].includes(item.text) // Estos podrían ir en submenú
+                );
+            }
+
+            return essentialItems.slice(0, 6); // Limitar a 6 items en móvil
+        }
+
+        return menuItems.filter(item =>
+            (!user && item.guest) ||
+            (user && profile && item.roles.includes(profile.rol))
+        );
+    };
+
+    const filteredMenuItems = getMobileMenuItems();
+
+    const logoUrl = '/logo.png';
 
     const drawer = (
-        <Box 
-            className="h-full" 
-            sx={{ 
-                backgroundColor: COLOR_NEGRO_SUAVE, 
-                height: '100%', 
-                display: 'flex', 
-                flexDirection: 'column' 
+        <Box
+            className="h-full"
+            sx={{
+                backgroundColor: COLOR_NEGRO_SUAVE,
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                width: isMobile ? DRAWER_WIDTH_MOBILE : DRAWER_WIDTH_DESKTOP
             }}
         >
-            {/* Toolbar con logo y nombre: VERDE LIMA */}
-            <Toolbar 
-                sx={{ 
-                    backgroundColor: COLOR_VERDE_LIMA, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    ...theme.mixins.toolbar, 
-                    px: 2, 
-                }}
-            >
-                {/* Logo y Nombre App SOLO EN MODO ESCRITORIO */}
-                {!isMobile && (
-                    <Box 
-                        sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            cursor: 'pointer', 
-                            flexGrow: 1, 
-                            justifyContent: 'center', 
-                        }} 
-                        onClick={() => navigate('/dashboard')}
-                    >
-                        {/* Logo */}
-                        <img 
-                            src={logoUrl} 
-                            alt="Logo OlympiaHub" 
-                            style={{ width: '40px', height: 'auto', padding: '2px', marginRight: '8px' }} 
-                            onError={(e) => { e.target.onerror = null; e.target.src="/vite.svg"; }}
+            {/* Header del drawer móvil */}
+            {isMobile && (
+                <Box sx={{
+                    backgroundColor: COLOR_VERDE_LIMA,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 2,
+                    borderBottom: `2px solid ${COLOR_AZUL_ELECTRICO}`
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <img
+                            src={logoUrl}
+                            alt="Logo OlympiaHub"
+                            style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                objectFit: 'contain'
+                            }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = "/vite.svg"; }}
                         />
-                        
-                        {/* Nombre App */}
                         <Typography
-                            variant="h5" 
-                            noWrap
-                            component="div"
+                            variant="h6"
                             sx={{
                                 fontFamily: 'Montserrat, sans-serif',
                                 fontWeight: 'bold',
-                                color: COLOR_NEGRO_SUAVE, 
-                                textShadow: '1px 1px 3px rgba(0,0,0,0.1)',
+                                color: COLOR_NEGRO_SUAVE,
                             }}
                         >
                             OlympiaHub
                         </Typography>
                     </Box>
-                )}
-            </Toolbar>
+                    <IconButton
+                        onClick={handleDrawerClose}
+                        size="small"
+                        sx={{
+                            color: COLOR_NEGRO_SUAVE,
+                            backgroundColor: 'rgba(0,0,0,0.1)',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0,0,0,0.2)'
+                            }
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </Box>
+            )}
 
+            {/* Toolbar con logo y nombre: VERDE LIMA (solo en desktop) */}
+            {!isMobile && (
+                <Toolbar
+                    sx={{
+                        backgroundColor: COLOR_VERDE_LIMA,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '64px !important',
+                        px: 2,
+                    }}
+                >
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            flexGrow: 1,
+                            justifyContent: 'center',
+                        }}
+                        onClick={() => navigate('/dashboard')}
+                    >
+                        <img
+                            src={logoUrl}
+                            alt="Logo OlympiaHub"
+                            style={{
+                                width: '40px',
+                                height: 'auto',
+                                padding: '2px',
+                                marginRight: '8px'
+                            }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = "/vite.svg"; }}
+                        />
+                        <Typography
+                            variant="h5"
+                            noWrap
+                            component="div"
+                            sx={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontWeight: 'bold',
+                                color: COLOR_NEGRO_SUAVE,
+                                textShadow: '1px 1px 3px rgba(0,0,0,0.1)',
+                                fontSize: { md: '1.25rem', lg: '1.5rem' }
+                            }}
+                        >
+                            OlympiaHub
+                        </Typography>
+                    </Box>
+                </Toolbar>
+            )}
+
+            {/* Información del usuario en móvil */}
+            {isMobile && user && (
+                <Box sx={{
+                    p: 2,
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    borderBottom: `1px solid ${COLOR_GRIS_OSCURO}20`
+                }}>
+                    <Typography variant="subtitle1" sx={{
+                        color: COLOR_BLANCO,
+                        fontWeight: 'bold',
+                        fontFamily: 'Montserrat, sans-serif',
+                        mb: 0.5
+                    }}>
+                        {profile?.nombre} {profile?.apellido || ''}
+                    </Typography>
+                    <Typography variant="caption" sx={{
+                        color: COLOR_VERDE_LIMA,
+                        display: 'block'
+                    }}>
+                        {getRolDisplayName(profile?.rol)}
+                    </Typography>
+                    <Typography variant="caption" sx={{
+                        color: 'rgba(255,255,255,0.7)',
+                        display: 'block',
+                        mt: 0.5
+                    }}>
+                        {profile?.email}
+                    </Typography>
+                </Box>
+            )}
 
             {/* Mensaje para invitados */}
             {!user && (
-                <Box className="p-3 m-2 rounded"
-                    sx={{ backgroundColor: `${COLOR_NARANJA_VIBRANTE}10`, borderLeft: `4px solid ${COLOR_NARANJA_VIBRANTE}` }}>
-                    <Typography variant="caption" sx={{ color: COLOR_BLANCO, fontWeight: 'medium' }}>
-                        <strong>Modo Invitado</strong><br/>
+                <Box sx={{
+                    p: 2,
+                    m: 1.5,
+                    borderRadius: '8px',
+                    backgroundColor: `${COLOR_NARANJA_VIBRANTE}15`,
+                    borderLeft: `3px solid ${COLOR_NARANJA_VIBRANTE}`
+                }}>
+                    <Typography variant="body2" sx={{
+                        color: COLOR_BLANCO,
+                        fontWeight: 'medium',
+                        mb: 1.5
+                    }}>
+                        <Box component="strong" sx={{ color: COLOR_VERDE_LIMA }}>
+                            Modo Invitado
+                        </Box>
+                        <br />
                         Regístrate para acceder a todas las funciones
                     </Typography>
-                    <Box className="flex flex-col gap-1 mt-2">
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Button
                             variant="contained"
                             size="small"
                             startIcon={<PersonAdd />}
-                            onClick={() => navigate('/register')}
+                            onClick={() => {
+                                navigate('/register');
+                                handleDrawerClose();
+                            }}
+                            fullWidth={isMobile}
                             sx={{
                                 backgroundColor: COLOR_AZUL_ELECTRICO,
                                 '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 },
-                                textTransform: 'none'
+                                textTransform: 'none',
+                                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                py: 0.5
                             }}
                         >
                             Registrarse
@@ -186,11 +324,21 @@ export default function Layout() {
                             variant="outlined"
                             size="small"
                             startIcon={<Login />}
-                            onClick={() => navigate('/login')}
+                            onClick={() => {
+                                navigate('/login');
+                                handleDrawerClose();
+                            }}
+                            fullWidth={isMobile}
                             sx={{
-                                borderColor: COLOR_BLANCO, 
-                                color: COLOR_BLANCO, 
-                                textTransform: 'none'
+                                borderColor: COLOR_BLANCO,
+                                color: COLOR_BLANCO,
+                                textTransform: 'none',
+                                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                                py: 0.5,
+                                '&:hover': {
+                                    borderColor: COLOR_VERDE_LIMA,
+                                    color: COLOR_VERDE_LIMA
+                                }
                             }}
                         >
                             Iniciar Sesión
@@ -200,54 +348,60 @@ export default function Layout() {
             )}
 
             {/* Lista de Items */}
-            <List className="px-2 mt-2" sx={{ flexGrow: 1, overflowY: 'auto' }}>
+            <List sx={{
+                flexGrow: 1,
+                overflowY: 'auto',
+                px: 1,
+                py: 0,
+                '&::-webkit-scrollbar': {
+                    width: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                    background: 'rgba(255,255,255,0.05)',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    background: COLOR_AZUL_ELECTRICO,
+                    borderRadius: '3px',
+                }
+            }}>
                 {filteredMenuItems.map((item) => {
-                    // LÓGICA DE ACTIVACIÓN:
                     const isActive = location.pathname.includes(item.path) && item.path !== '/'
                         ? location.pathname.startsWith(item.path)
                         : location.pathname === item.path;
-                    
+
                     return (
                         <ListItem
                             key={item.text}
                             component={Link}
                             to={item.path}
-                            onClick={() => setDrawerOpen(false)}
-                            selected={isActive} 
+                            onClick={handleDrawerClose}
+                            selected={isActive}
                             sx={{
-                                borderRadius: '8px', 
-                                mb: 0.5, 
-                                paddingLeft: 2,
-                                // Color por defecto: BLANCO (sobre fondo negro)
-                                color: COLOR_BLANCO, 
+                                borderRadius: '8px',
+                                mb: 0.5,
+                                px: 2,
+                                py: isMobile ? 1.25 : 1,
+                                color: COLOR_BLANCO,
                                 fontWeight: 'normal',
-                                
+                                minHeight: isMobile ? '48px' : '44px',
                                 '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-                                    transform: 'none', 
-                                    transition: 'all 0.1s ease-in-out',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
                                 },
-                                // 🚀 ESTILO CLAVE PARA RESALTAR LA OPCIÓN ACTIVA
                                 '&.Mui-selected, &.Mui-selected:hover': {
-                                    // Fondo: Gris Oscuro (sutil, como en tu última imagen)
-                                    backgroundColor: COLOR_GRIS_OSCURO, 
-                                    borderLeft: 'none', 
-                                    // Texto: ¡VERDE LIMA!
-                                    color: COLOR_VERDE_LIMA, 
+                                    backgroundColor: COLOR_GRIS_OSCURO,
+                                    color: COLOR_VERDE_LIMA,
                                     fontWeight: 'bold',
-                                    boxShadow: 'none',
                                     '& .MuiListItemIcon-root': {
-                                        // Ícono: ¡VERDE LIMA!
-                                        color: COLOR_VERDE_LIMA, 
+                                        color: COLOR_VERDE_LIMA,
                                     }
                                 },
                                 textDecoration: 'none',
                             }}
                         >
-                            <ListItemIcon 
-                                sx={{ 
-                                    // Si está activo (selected), usa VERDE LIMA, si no, usa BLANCO
-                                    color: isActive ? COLOR_VERDE_LIMA : COLOR_BLANCO 
+                            <ListItemIcon
+                                sx={{
+                                    color: isActive ? COLOR_VERDE_LIMA : COLOR_BLANCO,
+                                    minWidth: isMobile ? '48px' : '40px'
                                 }}
                             >
                                 {item.icon}
@@ -257,66 +411,99 @@ export default function Layout() {
                                 primaryTypographyProps={{
                                     sx: {
                                         fontFamily: 'Roboto, sans-serif',
-                                        fontWeight: 'medium' 
+                                        fontWeight: 'medium',
+                                        fontSize: isMobile ? '0.9rem' : '0.875rem'
                                     }
                                 }}
                             />
                             {!user && item.guest && (
-                                <Typography variant="caption" sx={{ color: COLOR_NARANJA_VIBRANTE, fontSize: '0.65rem' }}>
+                                <Typography variant="caption" sx={{
+                                    color: COLOR_NARANJA_VIBRANTE,
+                                    fontSize: '0.65rem',
+                                    ml: 1
+                                }}>
                                     Demo
                                 </Typography>
+                            )}
+                            {isActive && (
+                                <Box sx={{
+                                    width: '4px',
+                                    height: '20px',
+                                    backgroundColor: COLOR_VERDE_LIMA,
+                                    borderRadius: '2px',
+                                    ml: 1
+                                }} />
                             )}
                         </ListItem>
                     );
                 })}
             </List>
-            
-            {/* Pie de página (Cerrar Sesión) */}
+
+            {/* Pie de página (Cerrar Sesión o más items en mobile) */}
             {user && (
-                <Box sx={{ p: 2, borderTop: `1px solid ${COLOR_GRIS_OSCURO}10` }}>
+                <Box sx={{
+                    p: 1.5,
+                    borderTop: `1px solid ${COLOR_GRIS_OSCURO}20`,
+                    backgroundColor: 'rgba(0,0,0,0.2)'
+                }}>
                     <ListItem
                         onClick={handleLogout}
                         sx={{
                             borderRadius: '8px',
-                            color: COLOR_NARANJA_VIBRANTE, 
+                            color: COLOR_NARANJA_VIBRANTE,
+                            py: isMobile ? 1.25 : 1,
                             '&:hover': {
-                                backgroundColor: `${COLOR_NARANJA_VIBRANTE}10`,
-                                transform: 'translateX(3px)',
-                                transition: 'all 0.3s ease-in-out',
+                                backgroundColor: `${COLOR_NARANJA_VIBRANTE}15`,
                             }
                         }}
                     >
-                        <ListItemIcon sx={{ color: COLOR_NARANJA_VIBRANTE }}>
+                        <ListItemIcon sx={{ color: COLOR_NARANJA_VIBRANTE, minWidth: isMobile ? '48px' : '40px' }}>
                             <Logout />
                         </ListItemIcon>
                         <ListItemText
                             primary="Cerrar Sesión"
-                            primaryTypographyProps={{ 
-                                sx: { 
-                                    color: COLOR_NARANJA_VIBRANTE, 
+                            primaryTypographyProps={{
+                                sx: {
+                                    color: COLOR_NARANJA_VIBRANTE,
                                     fontWeight: 'bold',
                                     fontFamily: 'Roboto, sans-serif',
-                                } 
+                                    fontSize: isMobile ? '0.9rem' : '0.875rem'
+                                }
                             }}
                         />
                     </ListItem>
+                </Box>
+            )}
+
+            {/* Versión mobile: indicador de más items disponibles */}
+            {isMobile && filteredMenuItems.length < menuItems.filter(item =>
+                (user && profile && item.roles.includes(profile.rol)) || (!user && item.guest)
+            ).length && (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        Más opciones disponibles en la versión de escritorio
+                    </Typography>
                 </Box>
             )}
         </Box>
     );
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: COLOR_GRIS_CLARO_FONDO }}>
-            
+        <Box sx={{
+            display: 'flex',
+            minHeight: '100vh',
+            backgroundColor: COLOR_GRIS_CLARO_FONDO,
+            flexDirection: { xs: 'column', md: 'row' }
+        }}>
             {/* 1. HEADER (AppBar fijo) */}
-            <Header 
+            <Header
                 onMenuClick={handleDrawerToggle}
                 user={user}
                 profile={profile}
                 handleAvatarClick={handleAvatarClick}
-                headerColor={COLOR_AZUL_ELECTRICO} 
-                drawerWidth={DRAWER_WIDTH} 
-                logoUrl={logoUrl} 
+                headerColor={COLOR_AZUL_ELECTRICO}
+                drawerWidth={isMobile ? 0 : DRAWER_WIDTH_DESKTOP}
+                logoUrl={logoUrl}
             />
 
             {/* Menú de usuario (al hacer click en el avatar) */}
@@ -325,24 +512,54 @@ export default function Layout() {
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
                     onClose={handleMenuClose}
-                    sx={{ mt: '45px' }}
+                    sx={{
+                        mt: '45px',
+                        '& .MuiPaper-root': {
+                            borderRadius: '12px',
+                            minWidth: '200px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+                        }
+                    }}
                     anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                     transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                 >
-                    <MenuItem disabled>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {profile?.email}
+                    <MenuItem disabled sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1.5 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: COLOR_GRIS_OSCURO }}>
+                            {profile?.nombre} {profile?.apellido || ''}
                         </Typography>
-                    </MenuItem>
-                    <MenuItem disabled>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: COLOR_AZUL_ELECTRICO }}>
                             {getRolDisplayName(profile?.rol)}
                         </Typography>
                     </MenuItem>
                     <Divider />
-                    <MenuItem onClick={handleLogout}>
+                    <MenuItem
+                        onClick={() => {
+                            navigate('/dashboard');
+                            handleMenuClose();
+                        }}
+                        sx={{ py: 1.25 }}
+                    >
                         <ListItemIcon>
-                            <Logout fontSize="small" sx={{ color: COLOR_NARANJA_VIBRANTE }}/>
+                            <Dashboard fontSize="small" sx={{ color: COLOR_AZUL_ELECTRICO }} />
+                        </ListItemIcon>
+                        Dashboard
+                    </MenuItem>
+                    <MenuItem
+                        onClick={() => {
+                            navigate('/perfil');
+                            handleMenuClose();
+                        }}
+                        sx={{ py: 1.25 }}
+                    >
+                        <ListItemIcon>
+                            <People fontSize="small" sx={{ color: COLOR_VERDE_LIMA }} />
+                        </ListItemIcon>
+                        Mi Perfil
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={handleLogout} sx={{ py: 1.25 }}>
+                        <ListItemIcon>
+                            <Logout fontSize="small" sx={{ color: COLOR_NARANJA_VIBRANTE }} />
                         </ListItemIcon>
                         Cerrar Sesión
                     </MenuItem>
@@ -350,40 +567,121 @@ export default function Layout() {
             )}
 
             {/* 2. DRAWER (SIDEBAR) */}
-            <Drawer
-                variant={isMobile ? 'temporary' : 'permanent'}
-                open={isMobile ? drawerOpen : true}
-                onClose={handleDrawerToggle}
-                sx={{
-                    width: DRAWER_WIDTH,
-                    flexShrink: 0,
-                    [`& .MuiDrawer-paper`]: {
-                        width: DRAWER_WIDTH,
-                        boxSizing: 'border-box',
-                        height: '100vh', 
-                        borderRight: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-                        top: 0,
-                    },
-                    display: { xs: 'block', md: 'block' }
-                }}
-            >
-                {drawer} 
-            </Drawer>
+            {isMobile ? (
+                <SwipeableDrawer
+                    anchor="left"
+                    open={drawerOpen}
+                    onClose={handleDrawerClose}
+                    onOpen={() => setDrawerOpen(true)}
+                    swipeAreaWidth={20}
+                    disableSwipeToOpen={false}
+                    ModalProps={{
+                        keepMounted: true,
+                    }}
+                    sx={{
+                        '& .MuiDrawer-paper': {
+                            boxSizing: 'border-box',
+                            width: DRAWER_WIDTH_MOBILE,
+                            borderRight: 'none',
+                            boxShadow: '4px 0 20px rgba(0,0,0,0.3)'
+                        },
+                    }}
+                >
+                    {drawer}
+                </SwipeableDrawer>
+            ) : (
+                <Drawer
+                    variant="permanent"
+                    sx={{
+                        width: DRAWER_WIDTH_DESKTOP,
+                        flexShrink: 0,
+                        [`& .MuiDrawer-paper`]: {
+                            width: DRAWER_WIDTH_DESKTOP,
+                            boxSizing: 'border-box',
+                            height: '100vh',
+                            borderRight: 'none',
+                            boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
+                            top: 0,
+                            transition: theme.transitions.create('width', {
+                                easing: theme.transitions.easing.sharp,
+                                duration: theme.transitions.duration.leavingScreen,
+                            }),
+                        },
+                        display: { xs: 'none', md: 'block' }
+                    }}
+                >
+                    {drawer}
+                </Drawer>
+            )}
 
             {/* 3. CONTENIDO PRINCIPAL */}
             <Box
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    p: 3,
-                    width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, 
-                    ml: { md: `${DRAWER_WIDTH}px` }, 
+                    p: { xs: 1.5, sm: 2, md: 3 },
+                    width: '100%',
+                    ml: { md: `${DRAWER_WIDTH_DESKTOP}px` },
+                    mt: { xs: '56px', sm: '64px' }, // Compensar altura del header
+                    minHeight: 'calc(100vh - 56px)',
+                    [theme.breakpoints.up('sm')]: {
+                        mt: '64px',
+                        minHeight: 'calc(100vh - 64px)'
+                    }
                 }}
             >
-                <Toolbar /> 
-                
                 <Outlet />
             </Box>
+
+            {/* 4. BOTTOM NAVIGATION PARA MÓVIL (Opcional) */}
+            {isMobile && user && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        backgroundColor: COLOR_NEGRO_SUAVE,
+                        borderTop: `1px solid ${COLOR_GRIS_OSCURO}`,
+                        display: 'flex',
+                        justifyContent: 'space-around',
+                        py: 1,
+                        zIndex: 1100,
+                        boxShadow: '0 -4px 12px rgba(0,0,0,0.1)'
+                    }}
+                >
+                    {[
+                        { icon: <Dashboard />, label: 'Inicio', path: '/dashboard' },
+                        { icon: <CalendarMonth />, label: 'Reservar', path: '/reservar' },
+                        { icon: <SportsSoccer />, label: 'Canchas', path: '/canchas' },
+                        { icon: <People />, label: 'Perfil', onClick: handleAvatarClick },
+                    ].filter(item => {
+                        if (item.path === '/reservar' && profile?.rol !== 'cliente' && profile?.rol !== 'gestor') return false;
+                        if (item.path === '/canchas' && !['admin', 'gestor'].includes(profile?.rol)) return false;
+                        return true;
+                    }).map((item, index) => (
+                        <IconButton
+                            key={index}
+                            onClick={() => item.onClick ? item.onClick() : navigate(item.path)}
+                            sx={{
+                                flexDirection: 'column',
+                                color: location.pathname === item.path ? COLOR_VERDE_LIMA : 'rgba(255,255,255,0.7)',
+                                padding: '8px',
+                                minWidth: '64px'
+                            }}
+                        >
+                            {item.icon}
+                            <Typography variant="caption" sx={{
+                                fontSize: '0.6rem',
+                                mt: 0.5,
+                                color: location.pathname === item.path ? COLOR_VERDE_LIMA : 'rgba(255,255,255,0.7)'
+                            }}>
+                                {item.label}
+                            </Typography>
+                        </IconButton>
+                    ))}
+                </Box>
+            )}
         </Box>
     );
 }
