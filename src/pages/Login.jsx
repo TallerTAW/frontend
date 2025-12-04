@@ -31,13 +31,11 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-
     // --- LÓGICA DE AUTENTICACIÓN Y RECAPTCHA ---
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
     const { signIn, clearError } = useAuth(); 
     const navigate = useNavigate();
     const recaptchaRef = useRef(null);
-
     // --- ESTADOS DE NOTIFICACIÓN ---
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -87,7 +85,6 @@ export default function Login() {
         }
 
         setIsLoading(true);
-
         try {
             // Obtiene el token del CAPTCHA
             const token = recaptchaRef.current.getValue();
@@ -98,7 +95,6 @@ export default function Login() {
 
             // Llama a la función de autenticación
             const result = await signIn(email, password, token);
-            
             // Resetea el CAPTCHA después de cada intento de login para forzar una nueva verificación
             if (recaptchaRef.current) {
                 recaptchaRef.current.reset();
@@ -109,7 +105,7 @@ export default function Login() {
                 // Manejo de errores del backend
                 let errorSeverity = 'error';
                 if (result.type === 'inactive') {
-                    errorSeverity = 'warning'; 
+                    errorSeverity = 'warning';
                 }
                 
                 setSnackbarMessage(result.error);
@@ -158,7 +154,9 @@ export default function Login() {
         
         '& .MuiOutlinedInput-root': {
             color: COLOR_LIGHT, 
-            '& fieldset': { borderColor: COLOR_PRIMARY },
+            '& fieldset': { 
+                borderColor: COLOR_PRIMARY 
+            },
             '&:hover fieldset': { borderColor: COLOR_LIME },
             '&.Mui-focused fieldset': { 
                 borderColor: COLOR_LIME,
@@ -184,7 +182,8 @@ export default function Login() {
                 backgroundImage: 'url(/static/uploads/cancha-login.jpg)', 
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                padding: 4,
+                // Ajuste de padding para móviles y escritorio
+                padding: { xs: 2, sm: 4 }, 
                 position: 'relative',
                 '&::before': {
                     content: '""',
@@ -194,12 +193,24 @@ export default function Login() {
                 }
             }}
         >
-            <Container maxWidth="xs" sx={{ zIndex: 10 }}>
+            {/* Ajuste: Usar maxWidth="sm" para que en móviles sea más amplio y en tablets/desktop se limite a 400px (el tamaño de xs) */}
+            <Container 
+                // En móviles, permitimos que el formulario ocupe más espacio
+                maxWidth="sm" 
+                sx={{ 
+                    zIndex: 10,
+                    // Limitamos el ancho máximo en pantallas más grandes al tamaño de 'xs' (aprox. 444px)
+                    '@media (min-width: 600px)': {
+                        maxWidth: '444px' // El ancho de maxWidth="xs" en MUI es 444px
+                    }
+                }}
+            >
                 <Box
                     component="form"
                     onSubmit={handleSubmit}
                     sx={{
-                        p: 4,
+                        // Reducimos el padding en móviles (xs) y lo mantenemos en desktop (sm/md/lg)
+                        p: { xs: 3, sm: 4 }, 
                         borderRadius: 2,
                         backgroundColor: COLOR_DARK, 
                         boxShadow: '0 8px 30px rgba(0, 0, 0, 0.8)',
@@ -207,16 +218,18 @@ export default function Login() {
                         color: COLOR_LIGHT
                     }}
                 >
-                    {/* TÍTULO */}
+                    {/* TÍTULO - Responsivo: h4 en móvil, h3 en desktop */}
                     <Typography 
                         variant="h3" 
-                        fontWeight="bold" 
-                        gutterBottom
+                        // Ajuste: variant responsivo
                         sx={{ 
                             color: COLOR_LIME, 
                             fontFamily: 'Montserrat, sans-serif',
                             mb: 1,
+                            fontSize: { xs: '2rem', sm: '3rem' } // 2rem en móviles, 3rem en desktop
                         }}
+                        fontWeight="bold" 
+                        gutterBottom
                     >
                         ¡BIENVENIDO!
                     </Typography>
@@ -283,17 +296,18 @@ export default function Login() {
                         }}
                     />
 
-                    {/* RECAPTCHA CLÁSICO (MEJOR INTEGRADO) */}
-                    {/* Centrado con flexbox y usando el tema oscuro */}
+                    {/* RECAPTCHA CLÁSICO */}
+                    {/* El reCAPTCHA de Google es responsivo por defecto hasta cierto punto.
+                       Mantenemos el centrado con flexbox. */}
                     <Box 
                         sx={{ 
                             my: 2, 
                             display: 'flex', 
                             justifyContent: 'center', 
-                            // Opcional: añade un poco de espacio extra encima y debajo del CAPTCHA
                             py: 1 
                         }}
                     >
+                        {/* El reCAPTCHA tiene un ancho mínimo, pero se centrará bien */}
                         <ReCAPTCHA
                             sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "TU_SITEKEY_DE_EJEMPLO"}
                             ref={recaptchaRef}
@@ -312,11 +326,13 @@ export default function Login() {
                         sx={{
                             mt: 3,
                             mb: 1.5,
-                            py: 1.8,
+                            // Ajuste: Reducimos un poco el padding vertical en móviles
+                            py: { xs: 1.5, sm: 1.8 },
                             backgroundColor: COLOR_ACCENT_RED,
                             color: COLOR_LIGHT,
                             fontWeight: 'bold',
-                            fontSize: '1.2em',
+                            // Ajuste: Reducimos el tamaño de fuente en móviles
+                            fontSize: { xs: '1.1em', sm: '1.2em' },
                             fontFamily: 'Montserrat, sans-serif',
                             '&:hover': {
                                 backgroundColor: COLOR_LIME,
@@ -345,7 +361,8 @@ export default function Login() {
                         variant="outlined" 
                         disabled={isLoading}
                         sx={{
-                            py: 1.2,
+                            // Ajuste: Reducimos un poco el padding vertical en móviles
+                            py: { xs: 1, sm: 1.2 },
                             borderColor: COLOR_PRIMARY, 
                             color: COLOR_PRIMARY, 
                             fontWeight: 'bold',
@@ -367,6 +384,7 @@ export default function Login() {
                 open={openSnackbar} 
                 autoHideDuration={6000} 
                 onClose={handleCloseSnackbar}
+                // Ajuste: Cambiamos la posición en móvil para mejor visibilidad y evitar solapamiento
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
                 <Alert 

@@ -68,7 +68,6 @@ export default function Dashboard() {
     };
     const [loading, setLoading] = useState(true);
     const displayStats = isGuest ? guestStats : stats;
-    
     useEffect(() => {
       if (!isGuest) {
         fetchStats();
@@ -76,7 +75,6 @@ export default function Dashboard() {
         setLoading(false); 
       }
     }, [profile, isGuest]);
-    
     const fetchStats = async () => {
       try {
         setLoading(true);
@@ -88,7 +86,6 @@ export default function Dashboard() {
             reservasApi.getAll().catch(() => []),
             usuariosApi.getAll().catch(() => [])
          ]);
-  
           setStats({
             espacios: espaciosData.length || 0,
             canchas: canchasData.length || 0,
@@ -129,7 +126,6 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-    
     const handleCardClick = (section) => {
         // Lógica de handleCardClick: Se mantiene igual
         if (isGuest) {
@@ -160,7 +156,6 @@ export default function Dashboard() {
             break;
         }
       };
-      
     // Creación de tarjetas (se mantiene igual)
     const statCards = [];
     if (profile?.rol === 'admin') {
@@ -214,7 +209,18 @@ export default function Dashboard() {
                 backgroundColor: COLOR_BLANCO 
             }}
         >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6 }}>
+            {/* ENCABEZADO: Título y Botón - RESPONSIVE APLICADO */}
+            <Box 
+                sx={{ 
+                    display: 'flex', 
+                    // RESPONSIVE: Cambia a columna en xs (móvil)
+                    flexDirection: { xs: 'column', sm: 'row' }, 
+                    justifyContent: 'space-between', 
+                    // RESPONSIVE: Alinear arriba en xs
+                    alignItems: { xs: 'flex-start', sm: 'center' }, 
+                    mb: 6 
+                }}
+            >
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -232,6 +238,7 @@ export default function Dashboard() {
                     >
                         {isGuest ? 'Bienvenido a OlympiaHub' : `Bienvenido, ${profile?.nombre}`}
                     </Typography>
+              
                     <Typography 
                         variant="body1" 
                         sx={{ 
@@ -280,7 +287,7 @@ export default function Dashboard() {
                                         fontFamily: 'Montserrat, sans-serif',
                                         fontWeight: 'bold'
                                     }}
-                                >
+                                  >
                                     Regístrate Gratis
                                 </Button>
                                 <Button 
@@ -295,7 +302,7 @@ export default function Dashboard() {
                                         fontFamily: 'Montserrat, sans-serif',
                                         fontWeight: 'bold'
                                     }}
-                                >
+                                  >
                                     Iniciar Sesión
                                 </Button>
                             </Box>
@@ -303,12 +310,15 @@ export default function Dashboard() {
                     )}
                 </motion.div>
                 
+                {/* BOTÓN ACTUALIZAR */}
                 {!isGuest && (
                     <Button
                         startIcon={<Refresh />}
                         onClick={fetchStats}
                         variant="outlined"
                         sx={{ 
+                            // RESPONSIVE AÑADIDO: Margen superior en móvil para separación
+                            mt: { xs: 3, sm: 0 }, 
                             // BOTÓN ACTUALIZAR EN NARANJA OSCURO (#FD7E14)
                             color: COLOR_NARANJA_OSCURO, 
                             borderColor: COLOR_NARANJA_OSCURO,
@@ -325,43 +335,56 @@ export default function Dashboard() {
                 )}
             </Box>
 
-            {/* Grid de estadísticas (Card styles updated via getColorValue) */}
+            {/* Grid de estadísticas (RESPONSIVE APLICADO) */}
             <Grid container spacing={3}>
-                {(isGuest ? [
-                    { title: 'Espacios Deportivos', value: displayStats.espacios, icon: <Stadium />, color: 'from-primary to-primary', section: 'espacios', guest: true },
-                    { title: 'Canchas Disponibles', value: displayStats.canchas, icon: <SportsSoccer />, color: 'from-secondary to-secondary', section: 'canchas', guest: true },
-                    { title: 'Reservas Activas', value: displayStats.reservas, icon: <CalendarMonth />, color: 'from-accent to-accent', section: 'reservas', guest: true },
-                    { title: 'Deportes', value: '6+', icon: <People />, color: 'from-highlight to-highlight', section: 'deportes', guest: true }
-                ] : statCards).map((card, index) => (
-                    <Grid item key={index} xs={12} sm={6} md={3}>
+                {(isGuest 
+                    ? [
+                        // Stats de demo para invitado (4 tarjetas)
+                        { title: 'Espacios Deportivos', value: guestStats.espacios, icon: <Stadium />, color: 'from-primary to-primary', section: 'espacios', guest: true },
+                        { title: 'Canchas Disponibles', value: guestStats.canchas, icon: <SportsSoccer />, color: 'from-secondary to-secondary', section: 'canchas', guest: true },
+                        { title: 'Reservas Activas', value: guestStats.reservas, icon: <CalendarMonth />, color: 'from-accent to-accent', section: 'reservas', guest: true },
+                        { title: 'Disciplinas', value: '6+', icon: <People />, color: 'from-highlight to-highlight', section: 'deportes', guest: true }
+                    ] 
+                    : statCards
+                ).map((card, index) => (
+                    <Grid 
+                        item 
+                        key={index} 
+                        xs={12} // 1 card por fila en móvil
+                        sm={6} // 2 cards por fila en tablet
+                        lg={4} // 3 cards por fila en escritorio pequeño
+                        xl={3} // 4 cards por fila en escritorio grande
+                    >
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.5, delay: index * 0.1 }}
                         >
-                            <Card
-                                sx={{
+                            <Card 
+                                sx={{ 
+                                    cursor: (isGuest && card.guest) ? 'default' : 'pointer',
                                     borderRadius: '16px', 
-                                    boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-                                    transition: 'all 0.3s',
+                                    height: '100%', 
+                                    display: 'flex', 
+                                    alignItems: 'center',
+                                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                                    transition: 'transform 0.3s ease-in-out',
                                     '&:hover': {
-                                        boxShadow: '0 12px 24px rgba(0,0,0,0.25)',
-                                        transform: 'translateY(-4px)',
+                                        transform: (isGuest && card.guest) ? 'none' : 'translateY(-5px)',
+                                        boxShadow: '0 12px 24px rgba(0,0,0,0.3)',
                                     },
-                                    cursor: card.guest ? 'default' : 'pointer',
-                                    // El background ahora usa la nueva paleta y los colores de la card
                                     background: `linear-gradient(135deg, ${getColorValue(card.color.split(' ')[0])} 0%, ${getColorValue(card.color.split(' ')[1])} 100%)`,
-                                }}
+                                }} 
                                 onClick={card.guest ? undefined : () => handleCardClick(card.section)}
                             >
                                 <CardContent sx={{ color: COLOR_BLANCO, p: 3 }}>
                                     <Box sx={{ backgroundColor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '8px', backdropFilter: 'blur(5px)' }}>
                                         {card.icon}
                                     </Box>
-                                    <Typography variant="h3" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold' }}>
+                                    <Typography variant="h3" sx={{ fontWeight: 'bold', mt: 2, mb: 1, fontFamily: 'Montserrat, sans-serif' }}>
                                         {card.value}
                                     </Typography>
-                                    <Typography variant="h6" sx={{ fontFamily: 'Roboto, sans-serif', fontWeight: 'medium' }}>
+                                    <Typography variant="subtitle1" sx={{ fontFamily: 'Roboto, sans-serif' }}>
                                         {card.title}
                                     </Typography>
                                     {card.guest && (
@@ -381,125 +404,113 @@ export default function Dashboard() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                    style={{ marginTop: '32px' }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    style={{ marginTop: '48px' }}
                 >
-                    <Card sx={{ borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                       <Box sx={{ p: 4 }}>
-                            <Typography variant="h5" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', 
-                                // COLOR MODIFICADO (Azul Eléctrico)
-                                color: COLOR_AZUL_ELECTRICO, mb: 3 }}>
-                                Información del Sistema
+                    <Typography variant="h5" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', color: COLOR_AZUL_ELECTRICO, mb: 4 }}>
+                        Información del Sistema
+                    </Typography>
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
+                                <Box component="strong" sx={{ fontWeight: 'bold' }}>Usuario:</Box> {profile?.nombre} {profile?.apellido || ''}
                             </Typography>
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
-                                    <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
-                                        <Box component="strong" sx={{ fontWeight: 'bold' }}>Usuario:</Box> {profile?.nombre} {profile?.apellido || ''}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
-                                        <Box component="strong" sx={{ fontWeight: 'bold' }}>Email:</Box> {profile?.email}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700') }}>
-                                        <Box component="strong" sx={{ fontWeight: 'bold' }}>Rol:</Box> {getRolDisplayName(profile?.rol)}
-                                    </Typography>
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
-                                        <Box component="strong" sx={{ fontWeight: 'bold' }}>Fecha:</Box> {new Date().toLocaleDateString('es-ES', { 
-                                            weekday: 'long', 
-                                            year: 'numeric', 
-                                            month: 'long', 
-                                            day: 'numeric' 
-                                        })}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700') }}>
-                                        <Box component="strong" sx={{ fontWeight: 'bold' }}>Hora:</Box> {new Date().toLocaleTimeString('es-ES')}
-                                    </Typography>
-                                </Grid>
-                            </Grid>
+                            <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
+                                <Box component="strong" sx={{ fontWeight: 'bold' }}>Rol:</Box> {getRolDisplayName(profile?.rol)}
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
+                                <Box component="strong" sx={{ fontWeight: 'bold' }}>Último Acceso:</Box> {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontFamily: 'Roboto, sans-serif', color: getColorValue('text-gray-700'), mb: 1 }}>
+                                <Box component="strong" sx={{ fontWeight: 'bold' }}>Fecha:</Box> {new Date().toLocaleDateString('es-ES', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </Typography>
+                        </Grid>
+                    </Grid>
 
-                            {/* Acciones rápidas */}
-                            <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${COLOR_NEGRO_FONDO}10` }}>
-                                <Typography variant="h6" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', 
-                                    // COLOR MODIFICADO (Verde Lima)
-                                    color: COLOR_VERDE_LIMA, mb: 2 }}>
-                                    Acciones Rápidas
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    {profile?.rol === 'admin' && (
-                                        <>
-                                            <Grid item>
-                                                <Button 
-                                                    variant="contained" 
-                                                    onClick={() => navigate('/espacios')}
-                                                    sx={{ 
-                                                        // BOTÓN EN AZUL ELÉCTRICO
-                                                        backgroundColor: COLOR_AZUL_ELECTRICO,
-                                                        color: COLOR_BLANCO, 
-                                                        fontFamily: 'Roboto, sans-serif',
-                                                        '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 } 
-                                                    }}
-                                                >
-                                                    Gestionar Espacios
-                                                </Button>
-                                            </Grid>
-                                            <Grid item>
-                                                <Button 
-                                                    variant="contained" 
-                                                    onClick={() => navigate('/usuarios')}
-                                                    sx={{ 
-                                                        // BOTÓN EN VERDE LIMA
-                                                        backgroundColor: COLOR_VERDE_LIMA,
-                                                        color: COLOR_NEGRO_FONDO, // Texto oscuro para contraste
-                                                        fontFamily: 'Roboto, sans-serif',
-                                                        fontWeight: 'bold',
-                                                        '&:hover': { backgroundColor: COLOR_VERDE_LIMA, opacity: 0.9 } 
-                                                    }}
-                                                >
-                                                    Gestionar Usuarios
-                                                </Button>
-                                            </Grid>
-                                        </>
-                                    )}
-                                    {profile?.rol === 'cliente' && (
-                                        <Grid item>
-                                            <Button 
-                                                variant="contained" 
-                                                onClick={() => navigate('/reservar')}
-                                                sx={{ 
-                                                    // BOTÓN EN AZUL ELÉCTRICO
-                                                    backgroundColor: COLOR_AZUL_ELECTRICO,
-                                                    color: COLOR_BLANCO, 
-                                                    fontFamily: 'Roboto, sans-serif',
-                                                    fontWeight: 'bold',
-                                                    '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 } 
-                                                }}
-                                            >
-                                                Nueva Reserva
-                                            </Button>
-                                        </Grid>
-                                    )}
-                                    {profile?.rol === 'control_acceso' && (
-                                        <Grid item>
-                                            <Button 
-                                                variant="contained" 
-                                                onClick={() => navigate('/control-acceso')}
-                                                sx={{ 
-                                                    // BOTÓN EN NARANJA OSCURO (#FD7E14)
-                                                    backgroundColor: COLOR_NARANJA_OSCURO,
-                                                    color: COLOR_BLANCO, 
-                                                    fontFamily: 'Roboto, sans-serif',
-                                                    '&:hover': { backgroundColor: COLOR_NARANJA_OSCURO, opacity: 0.9 } 
-                                                }}
-                                            >
-                                                Control de Acceso
-                                            </Button>
-                                        </Grid>
-                                    )}
+                    {/* Acciones Rápidas */}
+                    <Typography variant="h5" sx={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'bold', mt: 6, color: COLOR_VERDE_LIMA, mb: 2 }}>
+                        Acciones Rápidas
+                    </Typography>
+                    <Grid container spacing={2}>
+                        {profile?.rol === 'admin' && (
+                            <>
+                                <Grid item>
+                                    <Button 
+                                        variant="contained" 
+                                        onClick={() => navigate('/espacios')}
+                                        sx={{ 
+                                            backgroundColor: COLOR_AZUL_ELECTRICO, 
+                                            color: COLOR_BLANCO, 
+                                            fontWeight: 'bold',
+                                            fontFamily: 'Roboto, sans-serif', 
+                                            '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 }
+                                        }} 
+                                    >
+                                        Gestionar Espacios
+                                    </Button>
                                 </Grid>
-                            </Box>
-                        </Box>
-                    </Card>
+                                <Grid item>
+                                    <Button 
+                                        variant="contained" 
+                                        onClick={() => navigate('/usuarios')}
+                                        sx={{ 
+                                            backgroundColor: COLOR_VERDE_LIMA, 
+                                            color: COLOR_NEGRO_FONDO, // Texto oscuro para contraste
+                                            fontWeight: 'bold',
+                                            fontFamily: 'Roboto, sans-serif', 
+                                            '&:hover': { backgroundColor: COLOR_VERDE_LIMA, opacity: 0.9 }
+                                        }}
+                                    >
+                                        Gestionar Usuarios
+                                    </Button>
+                                </Grid>
+                            </>
+                        )}
+                        
+                        {profile?.rol === 'cliente' && (
+                            <Grid item>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={() => navigate('/reservar')}
+                                    sx={{ 
+                                        // BOTÓN EN AZUL ELÉCTRICO 
+                                        backgroundColor: COLOR_AZUL_ELECTRICO, 
+                                        color: COLOR_BLANCO, 
+                                        fontWeight: 'bold',
+                                        fontFamily: 'Roboto, sans-serif', 
+                                        '&:hover': { backgroundColor: COLOR_AZUL_ELECTRICO, opacity: 0.9 }
+                                    }}
+                                >
+                                    Crear Nueva Reserva
+                                </Button>
+                            </Grid>
+                        )}
+                        {profile?.rol === 'control_acceso' && (
+                            <Grid item>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={() => navigate('/reservas')}
+                                    sx={{ 
+                                        // BOTÓN EN NARANJA VIBRANTE 
+                                        backgroundColor: COLOR_NARANJA_VIBRANTE, 
+                                        color: COLOR_NEGRO_FONDO, // Texto oscuro para contraste
+                                        fontWeight: 'bold',
+                                        fontFamily: 'Roboto, sans-serif', 
+                                        '&:hover': { backgroundColor: COLOR_NARANJA_VIBRANTE, opacity: 0.9 }
+                                    }}
+                                >
+                                    Validar Reservas
+                                </Button>
+                            </Grid>
+                        )}
+                    </Grid>
                 </motion.div>
             )}
         </Box>
