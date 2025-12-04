@@ -97,7 +97,7 @@ export default function Layout() {
         { text: 'Mi Billetera', icon: <AccountBalanceWallet />, path: '/wallet', roles: ['cliente'] },
         { text: 'Reservas', icon: <CalendarMonth />, path: '/reservas', roles: ['admin', 'gestor', 'control_acceso'] },
         { text: 'Control Acceso', icon: <QrCodeScanner />, path: '/control-acceso', roles: ['control_acceso'] },
-        { text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
+        //{ text: 'Reportes', icon: <Assessment />, path: '/reportes', roles: ['admin'] },
         { text: 'Usuarios', icon: <People />, path: '/usuarios', roles: ['admin'] },
         { text: 'Cupones', icon: <Star />, path: '/cupones', roles: ['admin'] },
     ];
