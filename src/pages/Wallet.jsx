@@ -19,19 +19,17 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Avatar,
   IconButton,
   Tooltip
 } from '@mui/material';
 import { 
-  AccountBalanceWallet, 
-  CardGiftcard, 
-  CheckCircle, 
+  AccountBalanceWallet,
+  CardGiftcard,
+  CheckCircle,
   Add,
   Edit,
   Delete,
-  ContentCopy,
-  LocalOffer
+  ContentCopy
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -316,7 +314,8 @@ export default function Wallet() {
                   },
                   borderLeft: `4px solid ${
                     cupon.estado === 'utilizado' ? '#9e9e9e' : 
-                    cupon.estado === 'activo' ? COLOR_VERDE_LIMA : COLOR_NARANJA_VIBRANTE
+                    cupon.estado === 'activo' ? COLOR_VERDE_LIMA : 
+                    COLOR_NARANJA_VIBRANTE
                   }`,
                 }}
               >
@@ -326,12 +325,14 @@ export default function Wallet() {
                       <CardGiftcard
                         sx={{
                           fontSize: 32,
-                          color: cupon.estado === 'activo' ? COLOR_NARANJA_VIBRANTE : '#9e9e9e',
+                          color: cupon.estado === 'activo' ?
+                            COLOR_NARANJA_VIBRANTE : '#9e9e9e',
                         }}
                       />
                       <Box>
                         <Typography variant="h4" sx={{ fontWeight: 'bold', color: COLOR_NARANJA_VIBRANTE }}>
-                          {cupon.tipo === 'porcentaje' ? `${cupon.monto_descuento}%` : `$${cupon.monto_descuento}`}
+                          {cupon.tipo === 'porcentaje' ?
+                            `${cupon.monto_descuento}%` : `$${cupon.monto_descuento}`}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography variant="body2" color="text.secondary">
@@ -355,8 +356,10 @@ export default function Wallet() {
                         icon={cupon.estado === 'utilizado' ? <CheckCircle /> : undefined}
                         label={cupon.estado}
                         color={
-                          cupon.estado === 'activo' ? 'success' : 
-                          cupon.estado === 'utilizado' ? 'default' : 'error'
+                          cupon.estado === 'activo' ?
+                            'success' : 
+                          cupon.estado === 'utilizado' ?
+                            'default' : 'error'
                         }
                         size="small"
                         sx={{ fontWeight: 'bold' }}
@@ -371,6 +374,7 @@ export default function Wallet() {
                           >
                             <Edit fontSize="small" />
                           </IconButton>
+                          
                           {cupon.estado === 'activo' ? (
                             <IconButton
                               size="small"
@@ -449,7 +453,7 @@ export default function Wallet() {
             No hay cupones disponibles
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {profile?.rol === 'admin' ? 
+            {profile?.rol === 'admin' ?
               'Crea tu primer cupón usando el botón "Crear Cupón"' : 
               'No tienes cupones asignados en este momento'}
           </Typography>
@@ -484,6 +488,7 @@ export default function Wallet() {
                 required
                 margin="normal"
               />
+              
               <Button 
                 onClick={generarCodigo}
                 variant="outlined"

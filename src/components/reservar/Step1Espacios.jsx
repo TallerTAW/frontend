@@ -1,4 +1,4 @@
-import { Grid } from '@mui/material';
+import { Grid, Typography, Box } from '@mui/material';
 import EspacioCard from './EspacioCard';
 import LoadingState from '../common/LoadingState';
 import EmptyState from '../common/EmptyState';
@@ -13,11 +13,21 @@ export default function Step1Espacios({ espacios, onEspacioSelect, loading }) {
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Selecciona un Espacio Deportivo</h2>
+    // Se cambia el div por Box y se usa Typography para consistencia
+    <Box> 
+      <Typography variant="h5" className="font-bold mb-6">
+        Selecciona un Espacio Deportivo
+      </Typography>
+      
       <Grid container spacing={3}>
         {espacios.map((espacio, index) => (
-          <Grid item xs={12} sm={6} md={4} key={espacio.id_espacio_deportivo}>
+          <Grid 
+            item 
+            xs={12}      // 1 columna en móvil
+            sm={6}      // 2 columnas en tableta
+            md={4}      // 3 columnas en escritorio (optimización de espacio)
+            key={espacio.id_espacio_deportivo}
+          >
             <EspacioCard
               espacio={espacio}
               onClick={() => onEspacioSelect(espacio)}
@@ -26,6 +36,6 @@ export default function Step1Espacios({ espacios, onEspacioSelect, loading }) {
           </Grid>
         ))}
       </Grid>
-    </div>
+    </Box>
   );
 }

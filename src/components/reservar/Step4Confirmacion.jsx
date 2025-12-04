@@ -40,66 +40,42 @@ export default function Step4Confirmacion({
   // Validar horario
   useEffect(() => {
     if (reservationData.hora_inicio && reservationData.hora_fin) {
+      // Re-ejecutar isHorarioDisponible si cambian las horas o la fecha
       setHorarioDisponible(isHorarioDisponible());
     } else {
       setHorarioDisponible(true);
     }
-  }, [reservationData.hora_inicio, reservationData.hora_fin, isHorarioDisponible]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationData.hora_inicio, reservationData.hora_fin, reservationData.fecha_reserva]); 
+  // Se añade reservationData.fecha_reserva como dependencia implícita
 
   // Validar asistentes
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('=== VALIDANDO ASISTENTES EN STEP4 ===');
-      console.log('Cantidad asistentes en reservationData:', reservationData.cantidad_asistentes);
-      console.log('Array de asistentes:', asistentes);
-      console.log('Longitud array asistentes:', asistentes?.length);
-      
+      // Si solo hay 1 asistente (el reservante), la validación es automática
       if (reservationData.cantidad_asistentes <= 1) {
-        console.log('Solo 1 asistente, validación automática OK');
         setAsistentesValidos(true);
         return;
       }
       
-      // Si no hay asistentes aún, marcar como inválidos
-      if (!asistentes || asistentes.length === 0) {
-        console.log('Error: Array de asistentes vacío');
-        setAsistentesValidos(false);
-        return;
+      // La cantidad de asistentes en el array debe coincidir con la cantidad solicitada
+      const cantidadCoincide = asistentes && asistentes.length === reservationData.cantidad_asistentes;
+      
+      if (!cantidadCoincide) {
+          setAsistentesValidos(false);
+          return;
       }
       
-      // Verificar cantidad
-      if (asistentes.length !== reservationData.cantidad_asistentes) {
-        console.log('Error: Cantidad no coincide', {
-          esperado: reservationData.cantidad_asistentes,
-          obtenido: asistentes.length
-        });
-        setAsistentesValidos(false);
-        return;
-      }
-      
-      // Validar cada asistente
-      const todosValidos = asistentes.every((asistente, index) => {
-        if (!asistente) {
-          console.log(`Asistente ${index + 1} no definido`);
-          return false;
-        }
+      // Validar datos de cada asistente (nombre no vacío, email válido)
+      const todosValidos = asistentes.every((asistente) => {
+        if (!asistente) return false;
         
         const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
         const emailValido = asistente.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asistente.email.trim());
         
-        if (!nombreValido || !emailValido) {
-          console.log(`Asistente ${index + 1} inválido:`, {
-            nombre: asistente.nombre,
-            email: asistente.email,
-            nombreValido,
-            emailValido
-          });
-        }
-        
         return nombreValido && emailValido;
       });
       
-      console.log('Resultado validación asistentes:', todosValidos);
       setAsistentesValidos(todosValidos);
     }, 100);
     
@@ -108,31 +84,26 @@ export default function Step4Confirmacion({
 
   // Determinar si el botón debe estar deshabilitado
   const isButtonDisabled = () => {
-  const tieneMasDeUnAsistente = reservationData.cantidad_asistentes > 1;
-  
-  const condiciones = {
-    fecha: !reservationData.fecha_reserva,
-    hora_inicio: !reservationData.hora_inicio,
-    hora_fin: !reservationData.hora_fin,
-    horarioNoValido: !isHorarioDisponible() || !horarioDisponible,
-    horasInvalidas: reservationData.hora_inicio && reservationData.hora_fin && 
-                   parseInt(reservationData.hora_fin.split(':')[0]) <= parseInt(reservationData.hora_inicio.split(':')[0]),
-    // SOLO validar asistentes si el usuario ha mostrado el formulario
-    asistentesInvalidos: tieneMasDeUnAsistente && mostrarFormAsistentes && !asistentesValidos,
+    const tieneMasDeUnAsistente = reservationData.cantidad_asistentes > 1;
+    
+    const condiciones = {
+      // Campos básicos
+      fecha: !reservationData.fecha_reserva,
+      hora_inicio: !reservationData.hora_inicio,
+      hora_fin: !reservationData.hora_fin,
+      
+      // Validaciones de horario
+      horarioNoDisponible: !isHorarioDisponible() || !horarioDisponible,
+      horasInvalidas: reservationData.hora_inicio && reservationData.hora_fin && 
+                      parseInt(reservationData.hora_fin.split(':')[0]) <= parseInt(reservationData.hora_inicio.split(':')[0]),
+      
+      // Validar asistentes SOLO si el formulario de asistentes se ha mostrado y hay más de 1
+      asistentesInvalidos: tieneMasDeUnAsistente && mostrarFormAsistentes && !asistentesValidos,
+    };
+    
+    // Si alguna condición es TRUE, el botón está deshabilitado
+    return Object.values(condiciones).some(c => c);
   };
-  
-  const deshabilitado = Object.values(condiciones).some(c => c);
-  
-  console.log('Condiciones botón:', {
-    ...condiciones,
-    tieneMasDeUnAsistente,
-    mostrarFormAsistentes,
-    asistentesValidos,
-    deshabilitado
-  });
-  
-  return deshabilitado;
-};
 
   return (
     <Box>
@@ -175,15 +146,19 @@ export default function Step4Confirmacion({
         </Alert>
       )}
 
+      {/* Uso de Grid para dividir en dos columnas en pantallas grandes (md en adelante) */}
       <Grid container spacing={4}>
-        {/* Columna 1: Detalles de la Cancha */}
+        {/* Columna 1: Detalles de la Cancha (Ocupa 5/12 en md, 12/12 en xs) */}
         <Grid item xs={12} md={5}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <Card className="rounded-2xl shadow-xl overflow-hidden h-full" sx={{ border: 'none' }}>
+            <Card 
+              className="rounded-2xl shadow-xl overflow-hidden" 
+              sx={{ border: 'none', height: '100%' }} // <--- Asegura altura completa para una apariencia limpia
+            >
               <Box sx={{ 
                 background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)', 
                 p: 3,
@@ -293,7 +268,7 @@ export default function Step4Confirmacion({
           </motion.div>
         </Grid>
 
-        {/* Columna 2: Formulario de Reserva */}
+        {/* Columna 2: Formulario de Reserva (Ocupa 7/12 en md, 12/12 en xs) */}
         <Grid item xs={12} md={7}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -328,7 +303,6 @@ export default function Step4Confirmacion({
                   getHorasFinDisponiblesList={getHorasFinDisponiblesList}
                   onAsistentesChange={onAsistentesChange}
                   onMostrarFormAsistentes={(mostrar) => setMostrarFormAsistentes(mostrar)}
-                  
                 />
 
                 {/* Resumen del Tiempo */}
@@ -336,7 +310,7 @@ export default function Step4Confirmacion({
                   <Paper elevation={0} sx={{ 
                     p: 3, 
                     mt: 3, 
-                    bgcolor: '#f5f5f5', 
+                    bgcolor: '#f5f5f5',
                     borderRadius: 2,
                     borderLeft: '4px solid #0f9fe1'
                   }}>
@@ -377,8 +351,8 @@ export default function Step4Confirmacion({
                 {cupones.length > 0 && (
                   <Paper elevation={0} sx={{ 
                     p: 3, 
-                    mt: 3, 
-                    bgcolor: '#fff8e1', 
+                    mt: 3,
+                    bgcolor: '#fff8e1',
                     borderRadius: 2,
                     border: '1px dashed #ffd54f'
                   }}>
@@ -412,7 +386,7 @@ export default function Step4Confirmacion({
                               <br/>
                               <small>
                                 {asistentes.filter(a => a && a.nombre && a.email && 
-                                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())).length} 
+                                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())).length}
                                 de {reservationData.cantidad_asistentes} completados correctamente
                               </small>
                             </>
@@ -465,7 +439,7 @@ export default function Step4Confirmacion({
                     <Alert 
                       severity="error" 
                       sx={{ 
-                        mt: 3, 
+                        mt: 3,
                         borderRadius: 2,
                         backgroundColor: '#ffebee',
                         border: '1px solid #ffcdd2'
