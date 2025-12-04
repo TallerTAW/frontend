@@ -21,6 +21,7 @@ import { ArrowBack } from '@mui/icons-material';
 export default function Reservar() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   
   const {
@@ -47,6 +48,7 @@ export default function Reservar() {
     fetchHorariosDisponibles,
     setActiveStep,
     handleEspacioSelect,
+ 
     handleDisciplinaSelect,
     handleCanchaSelect,
     setSelectedCoupon,
@@ -80,6 +82,7 @@ export default function Reservar() {
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
+   
         setLoading(false);
       }
     };
@@ -139,6 +142,7 @@ export default function Reservar() {
             onBack={() => setActiveStep(0)}
             loading={loading}
           />
+        
         );
       case 2:
         return (
@@ -149,6 +153,7 @@ export default function Reservar() {
             onCanchaSelect={handleCanchaSelect}
             onBack={() => setActiveStep(1)}
             loading={loading}
+     
           />
         );
       case 3:
@@ -160,6 +165,7 @@ export default function Reservar() {
             cupones={cupones}
             reservationData={reservationData}
             horariosDisponibles={horariosDisponibles}
+        
             selectedCoupon={selectedCoupon}
             onBack={() => setActiveStep(2)}
             onCouponChange={setSelectedCoupon}
@@ -168,6 +174,7 @@ export default function Reservar() {
             isHorarioDisponible={isHorarioDisponible}
             calcularCostoTotal={calcularCostoTotal}
             getOccupiedHours={getOccupiedHours}
+        
             profile={profile}
             isHoraInicioValida={isHoraInicioValida}
             isHoraFinValida={isHoraFinValida}
@@ -176,6 +183,7 @@ export default function Reservar() {
             horarioDisponible={isHorarioDisponible()}
             asistentes={asistentes}
             validarAsistentes={validarAsistentes}
+            
             onAsistentesChange={handleAsistentesChange}
           />
         );
@@ -194,6 +202,7 @@ export default function Reservar() {
           mb: 2, 
           color: 'text.secondary',
           '&:hover': {
+        
             backgroundColor: 'action.hover'
           }
         }}
@@ -206,6 +215,7 @@ export default function Reservar() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+  
       >
         <Typography 
           variant="h4" 
@@ -214,6 +224,7 @@ export default function Reservar() {
             mb: 4, 
             color: 'primary.main',
             fontSize: { xs: '1.75rem', sm: '2.125rem' }
+      
           }}
         >
           Reservar Cancha
@@ -224,6 +235,7 @@ export default function Reservar() {
       <Box sx={{ display: { xs: 'none', sm: 'block' }, mb: 4 }}>
         <Stepper activeStep={activeStep}>
           {steps.map((label) => (
+        
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -234,6 +246,7 @@ export default function Reservar() {
       {/* Indicador de paso para móviles */}
       <Box sx={{ display: { xs: 'block', sm: 'none' }, mb: 3 }}>
         <Typography variant="body1" sx={{ fontWeight: 'medium', color: 'primary.main' }}>
+ 
           Paso {activeStep + 1} de {steps.length}: {steps[activeStep]}
         </Typography>
       </Box>
@@ -247,6 +260,7 @@ export default function Reservar() {
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleConfirmReservation}
         selectedCancha={selectedCancha}
+    
         reservationData={reservationData}
         selectedCoupon={selectedCoupon}
         cupones={cupones}
@@ -259,6 +273,7 @@ export default function Reservar() {
         <Box sx={{ 
           mt: 4, 
           p: 2, 
+ 
           bgcolor: 'info.light', 
           borderRadius: 1,
           border: '1px solid',
@@ -267,6 +282,7 @@ export default function Reservar() {
           <Typography variant="body2" color="text.primary">
             <strong>Nota:</strong> Necesitarás iniciar sesión para completar la reserva
           </Typography>
+     
         </Box>
       )}
     </Box>

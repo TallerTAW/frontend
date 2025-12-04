@@ -29,9 +29,9 @@ import {
   Paper
 } from '@mui/material';
 import { 
-  AccountBalanceWallet, 
-  CardGiftcard, 
-  CheckCircle, 
+  AccountBalanceWallet,
+  CardGiftcard,
+  CheckCircle,
   Add,
   Edit,
   Delete,
@@ -743,7 +743,12 @@ function CouponCard({ cupon, profile, onEdit, onDelete, onActivate, onCopy, isMo
           `linear-gradient(135deg, ${tipoColor}15 0%, ${COLOR_AZUL_ELECTRICO}15 100%)` : 
           'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)',
         border: `2px solid ${isActivo ? tipoColor : '#bdbdbd'}`,
-        position: 'relative'
+        position: 'relative',
+        borderLeft: `4px solid ${
+          cupon.estado === 'utilizado' ? '#9e9e9e' : 
+          cupon.estado === 'activo' ? COLOR_VERDE_LIMA : 
+          COLOR_NARANJA_VIBRANTE
+        }`,
       }}
     >
       {/* Ribbon de estado */}

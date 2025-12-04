@@ -17,7 +17,7 @@ export default function Step3Canchas({
   }
 
   const canchasDisponibles = canchas.filter(c => c.estado === 'disponible');
-
+  
   if (canchasDisponibles.length === 0) {
     return (
       <Box>
@@ -57,7 +57,13 @@ export default function Step3Canchas({
 
       <Grid container spacing={3}>
         {canchasDisponibles.map((cancha, index) => (
-          <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
+          <Grid 
+            item 
+            xs={12}      // 1 columna en móvil
+            sm={6}      // 2 columnas en tableta
+            md={4}      // 3 columnas en escritorio (optimización de espacio)
+            key={cancha.id_cancha}
+          >
             <CanchaCard
               cancha={cancha}
               onClick={() => onCanchaSelect(cancha)}
