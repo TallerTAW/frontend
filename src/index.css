@@ -4,6 +4,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos para el mapa Leaflet */
+.leaflet-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  z-index: 1;
+}
+
+.leaflet-popup-content {
+  margin: 13px 19px !important;
+  min-width: 200px;
+}
+
+.leaflet-control-geocoder-form {
+  width: 300px;
+}
+
+.leaflet-control-geocoder-form input {
+  padding: 10px !important;
+  font-size: 14px !important;
+}
+
+.leaflet-control-geocoder-icon {
+  background-color: #00BFFF !important;
+  border-radius: 4px !important;
+}
+
+/* Animación de carga */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Estilos responsivos */
+@media (max-width: 600px) {
+  .leaflet-control-geocoder-form {
+    width: 200px;
+  }
+  
+  .leaflet-control-geocoder {
+    max-width: 90%;
+  }
+}
+
 * {
   margin: 0;
   padding: 0;

@@ -28,7 +28,8 @@ import {
   MenuItem,
   Avatar,
   Paper,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material';
 import {
   Add,
@@ -47,9 +48,11 @@ import {
   ArrowBack,
   Security,
   Person,
-  Cancel
+  Cancel,
+  GpsFixed
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import MapSelector from './MapSelector'; // Asegúrate de que la ruta sea correcta
 
 // === PALETA DE COLORES ===
 const COLOR_AZUL_ELECTRICO = '#00BFFF';
@@ -162,7 +165,9 @@ const ImageUploader = ({ onImageChange, currentImage }) => {
               right: 8,
               backgroundColor: 'rgba(0,0,0,0.5)',
               color: 'white',
-              '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.7)'
+              }
             }}
           >
             <DeleteIcon />
@@ -304,149 +309,6 @@ const HorariosCancha = ({ cancha, espacio, onBack }) => {
   );
 };
 
-// Selector de Mapa
-const MapPickerModal = ({ open, onClose, onLocationSelect, initialLat, initialLon }) => {
-  const [mapLocation, setMapLocation] = useState({ 
-    lat: initialLat || -16.5, 
-    lon: initialLon || -68.15 
-  });
-  
-  const handleMapClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const newLat = -16.5 + ((y / rect.height) - 0.5) * 0.05;
-    const newLon = -68.15 + ((x / rect.width) - 0.5) * 0.05;
-    
-    setMapLocation({ 
-      lat: newLat.toFixed(6), 
-      lon: newLon.toFixed(6) 
-    });
-  };
-
-  const handleConfirm = () => {
-    onLocationSelect(mapLocation.lat, mapLocation.lon);
-    onClose();
-  };
-
-  useEffect(() => {
-    if (open) {
-      setMapLocation({ 
-        lat: initialLat || -16.5, 
-        lon: initialLon || -68.15 
-      });
-    }
-  }, [initialLat, initialLon, open]);
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{ sx: { borderRadius: 2 } }}
-    >
-      <DialogTitle
-        sx={{
-          backgroundColor: COLOR_AZUL_ELECTRICO,
-          color: COLOR_BLANCO,
-          fontWeight: 'bold'
-        }}
-      >
-        📍 Seleccionar Ubicación en el Mapa
-      </DialogTitle>
-      <DialogContent dividers>
-        <Paper 
-          elevation={3}
-          sx={{ 
-            height: '50vh', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            cursor: 'crosshair',
-            backgroundColor: '#f0f0f0',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-          onClick={handleMapClick}
-        >
-          <Box sx={{ 
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '100%',
-            height: '100%',
-            backgroundImage: 'linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)',
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-          }}>
-            {/* Marcador de ubicación seleccionada */}
-            {mapLocation.lat && mapLocation.lon && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: `${50 + ((parseFloat(mapLocation.lat) + 16.5) * 1000)}%`,
-                  left: `${50 + ((parseFloat(mapLocation.lon) + 68.15) * 1000)}%`,
-                  transform: 'translate(-50%, -50%)',
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  backgroundColor: COLOR_NARANJA_VIBRANTE,
-                  border: `2px solid ${COLOR_BLANCO}`,
-                  boxShadow: '0 0 8px rgba(253, 126, 20, 0.7)',
-                  zIndex: 3,
-                  animation: 'pulse 2s infinite'
-                }}
-              />
-            )}
-          </Box>
-          
-          <Box sx={{ 
-            position: 'absolute',
-            bottom: 16,
-            left: 16,
-            backgroundColor: 'rgba(255,255,255,0.9)',
-            padding: 2,
-            borderRadius: 1,
-            zIndex: 4
-          }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-              Click en el mapa para seleccionar ubicación
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Latitud: {mapLocation.lat}
-            </Typography>
-            <Typography variant="body2">
-              Longitud: {mapLocation.lon}
-            </Typography>
-          </Box>
-        </Paper>
-      </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} sx={{ color: 'text.secondary' }}>
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleConfirm}
-          variant="contained"
-          startIcon={<LocationOn />}
-          sx={{
-            textTransform: 'none',
-            backgroundColor: COLOR_VERDE_LIMA,
-            color: COLOR_NEGRO_SUAVE,
-            fontWeight: 'bold',
-            '&:hover': { backgroundColor: COLOR_VERDE_LIMA, opacity: 0.9 }
-          }}
-        >
-          Confirmar Ubicación
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
 // Componente principal Facilities
 export default function Facilities() {
   const [espacios, setEspacios] = useState([]);
@@ -463,15 +325,14 @@ export default function Facilities() {
   const [selectedEspacio, setSelectedEspacio] = useState(null);
   const [selectedCancha, setSelectedCancha] = useState(null);
   const [canchas, setCanchas] = useState([]);
-  const [mapOpen, setMapOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
     ubicacion: '',
     capacidad: '',
     descripcion: '',
-    latitud: '',
-    longitud: '',
+    latitud: -16.5000,
+    longitud: -68.1193,
     gestor_id: '',
     control_acceso_id: '',
   });
@@ -663,8 +524,8 @@ export default function Facilities() {
       ubicacion: '',
       capacidad: '',
       descripcion: '',
-      latitud: '',
-      longitud: '',
+      latitud: -16.5000,
+      longitud: -68.1193,
       gestor_id: '',
       control_acceso_id: '',
     });
@@ -682,17 +543,6 @@ export default function Facilities() {
   const handleCanchaClick = (cancha) => {
     setSelectedCancha(cancha);
     setView('horarios');
-  };
-
-  // Mapa
-  const handleOpenMap = () => {
-    setMapOpen(true);
-  };
-
-  const handleLocationSelect = (lat, lon) => {
-    setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
-    toast.success(`Coordenadas seleccionadas: Latitud ${lat}, Longitud ${lon}`);
-    setMapOpen(false);
   };
 
   // Buscar canchas cercanas
@@ -729,6 +579,61 @@ export default function Facilities() {
       toast.error('No se pudo obtener tu ubicación. Verifica los permisos.');
     }
   };
+
+  // Manejar cambio de ubicación desde el mapa
+  const handleLocationChange = (lat, lon, address) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      latitud: lat, 
+      longitud: lon 
+    }));
+    
+    // Si hay dirección detectada, actualizar el campo de ubicación
+    if (address && !formData.ubicacion) {
+      setFormData(prev => ({ 
+        ...prev, 
+        ubicacion: address 
+      }));
+    }
+    
+    toast.success('Ubicación actualizada en el mapa');
+  };
+
+  // Usar ubicación actual
+  const handleUseCurrentLocation = () => {
+  if (!navigator.geolocation) {
+    toast.error('Geolocalización no soportada por este navegador');
+    return;
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
+      toast.success('Ubicación actual obtenida');
+    },
+    (error) => {
+      console.error('Error obteniendo ubicación:', error);
+      toast.error('No se pudo obtener la ubicación. Revisa permisos.');
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+};
+
+  // Usar ubicación por defecto (La Paz)
+  const handleUseDefaultLocation = () => {
+  setFormData(prev => ({ 
+    ...prev, 
+    latitud: -16.5000, 
+    longitud: -68.1193 
+  }));
+  toast.success('Ubicación establecida en La Paz, Bolivia');
+};
 
   // Renderizar breadcrumbs
   const renderBreadcrumbs = () => (
@@ -969,6 +874,15 @@ export default function Facilities() {
                       </Typography>
                     </Box>
 
+                    {espacio.latitud && espacio.longitud && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <GpsFixed sx={{ fontSize: 16, color: COLOR_AZUL_ELECTRICO, mr: 1 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {parseFloat(espacio.latitud).toFixed(4)}, {parseFloat(espacio.longitud).toFixed(4)}
+                        </Typography>
+                      </Box>
+                    )}
+
                     <Typography
                       variant="caption"
                       color="text.disabled"
@@ -1180,6 +1094,7 @@ export default function Facilities() {
               required
               margin="normal"
               variant="outlined"
+              placeholder="Ej: Av. 6 de Agosto, La Paz"
             />
             <TextField
               fullWidth
@@ -1193,68 +1108,89 @@ export default function Facilities() {
               inputProps={{ min: '1' }}
             />
             
-            <Grid container spacing={2} alignItems="center" sx={{ mt: 1, mb: 2 }}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Latitud"
-                  value={formData.latitud}
-                  onChange={(e) => setFormData({...formData, latitud: e.target.value})}
-                  placeholder="-16.5000"
-                  margin="normal"
-                  fullWidth
-                  variant="outlined"
-                />
+            {/* Mapa Interactivo */}
+            <Box sx={{ mt: 3, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: COLOR_NEGRO_SUAVE }}>
+                📍 Seleccionar ubicación en el mapa
+              </Typography>
+              
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} sm={6}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleUseCurrentLocation}
+                    fullWidth
+                    startIcon={<GpsFixed />}
+                    sx={{
+                      textTransform: 'none',
+                      borderColor: COLOR_AZUL_ELECTRICO,
+                      color: COLOR_AZUL_ELECTRICO,
+                      '&:hover': {
+                        borderColor: COLOR_AZUL_ELECTRICO,
+                        backgroundColor: `${COLOR_AZUL_ELECTRICO}10`
+                      }
+                    }}
+                  >
+                    Usar mi ubicación
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleUseDefaultLocation}
+                    startIcon={<LocationOn />}
+                    fullWidth
+                    sx={{
+                      textTransform: 'none',
+                      borderColor: COLOR_VERDE_LIMA,
+                      color: COLOR_NEGRO_SUAVE,
+                      '&:hover': {
+                        borderColor: COLOR_VERDE_LIMA,
+                        backgroundColor: `${COLOR_VERDE_LIMA}10`
+                      }
+                    }}
+                  >
+                    Usar La Paz
+                  </Button>
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Longitud"
-                  value={formData.longitud}
-                  onChange={(e) => setFormData({...formData, longitud: e.target.value})}
-                  placeholder="-68.1500"
-                  margin="normal"
-                  fullWidth
-                  variant="outlined"
-                />
+              
+              <MapSelector
+                lat={formData.latitud}
+                lon={formData.longitud}
+                onChange={handleLocationChange}
+                height={300}
+              />
+              
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Latitud"
+                    value={formData.latitud}
+                    onChange={(e) => setFormData({...formData, latitud: e.target.value})}
+                    margin="normal"
+                    fullWidth
+                    variant="outlined"
+                    InputProps={{
+                      readOnly: false,
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Longitud"
+                    value={formData.longitud}
+                    onChange={(e) => setFormData({...formData, longitud: e.target.value})}
+                    margin="normal"
+                    fullWidth
+                    variant="outlined"
+                    InputProps={{
+                      readOnly: false,
+                    }}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    if (!navigator.geolocation) {
-                      alert('Geolocalización no soportada por este navegador');
-                      return;
-                    }
-                    navigator.geolocation.getCurrentPosition(
-                      (pos) => {
-                        const lat = pos.coords.latitude;
-                        const lon = pos.coords.longitude;
-                        setFormData(prev => ({ ...prev, latitud: lat, longitud: lon }));
-                        toast.success('Ubicación capturada');
-                      },
-                      (err) => {
-                        console.error(err);
-                        toast.error('No se pudo obtener la ubicación. Revisa permisos.');
-                      },
-                      { enableHighAccuracy: true, timeout: 10000 }
-                    );
-                  }}
-                  fullWidth
-                  startIcon={<LocationOn />}
-                >
-                  Usar mi ubicación
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button
-                  variant="outlined"
-                  onClick={handleOpenMap}
-                  startIcon={<Map />}
-                  fullWidth
-                >
-                  Buscar en Mapa
-                </Button>
-              </Grid>
-            </Grid>
+            </Box>
             
             {isAdmin && (
               <>
@@ -1386,15 +1322,6 @@ export default function Facilities() {
           </DialogActions>
         </form>
       </Dialog>
-
-      {/* Modal de mapa */}
-      <MapPickerModal
-        open={mapOpen}
-        onClose={() => setMapOpen(false)}
-        onLocationSelect={handleLocationSelect}
-        initialLat={formData.latitud}
-        initialLon={formData.longitud}
-      />
 
       {/* Modal de zoom de imagen */}
       <ImageZoomModal
