@@ -55,6 +55,11 @@ export default function Register() {
     const navigate = useNavigate();
     const recaptchaRef = useRef(null);
 
+    // Función para volver a la página principal
+    const handleGoHome = () => {
+        navigate('/');
+    };
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -550,32 +555,28 @@ export default function Register() {
     
                                 {/* ReCAPTCHA (xs=12, ocupa el 100% del ancho) */}
                                 <Grid item xs={12}>
-                              
-                                    <Box 
-                                        sx={{ 
-                                            my: 2, 
-      
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                
-                                            py: 1
-                                        }}
-                               
-                                    >
-                                        <ReCAPTCHA
-                                            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY ||
-                                                "TU_SITEKEY_DE_EJEMPLO"}
-                                            ref={recaptchaRef}
-                                            onChange={handleRecaptchaChange}
-            
-                                            onExpired={handleRecaptchaExpire}
-                                            onErrored={handleRecaptchaError}
-                        
-                                            theme="dark"
-                                        />
-                                    </Box>
-    
-                                </Grid>
+                                {/* Ajuste para centrar el componente ReCAPTCHA y manejar su ancho fijo */}
+                                <Box 
+                                    sx={{ 
+                                        my: 2, 
+                                        // Centrar el componente reCAPTCHA que tiene un ancho fijo
+                                        display: 'flex',
+                                        justifyContent: 'center', 
+                                        py: 1,
+                                        // max-width del componente reCAPTCHA es típicamente 304px
+                                    }}
+                                >
+                                    <ReCAPTCHA
+                                        sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "TU_SITEKEY_DE_EJEMPLO"}
+                                        ref={recaptchaRef}
+                                        onChange={handleRecaptchaChange}
+                                        onExpired={handleRecaptchaExpire}
+                                        onErrored={handleRecaptchaError}
+                                        theme="dark"
+                                        size="compact" // <--- Esto ayuda a que el ancho se parezca más al de los inputs en móviles
+                                    />
+                                </Box>
+                            </Grid>
                             </Grid>
 
                             {/* Botón: Crear Cuenta */}
@@ -629,6 +630,7 @@ export default function Register() {
      
                         </form>
 
+                                
                         {/* SECCIÓN DE PIE DE PÁGINA */}
                         <Box className="mt-4 text-center" sx={{ mt: 3 }}>
                      
