@@ -18,6 +18,7 @@ import Wallet from './pages/Wallet';
 import Usuarios from './pages/Usuarios';
 import Unauthorized from './pages/No';
 import Register from './pages/Register';
+import ControlAcceso from './pages/ControlAcceso';
 
 function AppRoutes() {
   return (
@@ -117,7 +118,7 @@ function AppRoutes() {
           path="/control-acceso"
           element={
             <ProtectedRoute allowedRoles={['control_acceso']}>
-              <div>Página de Control de Acceso - En construcción</div>
+              <ControlAcceso />
             </ProtectedRoute>
           }
         />

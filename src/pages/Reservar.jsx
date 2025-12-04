@@ -63,6 +63,9 @@ export default function Reservar() {
     isHoraFinValida,
     getHorasInicioDisponiblesList,
     getHorasFinDisponiblesList,
+    asistentes,
+    validarAsistentes,
+    handleAsistentesChange
   } = useReserva();
 
   // Cargar datos iniciales
@@ -171,6 +174,9 @@ export default function Reservar() {
             getHorasInicioDisponiblesList={getHorasInicioDisponiblesList}
             getHorasFinDisponiblesList={getHorasFinDisponiblesList}
             horarioDisponible={isHorarioDisponible()}
+            asistentes={asistentes}
+            validarAsistentes={validarAsistentes}
+            onAsistentesChange={handleAsistentesChange}
           />
         );
       default:

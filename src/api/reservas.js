@@ -131,5 +131,69 @@ export const reservasApi = {
   delete: async (id) => {
     const response = await api.delete(`/reservas/${id}`);
     return response.data;
+  },
+
+
+verificarQR: async (codigo_qr, token_verificacion) => {
+  try {
+    console.log('📱 Enviando verificación QR:', { codigo_qr });
+    
+    const response = await api.post('/control-acceso/verificar-qr', {
+      codigo_qr,
+      token_verificacion
+    });
+    
+    console.log('✅ Respuesta exitosa:', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ Error en verificarQR:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // ✅ MEJOR MANEJO DE ERRORES CON INFORMACIÓN ESTRUCTURADA
+    let errorDetail = error.response?.data?.detail;
+    let errorMessage = 'Error verificando el código QR';
+    
+    if (errorDetail) {
+      if (typeof errorDetail === 'object') {
+        // Si es un objeto estructurado
+        errorMessage = errorDetail.message || errorMessage;
+      } else {
+        // Si es un string
+        errorMessage = errorDetail;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    const apiError = new Error(errorMessage);
+    apiError.response = error.response;
+    apiError.status = error.response?.status;
+    apiError.detail = errorDetail; // ✅ Preservar toda la información
+    
+    throw apiError;
   }
+},
+
+crearReservaConAsistentes: async (reservaData) => {
+  try {
+    const response = await api.post('/control-acceso/crear-con-asistentes', reservaData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+},
+
+obtenerAsistentesReserva: async (reserva_id) => {
+  try {
+    const response = await api.get(`/control-acceso/asistentes/${reserva_id}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+},
+
 };

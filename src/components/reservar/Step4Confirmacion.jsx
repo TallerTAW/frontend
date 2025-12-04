@@ -3,6 +3,7 @@ import { ArrowBack, SportsSoccer, Stadium, People, Money, AccessTime, CalendarMo
 import { motion } from 'framer-motion';
 import ReservationForm from './ReservationForm';
 import PaymentSummary from './PaymentSummary';
+import { useEffect, useState } from 'react';
 
 export default function Step4Confirmacion({
   selectedEspacio,
@@ -24,12 +25,114 @@ export default function Step4Confirmacion({
   isHoraFinValida,
   getHorasInicioDisponiblesList,
   getHorasFinDisponiblesList,
-  horarioDisponible
+  asistentes = [],
+  onAsistentesChange,
 }) {
   const occupiedHours = getOccupiedHours();
   const totalHours = reservationData.hora_inicio && reservationData.hora_fin 
     ? parseInt(reservationData.hora_fin.split(':')[0]) - parseInt(reservationData.hora_inicio.split(':')[0])
     : 0;
+  
+  const [asistentesValidos, setAsistentesValidos] = useState(true);
+  const [horarioDisponible, setHorarioDisponible] = useState(true);
+  const [mostrarFormAsistentes, setMostrarFormAsistentes] = useState(false);
+
+  // Validar horario
+  useEffect(() => {
+    if (reservationData.hora_inicio && reservationData.hora_fin) {
+      setHorarioDisponible(isHorarioDisponible());
+    } else {
+      setHorarioDisponible(true);
+    }
+  }, [reservationData.hora_inicio, reservationData.hora_fin, isHorarioDisponible]);
+
+  // Validar asistentes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('=== VALIDANDO ASISTENTES EN STEP4 ===');
+      console.log('Cantidad asistentes en reservationData:', reservationData.cantidad_asistentes);
+      console.log('Array de asistentes:', asistentes);
+      console.log('Longitud array asistentes:', asistentes?.length);
+      
+      if (reservationData.cantidad_asistentes <= 1) {
+        console.log('Solo 1 asistente, validación automática OK');
+        setAsistentesValidos(true);
+        return;
+      }
+      
+      // Si no hay asistentes aún, marcar como inválidos
+      if (!asistentes || asistentes.length === 0) {
+        console.log('Error: Array de asistentes vacío');
+        setAsistentesValidos(false);
+        return;
+      }
+      
+      // Verificar cantidad
+      if (asistentes.length !== reservationData.cantidad_asistentes) {
+        console.log('Error: Cantidad no coincide', {
+          esperado: reservationData.cantidad_asistentes,
+          obtenido: asistentes.length
+        });
+        setAsistentesValidos(false);
+        return;
+      }
+      
+      // Validar cada asistente
+      const todosValidos = asistentes.every((asistente, index) => {
+        if (!asistente) {
+          console.log(`Asistente ${index + 1} no definido`);
+          return false;
+        }
+        
+        const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
+        const emailValido = asistente.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asistente.email.trim());
+        
+        if (!nombreValido || !emailValido) {
+          console.log(`Asistente ${index + 1} inválido:`, {
+            nombre: asistente.nombre,
+            email: asistente.email,
+            nombreValido,
+            emailValido
+          });
+        }
+        
+        return nombreValido && emailValido;
+      });
+      
+      console.log('Resultado validación asistentes:', todosValidos);
+      setAsistentesValidos(todosValidos);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [asistentes, reservationData.cantidad_asistentes]);
+
+  // Determinar si el botón debe estar deshabilitado
+  const isButtonDisabled = () => {
+  const tieneMasDeUnAsistente = reservationData.cantidad_asistentes > 1;
+  
+  const condiciones = {
+    fecha: !reservationData.fecha_reserva,
+    hora_inicio: !reservationData.hora_inicio,
+    hora_fin: !reservationData.hora_fin,
+    horarioNoValido: !isHorarioDisponible() || !horarioDisponible,
+    horasInvalidas: reservationData.hora_inicio && reservationData.hora_fin && 
+                   parseInt(reservationData.hora_fin.split(':')[0]) <= parseInt(reservationData.hora_inicio.split(':')[0]),
+    // SOLO validar asistentes si el usuario ha mostrado el formulario
+    asistentesInvalidos: tieneMasDeUnAsistente && mostrarFormAsistentes && !asistentesValidos,
+  };
+  
+  const deshabilitado = Object.values(condiciones).some(c => c);
+  
+  console.log('Condiciones botón:', {
+    ...condiciones,
+    tieneMasDeUnAsistente,
+    mostrarFormAsistentes,
+    asistentesValidos,
+    deshabilitado
+  });
+  
+  return deshabilitado;
+};
 
   return (
     <Box>
@@ -223,6 +326,9 @@ export default function Step4Confirmacion({
                   isHoraFinValida={isHoraFinValida}
                   getHorasInicioDisponiblesList={getHorasInicioDisponiblesList}
                   getHorasFinDisponiblesList={getHorasFinDisponiblesList}
+                  onAsistentesChange={onAsistentesChange}
+                  onMostrarFormAsistentes={(mostrar) => setMostrarFormAsistentes(mostrar)}
+                  
                 />
 
                 {/* Resumen del Tiempo */}
@@ -294,20 +400,43 @@ export default function Step4Confirmacion({
                   totalHours={totalHours}
                 />
 
+                {/* Validación de asistentes - MOSTRAR SOLO SI HAY MÁS DE 1 ASISTENTE */}
+                {reservationData.cantidad_asistentes > 1 && (
+                  <>
+                    {!asistentesValidos && (
+                      <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          ❌ Por favor completa la información de todos los asistentes antes de confirmar.
+                          {asistentes?.length > 0 && (
+                            <>
+                              <br/>
+                              <small>
+                                {asistentes.filter(a => a && a.nombre && a.email && 
+                                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())).length} 
+                                de {reservationData.cantidad_asistentes} completados correctamente
+                              </small>
+                            </>
+                          )}
+                        </Typography>
+                      </Alert>
+                    )}
+                    
+                    {asistentesValidos && asistentes?.length > 0 && (
+                      <Alert severity="success" sx={{ mt: 3, borderRadius: 2 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          ✅ Todos los asistentes tienen información válida
+                        </Typography>
+                      </Alert>
+                    )}
+                  </>
+                )}
+
                 <Box className="mt-8">
                   <Button
                     fullWidth
                     variant="contained"
                     onClick={onConfirm}
-                    disabled={
-                      !reservationData.fecha_reserva ||
-                      !reservationData.hora_inicio ||
-                      !reservationData.hora_fin ||
-                      !isHorarioDisponible() ||
-                      !horarioDisponible ||
-                      parseInt(reservationData.hora_fin.split(':')[0]) <= 
-                      parseInt(reservationData.hora_inicio.split(':')[0])
-                    }
+                    disabled={isButtonDisabled()}
                     sx={{
                       textTransform: 'none',
                       background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)',

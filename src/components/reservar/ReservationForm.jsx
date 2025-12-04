@@ -15,6 +15,7 @@ import {
   Tooltip,
   Chip,
   Collapse,
+  Button,
 } from '@mui/material';
 import { 
   CalendarToday, 
@@ -24,7 +25,14 @@ import {
   Info,
   CheckCircle,
   Cancel,
-  Warning
+  Warning,
+  Email,
+  PersonAdd,
+  Person,
+  AddCircle,
+  RemoveCircle,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 
@@ -41,10 +49,84 @@ export default function ReservationForm({
   isHoraFinValida,
   getHorasInicioDisponiblesList,
   getHorasFinDisponiblesList,
+  onAsistentesChange,
 }) {
   const today = new Date().toISOString().split('T')[0];
   const [showCapacityInfo, setShowCapacityInfo] = useState(false);
   const [horarioDisponible, setHorarioDisponible] = useState(true);
+  const [asistentes, setAsistentes] = useState([]);
+  const [showAsistentesForm, setShowAsistentesForm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Validar email
+  const isValidEmail = (email) => {
+    if (!email || email.trim() === '') return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
+  // Inicializar asistentes
+  useEffect(() => {
+  const cantidad = reservationData.cantidad_asistentes || 1;
+  
+  // Si la cantidad cambió, ajustar el array de asistentes
+  if (asistentes.length !== cantidad) {
+    const newAsistentes = [];
+    
+    for (let i = 0; i < cantidad; i++) {
+      // Mantener datos existentes si los hay
+      newAsistentes[i] = asistentes[i] || { 
+        nombre: '', 
+        email: '',
+        id: i + 1
+      };
+    }
+    
+    console.log('Inicializando asistentes:', { cantidad, newAsistentes });
+    setAsistentes(newAsistentes);
+    
+    // Solo notificar al padre si hay más de 1 asistente
+    if (cantidad > 1 && onAsistentesChange) {
+      setTimeout(() => {
+        onAsistentesChange(newAsistentes);
+      }, 100);
+    }
+  }
+  
+  console.log('Asistentes inicializados:', {
+    cantidad,
+    asistentesLength: asistentes.length,
+    asistentes
+  });
+}, [reservationData.cantidad_asistentes]);
+
+  // Notificar cambios en asistentes al padre
+  useEffect(() => {
+  if (reservationData.cantidad_asistentes > 1) {
+    // Notificar al padre con el array actual
+    if (onAsistentesChange) {
+      onAsistentesChange(asistentes);
+    }
+  }
+  
+  // Validar y actualizar errores
+  const errors = {};
+  asistentes.forEach((asistente, index) => {
+    if (asistente && asistente.email && asistente.email.trim() !== '') {
+      if (!isValidEmail(asistente.email)) {
+        errors[`email_${index}`] = true; // Cambia a booleano, no string
+      }
+    }
+  });
+  setValidationErrors(errors);
+  
+  console.log('Asistentes actualizados:', {
+    cantidadAsistentes: reservationData.cantidad_asistentes,
+    asistentesLength: asistentes.length,
+    asistentes,
+    errors
+  });
+}, [asistentes, reservationData.cantidad_asistentes]);
 
   // Verificar si el horario está disponible
   useEffect(() => {
@@ -55,6 +137,46 @@ export default function ReservationForm({
       setHorarioDisponible(true);
     }
   }, [reservationData.hora_inicio, reservationData.hora_fin, isHorarioDisponible]);
+
+  const allAsistentesValid = () => {
+  if (reservationData.cantidad_asistentes <= 1) {
+    return true;
+  }
+  
+  console.log('=== VALIDANDO ASISTENTES EN FORMULARIO ===');
+  console.log('Cantidad esperada:', reservationData.cantidad_asistentes);
+  console.log('Cantidad en array:', asistentes.length);
+  console.log('Asistentes:', asistentes);
+  
+  if (asistentes.length !== reservationData.cantidad_asistentes) {
+    console.log('Error: Cantidad no coincide');
+    return false;
+  }
+  
+  const todosValidos = asistentes.every((asistente, index) => {
+    if (!asistente) {
+      console.log(`Asistente ${index + 1} no definido`);
+      return false;
+    }
+    
+    const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
+    const emailValido = isValidEmail(asistente.email);
+    
+    if (!nombreValido || !emailValido) {
+      console.log(`Asistente ${index + 1} inválido:`, {
+        nombre: asistente.nombre,
+        email: asistente.email,
+        nombreValido,
+        emailValido
+      });
+    }
+    
+    return nombreValido && emailValido;
+  });
+  
+  console.log('Resultado validación formulario:', todosValidos);
+  return todosValidos;
+};
 
   const handleHoraInicioChange = (horaInicio) => {
     onReservationChange({
@@ -79,6 +201,37 @@ export default function ReservationForm({
     });
   };
 
+  const handleAsistenteChange = (index, field, value) => {
+    const newAsistentes = [...asistentes];
+    newAsistentes[index] = {
+      ...newAsistentes[index],
+      [field]: value
+    };
+    setAsistentes(newAsistentes);
+  };
+
+  const addAsistente = () => {
+    const cantidadActual = reservationData.cantidad_asistentes || 1;
+    const maxCapacity = selectedEspacio?.capacidad || 100;
+    
+    if (cantidadActual < maxCapacity) {
+      onReservationChange({
+        ...reservationData,
+        cantidad_asistentes: cantidadActual + 1
+      });
+    }
+  };
+
+  const removeAsistente = () => {
+    const cantidadActual = reservationData.cantidad_asistentes || 1;
+    if (cantidadActual > 1) {
+      onReservationChange({
+        ...reservationData,
+        cantidad_asistentes: cantidadActual - 1
+      });
+    }
+  };
+
   const horasInicioDisponibles = getHorasInicioDisponiblesList();
   const horasFinDisponibles = reservationData.hora_inicio 
     ? getHorasFinDisponiblesList(reservationData.hora_inicio)
@@ -86,6 +239,9 @@ export default function ReservationForm({
 
   const isHoraInicioOk = reservationData.hora_inicio ? isHoraInicioValida(reservationData.hora_inicio) : true;
   const isHoraFinOk = reservationData.hora_fin ? isHoraFinValida(reservationData.hora_fin) : true;
+
+  const maxCapacity = selectedEspacio?.capacidad || 100;
+  const tieneMasDeUnAsistente = (reservationData.cantidad_asistentes || 1) > 1;
 
   return (
     <Box className="space-y-6">
@@ -99,12 +255,18 @@ export default function ReservationForm({
           fullWidth
           type="date"
           value={reservationData.fecha_reserva}
-          onChange={(e) => onReservationChange({
-            ...reservationData,
-            fecha_reserva: e.target.value,
-            hora_inicio: '',
-            hora_fin: ''
-          })}
+          onChange={(e) => {
+            onReservationChange({
+              ...reservationData,
+              fecha_reserva: e.target.value,
+              hora_inicio: '',
+              hora_fin: ''
+            });
+            // Limpiar asistentes al cambiar fecha
+            if (asistentes.length > 0) {
+              setAsistentes([]);
+            }
+          }}
           InputLabelProps={{ shrink: true }}
           inputProps={{ min: today }}
           required
@@ -299,49 +461,90 @@ export default function ReservationForm({
         </Collapse>
       </Paper>
 
-      {/* Cantidad de Asistentes */}
+      {/* Cantidad de Asistentes y Controles */}
       <Paper elevation={0} sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="subtitle1" sx={{ color: '#1a237e', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
             <People sx={{ color: '#0f9fe1' }} />
             Cantidad de Asistentes
-          </Typography>
-          <Tooltip title={`Capacidad máxima: ${selectedEspacio?.capacidad || 100} personas`}>
-            <IconButton 
+            <Chip 
+              label={`${reservationData.cantidad_asistentes || 1}/${maxCapacity}`} 
               size="small" 
-              onClick={() => setShowCapacityInfo(!showCapacityInfo)}
-              sx={{ color: '#0f9fe1' }}
+              color="primary"
+              sx={{ ml: 1 }}
+            />
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title={`Capacidad máxima: ${maxCapacity} personas`}>
+              <IconButton 
+                size="small" 
+                onClick={() => setShowCapacityInfo(!showCapacityInfo)}
+                sx={{ color: '#0f9fe1' }}
+              >
+                <Info />
+              </IconButton>
+            </Tooltip>
+            
+            <IconButton
+              size="small"
+              onClick={removeAsistente}
+              disabled={(reservationData.cantidad_asistentes || 1) <= 1}
+              sx={{ 
+                color: (reservationData.cantidad_asistentes || 1) > 1 ? '#f44336' : '#ccc',
+                '&:hover': {
+                  backgroundColor: (reservationData.cantidad_asistentes || 1) > 1 ? '#ffebee' : 'transparent'
+                }
+              }}
             >
-              <Info />
+              <RemoveCircle />
             </IconButton>
-          </Tooltip>
+            
+            <IconButton
+              size="small"
+              onClick={addAsistente}
+              disabled={(reservationData.cantidad_asistentes || 1) >= maxCapacity}
+              sx={{ 
+                color: (reservationData.cantidad_asistentes || 1) < maxCapacity ? '#4caf50' : '#ccc',
+                '&:hover': {
+                  backgroundColor: (reservationData.cantidad_asistentes || 1) < maxCapacity ? '#e8f5e9' : 'transparent'
+                }
+              }}
+            >
+              <AddCircle />
+            </IconButton>
+          </Box>
         </Box>
         
         {showCapacityInfo && (
           <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
-            La capacidad máxima permitida es de {selectedEspacio?.capacidad || 100} personas
+            La capacidad máxima permitida es de {maxCapacity} personas
           </Alert>
         )}
         
         <TextField
           fullWidth
           type="number"
-          value={reservationData.cantidad_asistentes || ''}
+          value={reservationData.cantidad_asistentes || 1}
           onChange={(e) => {
             const value = e.target.value;
-            const numValue = value === '' ? '' : parseInt(value, 10);
-            const maxCapacity = selectedEspacio?.capacidad || 100;
+            const numValue = value === '' ? 1 : parseInt(value, 10);
             
-            if (value === '' || (!isNaN(numValue) && numValue > 0 && numValue <= maxCapacity)) {
+            if (!isNaN(numValue) && numValue > 0 && numValue <= maxCapacity) {
               onReservationChange({
                 ...reservationData,
-                cantidad_asistentes: numValue === '' ? 1 : numValue
+                cantidad_asistentes: numValue
               });
+              
+              // Si se redujo a 1, limpiar el formulario de asistentes
+              if (numValue <= 1) {
+                setShowAsistentesForm(false);
+              }
             }
           }}
           inputProps={{ 
             min: 1, 
-            max: selectedEspacio?.capacidad || 100,
+            max: maxCapacity,
             style: { textAlign: 'center' }
           }}
           required
@@ -359,16 +562,172 @@ export default function ReservationForm({
                 <People sx={{ color: '#0f9fe1' }} />
               </InputAdornment>
             ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <Typography variant="caption" color="text.secondary">
-                  / {selectedEspacio?.capacidad || 100} máx.
-                </Typography>
-              </InputAdornment>
-            ),
           }}
         />
+
+        {/* Mostrar opción para completar datos solo si hay más de 1 asistente */}
+        {tieneMasDeUnAsistente && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setShowAsistentesForm(!showAsistentesForm)}
+              sx={{ 
+                color: '#0f9fe1',
+                borderColor: '#0f9fe1',
+                '&:hover': {
+                  borderColor: '#0d8dc7',
+                  backgroundColor: 'rgba(15, 159, 225, 0.04)'
+                }
+              }}
+              startIcon={showAsistentesForm ? <ExpandLess /> : <ExpandMore />}
+            >
+              {showAsistentesForm ? 'Ocultar datos de asistentes' : 'Completar datos de asistentes'}
+            </Button>
+            
+            {allAsistentesValid() && (
+              <Chip
+                label="✅ Todos los datos completos"
+                color="success"
+                size="small"
+                sx={{ fontWeight: 'medium' }}
+              />
+            )}
+          </Box>
+        )}
       </Paper>
+
+      {/* Formulario de Asistentes (solo se muestra si hay más de 1 asistente) */}
+      <Collapse in={showAsistentesForm && tieneMasDeUnAsistente}>
+        <Paper elevation={0} sx={{ p: 3, bgcolor: '#e8f5e9', borderRadius: 2, mt: 2 }}>
+          <Typography variant="h6" sx={{ 
+            color: '#2e7d32', 
+            mb: 3, 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1 
+          }}>
+            <PersonAdd sx={{ color: '#4caf50' }} />
+            Información de Asistentes ({reservationData.cantidad_asistentes || 1})
+          </Typography>
+
+          <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+            Cada asistente recibirá un código QR personal por email para acceder a la cancha.
+          </Alert>
+
+          {!allAsistentesValid() && asistentes.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+              ⚠️ Por favor completa todos los campos de los asistentes
+            </Alert>
+          )}
+
+          <Grid container spacing={3}>
+            {asistentes.map((asistente, index) => (
+              <Grid item xs={12} key={index}>
+                <Box sx={{ 
+                  p: 2.5, 
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  border: '1px solid #c8e6c9',
+                  position: 'relative',
+                  mt: 2.5,
+                  pt: 3.5,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                }}>
+                  <Chip 
+                    label={`Asistente ${index + 1}`}
+                    size="small"
+                    sx={{ 
+                      position: 'absolute', 
+                      top: -12,
+                      left: 16,
+                      backgroundColor: '#0f9fe1',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      height: 24,
+                      fontSize: '0.75rem',
+                      '& .MuiChip-label': {
+                        px: 1.5,
+                        py: 0.5
+                      }
+                    }}
+                  />
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Nombre completo"
+                        value={asistente.nombre}
+                        onChange={(e) => handleAsistenteChange(index, 'nombre', e.target.value)}
+                        required
+                        variant="outlined"
+                        size="medium"
+                        error={!asistente.nombre && asistente.nombre !== ''}
+                        helperText={!asistente.nombre && asistente.nombre !== '' ? 'Nombre requerido' : ''}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            backgroundColor: '#fafafa',
+                          }
+                        }}
+                        InputProps={{
+                          startAdornment: (
+                            <Person sx={{ color: '#0f9fe1', mr: 1 }} />
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Email"
+                        type="email"
+                        value={asistente.email}
+                        onChange={(e) => handleAsistenteChange(index, 'email', e.target.value)}
+                        required
+                        variant="outlined"
+                        size="medium"
+                        error={!!validationErrors[`email_${index}`]}
+                        helperText={
+                          validationErrors[`email_${index}`] 
+                            ? 'Email inválido' 
+                            : !asistente.email && asistente.email !== ''
+                            ? 'Email requerido'
+                            : 'Recibirá el código QR aquí'
+                        }
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            backgroundColor: '#fafafa',
+                          }
+                        }}
+                        InputProps={{
+                          startAdornment: (
+                            <Email sx={{ color: '#9eca3f', mr: 1 }} />
+                          ),
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Box sx={{ mt: 3, p: 2, backgroundColor: '#c8e6c9', borderRadius: 2 }}>
+            <Typography variant="body2" color="#2e7d32" sx={{ fontWeight: 'medium', mb: 1 }}>
+              ℹ️ Información importante:
+            </Typography>
+            <Typography variant="body2" color="#2e7d32">
+              • Cada asistente recibirá un email con código QR personal<br/>
+              • El QR es válido solo para la fecha y hora de la reserva<br/>
+              • Presentar el QR al personal de control de acceso<br/>
+              • Los códigos son de un solo uso
+            </Typography>
+          </Box>
+        </Paper>
+      </Collapse>
 
       {/* Material Prestado */}
       <Paper elevation={0} sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 2 }}>
