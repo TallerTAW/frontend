@@ -48,7 +48,7 @@ export default function Header({ onMenuClick, handleAvatarClick, drawerWidth = 2
     const theme = useTheme(); 
     
     // Usamos una URL genérica para el logo si el hook no está activo
-    const logoUrl = '/ruta/a/tu/logo.png'; 
+    const logoUrl = '/logo.png'; 
     
     // Estados y lógica de Notificaciones
     const [notifications, setNotifications] = useState([]);
@@ -161,7 +161,12 @@ export default function Header({ onMenuClick, handleAvatarClick, drawerWidth = 2
                     onClick={() => navigate('/dashboard')}
                 >
                     {/* Logo */}
-                    <img src={logoUrl} alt="Logo" style={{ width: '40px', height: 'auto', padding: '2px', marginRight: '8px' }} />
+                    <img 
+                        src={logoUrl} 
+                        alt="Logo" 
+                        style={{ width: '40px', height: 'auto', padding: '2px', marginRight: '8px' }} 
+                        onError={(e) => { e.target.onerror = null; e.target.src = "/vite.svg"; }}
+                    />
                     
                     {/* Nombre App */}
                     <Typography

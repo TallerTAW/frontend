@@ -519,20 +519,33 @@ export default function Courts() {
   return (
     <Box sx={{ mt: 0, p: 0 }}>
       {/* --- Encabezado de la página (Gestión de Canchas) --- */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, px: 4, pt: 4 }}>
+      <Box sx={{ 
+          display: 'flex', 
+          // CAMBIO: Columna en móvil (xs), Fila en escritorio (md)
+          flexDirection: { xs: 'column', md: 'row' }, 
+          justifyContent: 'space-between', 
+          // CAMBIO: Alinear al inicio en móvil, al centro en escritorio
+          alignItems: { xs: 'flex-start', md: 'center' }, 
+          mb: 4, 
+          // CAMBIO: Menos padding en celular para aprovechar espacio
+          px: { xs: 2, md: 4 }, 
+          pt: 4,
+          // CAMBIO: Espacio entre elementos cuando están en columna
+          gap: 2 
+      }}>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-      
           transition={{ duration: 0.5 }}
         >
           <Typography 
             variant="h4" 
             sx={{ 
               fontWeight: 'bold', 
-              color: COLOR_AZUL_ELECTRICO 
+              color: COLOR_AZUL_ELECTRICO,
+              // CAMBIO: Texto un poco más pequeño en celular
+              fontSize: { xs: '1.75rem', md: '2.125rem' } 
             }}
-    
           >
             Gestión de Canchas
           </Typography>
@@ -541,34 +554,41 @@ export default function Courts() {
           </Typography>
         </motion.div>
 
-        <Stack direction="row" spacing={1}>
-            <Button
+        <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+             {/* El resto de los botones se queda igual, 
+                 solo asegúrate de cerrar el Stack y el Box correctamente */}
+             <Button
                 variant="outlined"
                 startIcon={<Refresh />}
                 onClick={fetchData}
-                sx={{ textTransform: 'none', color: COLOR_AZUL_ELECTRICO, borderColor: COLOR_AZUL_ELECTRICO }}
+                sx={{ 
+                    textTransform: 'none', 
+                    color: COLOR_AZUL_ELECTRICO, 
+                    borderColor: COLOR_AZUL_ELECTRICO,
+                    // Opcional: Que los botones llenen el ancho en celular
+                    flex: { xs: 1, md: 'initial' }
+                }}
             >
-                Actualizar
+              Actualizar
             </Button>
             <motion.div
-              initial={{ opacity: 
-              0, x: 20 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
+              style={{ flex: 1 }} // Para que crezca en móvil
             >
                 <Button
                     variant="contained"
                     startIcon={<Add />}
                     onClick={() => setOpen(true)}
-                    
                     sx={{
                         textTransform: 'none',
                         backgroundColor: COLOR_NARANJA_VIBRANTE,
                         color: COLOR_BLANCO,
                         fontWeight: 'bold',
+                        width: '100%', // Ancho completo dentro de su contenedor flex
                         '&:hover': {
                             backgroundColor: COLOR_NARANJA_VIBRANTE,
-                    
                             opacity: 0.9,
                             boxShadow: '0 4px 8px rgba(253, 126, 20, 0.4)',
                         },
@@ -587,123 +607,131 @@ export default function Courts() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        sx={{ px: 4, mb: 3 }}
+        sx={{ px: { xs: 1, md: 4 }, mb: 3 }}
       >
-        <Grid container spacing={2}>
-          {/* Campo de Búsqueda de Texto (ocupa 6 columnas en md) */}
+        {/* Espaciado ajustado (1) para ganar espacio horizontal en celular */}
+        <Grid container spacing={1}>
+          
+          {/* 1. BUSCADOR (Ancho completo en móvil) */}
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Buscar por Nombre o Tipo de Deporte"
+              size="small"
+              label="Buscar por Nombre o Deporte"
               variant="outlined"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
                 startAdornment: <Search sx={{ mr: 1, color: COLOR_AZUL_ELECTRICO }} />,
+                style: { fontSize: '0.9rem', backgroundColor: '#FFF', borderRadius: '4px' }
               }}
-              sx={{ '& fieldset': { borderRadius: 2 } }}
+              InputLabelProps={{ style: { fontSize: '0.9rem' } }}
+              sx={{ '& fieldset': { borderRadius: 1 } }}
             />
           </Grid>
 
-          {/* Filtro por Hora (ocupa 1.5 columnas en md) */}
-          <Grid item xs={3} md={1.5}>
+          {/* === FILA 1: HORA y DEPORTE (50% cada uno) === */}
+
+          {/* 2. FILTRO HORA */}
+          <Grid item xs={6} md={1.5}>
             <TextField
               fullWidth
+              size="small"
               label="Hora"
               type="time"
               value={selectedTime}
               onChange={(e) => setSelectedTime(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              InputLabelProps={{ shrink: true, style: { fontSize: '0.8rem' } }}
+              InputProps={{ 
+                style: { fontSize: '0.8rem', backgroundColor: '#FFF', borderRadius: '4px' } 
+              }}
               variant="outlined"
-              sx={{ 
-                '& fieldset': { borderRadius: 2 },
-                minWidth: 120
-              }} 
+              sx={{ '& fieldset': { borderRadius: 1 } }} 
             />
           </Grid>
 
-          {/* Filtro por Tipo de Deporte (ocupa 1.5 columnas en md) */}
-          <Grid item xs={3} md={1.5}>
-            <FormControl 
-              fullWidth 
-              variant="outlined"
-              sx={{ minWidth: 120 }} // Ancho fijo para estabilidad
-            >
-              <InputLabel>Deporte</InputLabel>
+          {/* 3. FILTRO DEPORTE (Igual ancho que Hora) */}
+          <Grid item xs={22} md={14}>
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel sx={{ fontSize: '0.8rem', backgroundColor: '#FFF', px: 0.5 }}>Deporte</InputLabel>
               <Select
                 value={selectedTipo}
                 onChange={(e) => setSelectedTipo(e.target.value)}
-                label="Deporte"
-                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
+                label="Deporte" // Necesario para que el borde no corte el label
+                sx={{ 
+                    backgroundColor: '#FFF',
+                    borderRadius: 1,
+                    fontSize: '0.8rem',
+                    '& .MuiSelect-select': { py: 1 } // Ajuste vertical para igualar al input de hora
+                }}
               >
-                <MenuItem value="">Todos</MenuItem>
-                {/* Usar la lista de tipos únicos generada */}
+                <MenuItem value="" sx={{ fontSize: '0.85rem' }}>Todos</MenuItem>
                 {tipoDeportes.map((tipo) => (
-                  <MenuItem 
-                    key={tipo} 
-                    value={tipo}
-                  >
-                    {tipo}
-                  </MenuItem>
+                  <MenuItem key={tipo} value={tipo} sx={{ fontSize: '0.85rem' }}>{tipo}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
 
-          {/* Filtro por Estado (ocupa 1.5 columnas en md) */}
-          <Grid item xs={3} md={1.5}>
-            <FormControl 
-              fullWidth 
-              variant="outlined"
-              sx={{ minWidth: 120 }} // Ancho fijo para estabilidad
-            >
-              <InputLabel>Estado</InputLabel>
+          {/* === FILA 2: ESTADO y ORDENAR (50% cada uno) === */}
+
+          {/* 4. FILTRO ESTADO */}
+          <Grid item xs={6} md={1.5}>
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel sx={{ fontSize: '0.8rem', backgroundColor: '#FFF', px: 0.5 }}>Estado</InputLabel>
               <Select
                 value={selectedEstado}
                 onChange={(e) => setSelectedEstado(e.target.value)}
                 label="Estado"
-                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
+                sx={{ 
+                    backgroundColor: '#FFF',
+                    borderRadius: 1,
+                    fontSize: '0.8rem',
+                    '& .MuiSelect-select': { py: 1 }
+                }}
               >
-                <MenuItem value="">Todos</MenuItem>
-                <MenuItem value="disponible">Disponible</MenuItem>
-                <MenuItem value="mantenimiento">Mantenimiento</MenuItem>
-                <MenuItem value="inactiva">Inactiva</MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.85rem' }}>Todos</MenuItem>
+                <MenuItem value="disponible" sx={{ fontSize: '0.85rem' }}>Disponible</MenuItem>
+                <MenuItem value="mantenimiento" sx={{ fontSize: '0.85rem' }}>Mantenimiento</MenuItem>
+                <MenuItem value="inactiva" sx={{ fontSize: '0.85rem' }}>Inactiva</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           
-          {/* ORDENAR POR PRECIO (ocupa 1.5 columnas en md) */}
-          <Grid item xs={3} md={1.5}>
-            <FormControl 
-              fullWidth 
-              variant="outlined"
-              sx={{ minWidth: 120 }} // Ancho fijo para estabilidad
-            >
-              <InputLabel>Ordenar</InputLabel>
+          {/* 5. FILTRO ORDENAR */}
+          <Grid item xs={6} md={1.5}>
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel sx={{ fontSize: '0.8rem', backgroundColor: '#FFF', px: 0.5 }}>Ordenar</InputLabel>
               <Select
                 value={sortPriceDirection}
                 onChange={(e) => setSortPriceDirection(e.target.value)}
                 label="Ordenar"
-                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
+                sx={{ 
+                    backgroundColor: '#FFF',
+                    borderRadius: 1,
+                    fontSize: '0.8rem',
+                    '& .MuiSelect-select': { py: 1 }
+                }}
               >
-                <MenuItem value="">Sin Orden</MenuItem>
-                <MenuItem value="asc">
-                    <AttachMoney sx={{ fontSize: 18, color: COLOR_VERDE_LIMA, mr: 1 }} />
-                    Precio Asc.
+                <MenuItem value="" sx={{ fontSize: '0.85rem' }}>Sin Orden</MenuItem>
+                <MenuItem value="asc" sx={{ fontSize: '0.85rem' }}>
+                    <AttachMoney sx={{ fontSize: 14, color: COLOR_VERDE_LIMA, mr: 0.2 }} />
+                    Asc.
                 </MenuItem>
-                <MenuItem value="desc">
-                    <AttachMoney sx={{ fontSize: 18, color: COLOR_NARANJA_VIBRANTE, mr: 1 }} />
-                    Precio Desc.
+                <MenuItem value="desc" sx={{ fontSize: '0.85rem' }}>
+                    <AttachMoney sx={{ fontSize: 14, color: COLOR_NARANJA_VIBRANTE, mr: 0.2 }} />
+                    Desc.
                 </MenuItem>
               </Select>
             </FormControl>
           </Grid>
+
         </Grid>
       </motion.div>
 
 
       {/* --- Grilla de Canchas --- */}
-      <Grid container spacing={4} sx={{ p: 4 }}>
+      <Grid container spacing={4} sx={{ p: { xs: 2, md: 4 } }}>
         {filteredCanchas.length === 0 ? (
            <Grid item xs={12}>
                 <Box className="text-center py-12">
@@ -1005,37 +1033,36 @@ export default function Courts() {
             />
           
             {/* 5. Horario (en una fila) */}
-            <Box className="flex gap-4">
+            <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' }, // CAMBIO AQUÍ
+                gap: { xs: 2, sm: 4 } // Separación ajustada
+            }}>
               <TextField
                 fullWidth
                 label="Hora Apertura"
                 type="time"
-  
                 value={formData.hora_apertura}
                 onChange={(e) => setFormData({ ...formData, hora_apertura: e.target.value })}
                 required
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
-             
                 InputProps={{ startAdornment: <Schedule sx={{ color: COLOR_AZUL_ELECTRICO, mr: 1 }} /> }}
                 variant="outlined"
                 sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
               />
               <TextField
                 fullWidth
-  
                 label="Hora Cierre"
                 type="time"
                 value={formData.hora_cierre}
                 onChange={(e) => setFormData({ ...formData, hora_cierre: e.target.value })}
                 required
-              
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <Schedule sx={{ color: COLOR_AZUL_ELECTRICO, mr: 1 }} /> }}
                 variant="outlined"
                 sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
-            
               />
             </Box>
 

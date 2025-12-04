@@ -675,70 +675,72 @@ export default function Facilities() {
   // Renderizar vista de espacios
   const renderEspaciosView = () => (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+      <Box sx={{ 
+      display: 'flex', 
+      // CAMBIO: Columna en móvil (xs), Fila en tablet/PC (sm)
+      flexDirection: { xs: 'column', sm: 'row' }, 
+      justifyContent: 'space-between', 
+      // CAMBIO: Alinear a la izquierda en móvil, al centro en PC
+      alignItems: { xs: 'flex-start', sm: 'center' }, 
+      mb: 4,
+      // CAMBIO: Espacio vertical entre título y botón en móvil
+      gap: 2 
+    }}>
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 'bold', 
+            color: COLOR_AZUL_ELECTRICO,
+            // CAMBIO: Fuente un poco más pequeña en celular para que no ocupe tanto
+            fontSize: { xs: '1.75rem', md: '2.125rem' } 
+          }}
         >
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 'bold',
-              color: COLOR_AZUL_ELECTRICO
-            }}
-          >
-            Gestión de Espacios Deportivos
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Administra tus instalaciones y asigna gestores y controles de acceso.
-          </Typography>
-        </motion.div>
-        {isAdmin && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setOpen(true)}
-              sx={{
-                marginRight: 2,
-                textTransform: 'none',
-                backgroundColor: COLOR_VERDE_LIMA,
-                color: COLOR_NEGRO_SUAVE,
-                fontWeight: 'bold',
-                '&:hover': {
-                  backgroundColor: COLOR_VERDE_LIMA,
-                  opacity: 0.9,
-                  boxShadow: '0 4px 8px rgba(162, 232, 49, 0.4)',
-                },
-              }}
-            >
-              Nuevo Espacio
-            </Button>
+          Espacios Deportivos
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          Gestiona tus complejos y sedes
+        </Typography>
+      </motion.div>
 
-            <Button 
-              variant="contained"
-              onClick={handleBuscarCercanas}
-              sx={{
-                textTransform: 'none',
-                backgroundColor: COLOR_AZUL_ELECTRICO,
-                color: COLOR_BLANCO,
-                fontWeight: 'bold',
-                '&:hover': {
-                  backgroundColor: COLOR_AZUL_ELECTRICO,
-                  opacity: 0.9,
-                },
-              }}
-            >
-              Buscar canchas cerca de mí
-            </Button>
-          </motion.div>
-        )}
-      </Box>
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+        // CAMBIO: En celular, queremos que el contenedor del botón ocupe todo el ancho
+        style={{ width: window.innerWidth < 600 ? '100%' : 'auto' }}
+      >
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => handleOpen()}
+          sx={{
+            textTransform: 'none',
+            backgroundColor: COLOR_NARANJA_VIBRANTE,
+            color: COLOR_BLANCO,
+            fontWeight: 'bold',
+            px: 3,
+            py: 1,
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(253, 126, 20, 0.3)',
+            // CAMBIO: Botón ancho completo en móvil
+            width: { xs: '100%', sm: 'auto' },
+            '&:hover': {
+              backgroundColor: '#CC6A11',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 6px 15px rgba(253, 126, 20, 0.4)',
+            },
+            transition: 'all 0.3s ease',
+          }}
+        >
+          Nuevo Espacio
+        </Button>
+      </motion.div>
+    </Box>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -1334,7 +1336,7 @@ export default function Facilities() {
 
   // Render principal
   return (
-    <Box sx={{ mt: 12, p: 3 }}>
+    <Box sx={{ mt: { xs: 10, md: 12 }, p: { xs: 2, md: 3 } }}>
       {renderBreadcrumbs()}
 
       {view === 'espacios' && renderEspaciosView()}

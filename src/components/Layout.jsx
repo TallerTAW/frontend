@@ -652,9 +652,10 @@ export default function Layout() {
                 >
                     {[
                         { icon: <Dashboard />, label: 'Inicio', path: '/dashboard' },
+                        { icon: <Sports />, label: 'Espacios', path: '/espacios' },
                         { icon: <CalendarMonth />, label: 'Reservar', path: '/reservar' },
                         { icon: <SportsSoccer />, label: 'Canchas', path: '/canchas' },
-                        { icon: <People />, label: 'Perfil', onClick: handleAvatarClick },
+                        // { icon: <CalendarMonth />, label: 'Reservar', onClick: handleAvatarClick },
                     ].filter(item => {
                         if (item.path === '/reservar' && profile?.rol !== 'cliente' && profile?.rol !== 'gestor') return false;
                         if (item.path === '/canchas' && !['admin', 'gestor'].includes(profile?.rol)) return false;
