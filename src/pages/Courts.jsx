@@ -779,7 +779,7 @@ export default function Courts() {
                   (
                       <>
                         <img 
-                          src={`${api_url}${cancha.imagen}`} 
+                          src={cancha.imagen}
                           alt={cancha.nombre} 
          
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"

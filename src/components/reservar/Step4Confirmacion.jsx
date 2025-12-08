@@ -40,25 +40,20 @@ export default function Step4Confirmacion({
   // Validar horario
   useEffect(() => {
     if (reservationData.hora_inicio && reservationData.hora_fin) {
-      // Re-ejecutar isHorarioDisponible si cambian las horas o la fecha
       setHorarioDisponible(isHorarioDisponible());
     } else {
       setHorarioDisponible(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservationData.hora_inicio, reservationData.hora_fin, reservationData.fecha_reserva]); 
-  // Se añade reservationData.fecha_reserva como dependencia implícita
+  }, [reservationData.hora_inicio, reservationData.hora_fin, reservationData.fecha_reserva]);
 
   // Validar asistentes
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Si solo hay 1 asistente (el reservante), la validación es automática
       if (reservationData.cantidad_asistentes <= 1) {
         setAsistentesValidos(true);
         return;
       }
       
-      // La cantidad de asistentes en el array debe coincidir con la cantidad solicitada
       const cantidadCoincide = asistentes && asistentes.length === reservationData.cantidad_asistentes;
       
       if (!cantidadCoincide) {
@@ -66,7 +61,6 @@ export default function Step4Confirmacion({
           return;
       }
       
-      // Validar datos de cada asistente (nombre no vacío, email válido)
       const todosValidos = asistentes.every((asistente) => {
         if (!asistente) return false;
         
@@ -87,27 +81,28 @@ export default function Step4Confirmacion({
     const tieneMasDeUnAsistente = reservationData.cantidad_asistentes > 1;
     
     const condiciones = {
-      // Campos básicos
       fecha: !reservationData.fecha_reserva,
       hora_inicio: !reservationData.hora_inicio,
       hora_fin: !reservationData.hora_fin,
-      
-      // Validaciones de horario
       horarioNoDisponible: !isHorarioDisponible() || !horarioDisponible,
       horasInvalidas: reservationData.hora_inicio && reservationData.hora_fin && 
                       parseInt(reservationData.hora_fin.split(':')[0]) <= parseInt(reservationData.hora_inicio.split(':')[0]),
-      
-      // Validar asistentes SOLO si el formulario de asistentes se ha mostrado y hay más de 1
       asistentesInvalidos: tieneMasDeUnAsistente && mostrarFormAsistentes && !asistentesValidos,
     };
     
-    // Si alguna condición es TRUE, el botón está deshabilitado
     return Object.values(condiciones).some(c => c);
   };
 
   return (
-    <Box>
-      <Box className="flex items-center gap-4 mb-8">
+    <Box sx={{ px: { xs: 1, sm: 2, md: 3 }, py: { xs: 2, sm: 3 } }}>
+      {/* Botón Volver y Título */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' }, 
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        gap: { xs: 2, sm: 3 },
+        mb: { xs: 4, sm: 6 }
+      }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={onBack}
@@ -116,6 +111,7 @@ export default function Step4Confirmacion({
             color: '#0f9fe1',
             borderColor: '#0f9fe1',
             fontWeight: 'bold',
+            minWidth: { xs: '100%', sm: 'auto' },
             '&:hover': {
               borderColor: '#0d8dc7',
               backgroundColor: 'rgba(15, 159, 225, 0.08)'
@@ -124,11 +120,21 @@ export default function Step4Confirmacion({
         >
           Volver
         </Button>
-        <Typography variant="h4" className="font-bold" sx={{ color: '#1a237e' }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 'bold', 
+            color: '#1a237e',
+            fontSize: { xs: '1.75rem', sm: '2rem', md: '2.125rem' },
+            textAlign: { xs: 'center', sm: 'left' },
+            width: { xs: '100%', sm: 'auto' }
+          }}
+        >
           Confirmar Reserva
         </Typography>
       </Box>
 
+      {/* Alerta de horas ocupadas */}
       {occupiedHours.length > 0 && (
         <Alert 
           severity="warning" 
@@ -141,14 +147,14 @@ export default function Step4Confirmacion({
           }}
         >
           <Typography variant="body2" fontWeight="medium">
-            ⚠️ Horas ocupadas en esta fecha: <strong>{occupiedHours.join(', ')}</strong>
+            ⚠️ Horas ocupadas: <strong>{occupiedHours.join(', ')}</strong>
           </Typography>
         </Alert>
       )}
 
-      {/* Uso de Grid para dividir en dos columnas en pantallas grandes (md en adelante) */}
-      <Grid container spacing={4}>
-        {/* Columna 1: Detalles de la Cancha (Ocupa 5/12 en md, 12/12 en xs) */}
+      {/* Grid Principal Responsivo */}
+      <Grid container spacing={{ xs: 3, md: 4 }}>
+        {/* Columna 1: Detalles de la Cancha */}
         <Grid item xs={12} md={5}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -156,60 +162,91 @@ export default function Step4Confirmacion({
             transition={{ duration: 0.6 }}
           >
             <Card 
-              className="rounded-2xl shadow-xl overflow-hidden" 
-              sx={{ border: 'none', height: '100%' }} // <--- Asegura altura completa para una apariencia limpia
+              sx={{ 
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: 'none',
+                height: '100%',
+                boxShadow: 3
+              }}
             >
+              {/* Header */}
               <Box sx={{ 
                 background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)', 
-                p: 3,
+                p: { xs: 2, sm: 3 },
                 color: 'white'
               }}>
-                <Typography variant="h5" className="font-bold">
-                  <SportsSoccer sx={{ mr: 1.5, verticalAlign: 'middle', fontSize: 28 }} />
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <SportsSoccer sx={{ fontSize: { xs: 22, sm: 24 } }} />
                   Detalles de la Cancha
                 </Typography>
               </Box>
               
-              <CardContent sx={{ p: 4 }}>
-                <Box className="space-y-4">
+              {/* Contenido */}
+              <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {/* Información Principal */}
-                  <Paper elevation={0} sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-                    <Typography variant="h6" sx={{ color: '#0f9fe1', mb: 2, fontWeight: 'bold' }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: { xs: 2, sm: 3 }, 
+                      bgcolor: '#f8f9fa', 
+                      borderRadius: 2 
+                    }}
+                  >
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: '#0f9fe1', 
+                        mb: 2, 
+                        fontWeight: 'bold',
+                        fontSize: { xs: '1rem', sm: '1.1rem' }
+                      }}
+                    >
                       {selectedCancha.nombre}
                     </Typography>
                     
-                    <Box className="space-y-3">
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Stadium sx={{ color: '#9eca3f', fontSize: 22 }} />
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        <Stadium sx={{ color: '#9eca3f', fontSize: { xs: 20, sm: 22 } }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
                             Espacio Deportivo
                           </Typography>
-                          <Typography variant="body1" fontWeight="medium">
+                          <Typography variant="body2" fontWeight="medium">
                             {selectedEspacio?.nombre}
                           </Typography>
                         </Box>
                       </Box>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <People sx={{ color: '#0f9fe1', fontSize: 22 }} />
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        <People sx={{ color: '#0f9fe1', fontSize: { xs: 20, sm: 22 } }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
                             Disciplina
                           </Typography>
-                          <Typography variant="body1" fontWeight="medium">
+                          <Typography variant="body2" fontWeight="medium">
                             {selectedDisciplina?.nombre}
                           </Typography>
                         </Box>
                       </Box>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <AccessTime sx={{ color: '#ff9800', fontSize: 22 }} />
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        <AccessTime sx={{ color: '#ff9800', fontSize: { xs: 20, sm: 22 } }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
                             Horario Operativo
                           </Typography>
-                          <Typography variant="body1" fontWeight="medium">
+                          <Typography variant="body2" fontWeight="medium">
                             {selectedCancha.hora_apertura.slice(0,5)} - {selectedCancha.hora_cierre.slice(0,5)}
                           </Typography>
                         </Box>
@@ -218,16 +255,45 @@ export default function Step4Confirmacion({
                   </Paper>
 
                   {/* Precio y Capacidad */}
-                  <Paper elevation={0} sx={{ p: 3, bgcolor: '#f0f7ff', borderRadius: 2, border: '1px solid #e1f5fe' }}>
-                    <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, fontWeight: 'bold' }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: { xs: 2, sm: 3 }, 
+                      bgcolor: '#f0f7ff', 
+                      borderRadius: 2, 
+                      border: '1px solid #e1f5fe' 
+                    }}
+                  >
+                    <Typography 
+                      variant="subtitle2" 
+                      sx={{ 
+                        color: '#1a237e', 
+                        mb: 2, 
+                        fontWeight: 'bold',
+                        fontSize: { xs: '0.9rem', sm: '1rem' }
+                      }}
+                    >
                       Información de Tarifas
                     </Typography>
                     
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
-                        <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                          <Money sx={{ fontSize: 32, color: '#4caf50', mb: 1 }} />
-                          <Typography variant="h5" sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                        <Box sx={{ 
+                          textAlign: 'center', 
+                          p: 2, 
+                          bgcolor: 'white', 
+                          borderRadius: 2, 
+                          border: '1px solid #e0e0e0' 
+                        }}>
+                          <Money sx={{ fontSize: { xs: 24, sm: 28 }, color: '#4caf50', mb: 1 }} />
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              color: '#2e7d32', 
+                              fontWeight: 'bold',
+                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                            }}
+                          >
                             ${selectedCancha.precio_por_hora}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
@@ -236,27 +302,40 @@ export default function Step4Confirmacion({
                         </Box>
                       </Grid>
                       <Grid item xs={6}>
-                        <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                          <Groups sx={{ fontSize: 32, color: '#0f9fe1', mb: 1 }} />
-                          <Typography variant="h5" sx={{ color: '#1565c0', fontWeight: 'bold' }}>
+                        <Box sx={{ 
+                          textAlign: 'center', 
+                          p: 2, 
+                          bgcolor: 'white', 
+                          borderRadius: 2, 
+                          border: '1px solid #e0e0e0' 
+                        }}>
+                          <Groups sx={{ fontSize: { xs: 24, sm: 28 }, color: '#0f9fe1', mb: 1 }} />
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              color: '#1565c0', 
+                              fontWeight: 'bold',
+                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                            }}
+                          >
                             {selectedEspacio?.capacidad}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            capacidad máxima
+                            capacidad
                           </Typography>
                         </Box>
                       </Grid>
                     </Grid>
                   </Paper>
 
-                  {/* Estado de la Cancha */}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  {/* Estado */}
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                     <Chip
                       label="DISPONIBLE"
                       color="success"
                       sx={{ 
                         fontWeight: 'bold',
-                        fontSize: '0.9rem',
+                        fontSize: { xs: '0.75rem', sm: '0.85rem' },
                         px: 3,
                         py: 1
                       }}
@@ -268,26 +347,42 @@ export default function Step4Confirmacion({
           </motion.div>
         </Grid>
 
-        {/* Columna 2: Formulario de Reserva (Ocupa 7/12 en md, 12/12 en xs) */}
+        {/* Columna 2: Formulario de Reserva */}
         <Grid item xs={12} md={7}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Card className="rounded-2xl shadow-xl overflow-hidden" sx={{ border: 'none' }}>
+            <Card sx={{ 
+              borderRadius: 2,
+              overflow: 'hidden',
+              border: 'none',
+              boxShadow: 3
+            }}>
+              {/* Header */}
               <Box sx={{ 
                 background: 'linear-gradient(135deg, #1a237e 0%, #283593 100%)', 
-                p: 3,
+                p: { xs: 2, sm: 3 },
                 color: 'white'
               }}>
-                <Typography variant="h5" className="font-bold">
-                  <CalendarMonth sx={{ mr: 1.5, verticalAlign: 'middle', fontSize: 28 }} />
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <CalendarMonth sx={{ fontSize: { xs: 22, sm: 24 } }} />
                   Información de la Reserva
                 </Typography>
               </Box>
               
-              <CardContent sx={{ p: 4 }}>
+              {/* Contenido */}
+              <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
                 <ReservationForm
                   reservationData={reservationData}
                   horariosDisponibles={horariosDisponibles}
@@ -307,39 +402,57 @@ export default function Step4Confirmacion({
 
                 {/* Resumen del Tiempo */}
                 {reservationData.hora_inicio && reservationData.hora_fin && (
-                  <Paper elevation={0} sx={{ 
-                    p: 3, 
-                    mt: 3, 
-                    bgcolor: '#f5f5f5',
-                    borderRadius: 2,
-                    borderLeft: '4px solid #0f9fe1'
-                  }}>
-                    <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 1, fontWeight: 'bold' }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: { xs: 2, sm: 3 }, 
+                      mt: 3, 
+                      bgcolor: '#f5f5f5',
+                      borderRadius: 2,
+                      borderLeft: '4px solid #0f9fe1'
+                    }}
+                  >
+                    <Typography 
+                      variant="subtitle2" 
+                      sx={{ 
+                        color: '#1a237e', 
+                        mb: 1, 
+                        fontWeight: 'bold',
+                        fontSize: { xs: '0.9rem', sm: '1rem' }
+                      }}
+                    >
                       Resumen del Horario
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary">
                           Inicio:
                         </Typography>
-                        <Typography variant="body1" fontWeight="medium">
+                        <Typography variant="body2" fontWeight="medium">
                           {reservationData.hora_inicio}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary">
                           Fin:
                         </Typography>
-                        <Typography variant="body1" fontWeight="medium">
+                        <Typography variant="body2" fontWeight="medium">
                           {reservationData.hora_fin}
                         </Typography>
                       </Grid>
                       <Grid item xs={12}>
                         <Divider sx={{ my: 1 }} />
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="caption" color="text.secondary">
                           Duración total:
                         </Typography>
-                        <Typography variant="h6" sx={{ color: '#0f9fe1', fontWeight: 'bold' }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          sx={{ 
+                            color: '#0f9fe1', 
+                            fontWeight: 'bold',
+                            fontSize: { xs: '1rem', sm: '1.1rem' }
+                          }}
+                        >
                           {totalHours} hora{totalHours !== 1 ? 's' : ''}
                         </Typography>
                       </Grid>
@@ -349,63 +462,80 @@ export default function Step4Confirmacion({
 
                 {/* Cupones */}
                 {cupones.length > 0 && (
-                  <Paper elevation={0} sx={{ 
-                    p: 3, 
-                    mt: 3,
-                    bgcolor: '#fff8e1',
-                    borderRadius: 2,
-                    border: '1px dashed #ffd54f'
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <LocalOffer sx={{ color: '#ff9800', mr: 1.5 }} />
-                      <Typography variant="subtitle1" sx={{ color: '#5d4037', fontWeight: 'bold' }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: { xs: 2, sm: 3 }, 
+                      mt: 3,
+                      bgcolor: '#fff8e1',
+                      borderRadius: 2,
+                      border: '1px dashed #ffd54f'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <LocalOffer sx={{ color: '#ff9800', mr: 1, fontSize: { xs: 18, sm: 20 } }} />
+                      <Typography 
+                        variant="subtitle2" 
+                        sx={{ 
+                          color: '#5d4037', 
+                          fontWeight: 'bold',
+                          fontSize: { xs: '0.9rem', sm: '1rem' }
+                        }}
+                      >
                         Cupones Disponibles
                       </Typography>
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Tienes {cupones.length} cupón{cupones.length !== 1 ? 'es' : ''} disponible{cupones.length !== 1 ? 's' : ''} para aplicar
+                    <Typography variant="caption" color="text.secondary">
+                      Tienes {cupones.length} cupón{cupones.length !== 1 ? 'es' : ''} disponible{cupones.length !== 1 ? 's' : ''}
                     </Typography>
                   </Paper>
                 )}
 
-                <PaymentSummary
-                  calcularCostoTotal={calcularCostoTotal}
-                  selectedCoupon={selectedCoupon}
-                  totalHours={totalHours}
-                />
+                {/* Payment Summary - MODIFICADO para ser responsive */}
+                <Box sx={{ mt: 3 }}>
+                  <PaymentSummary
+                    calcularCostoTotal={calcularCostoTotal}
+                    selectedCoupon={selectedCoupon}
+                    totalHours={totalHours}
+                  />
+                </Box>
 
-                {/* Validación de asistentes - MOSTRAR SOLO SI HAY MÁS DE 1 ASISTENTE */}
+                {/* Validación de asistentes */}
                 {reservationData.cantidad_asistentes > 1 && (
-                  <>
+                  <Box sx={{ mt: 3 }}>
                     {!asistentesValidos && (
-                      <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          ❌ Por favor completa la información de todos los asistentes antes de confirmar.
-                          {asistentes?.length > 0 && (
-                            <>
-                              <br/>
-                              <small>
-                                {asistentes.filter(a => a && a.nombre && a.email && 
-                                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())).length}
-                                de {reservationData.cantidad_asistentes} completados correctamente
-                              </small>
-                            </>
-                          )}
+                      <Alert 
+                        severity="error" 
+                        sx={{ 
+                          borderRadius: 2,
+                          '& .MuiAlert-message': { width: '100%' }
+                        }}
+                      >
+                        <Typography variant="caption" fontWeight="medium">
+                          ❌ Completa la información de todos los asistentes
                         </Typography>
+                        {asistentes?.length > 0 && (
+                          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                            {asistentes.filter(a => a && a.nombre && a.email && 
+                              /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())).length}
+                            /{reservationData.cantidad_asistentes} completados
+                          </Typography>
+                        )}
                       </Alert>
                     )}
                     
                     {asistentesValidos && asistentes?.length > 0 && (
-                      <Alert severity="success" sx={{ mt: 3, borderRadius: 2 }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          ✅ Todos los asistentes tienen información válida
+                      <Alert severity="success" sx={{ borderRadius: 2 }}>
+                        <Typography variant="caption" fontWeight="medium">
+                          ✅ Todos los asistentes válidos
                         </Typography>
                       </Alert>
                     )}
-                  </>
+                  </Box>
                 )}
 
-                <Box className="mt-8">
+                {/* Botón de Confirmación */}
+                <Box sx={{ mt: 4 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -425,16 +555,17 @@ export default function Step4Confirmacion({
                         transform: 'none',
                         boxShadow: 'none'
                       },
-                      fontSize: '1.1rem',
                       fontWeight: 'bold',
-                      py: 2.5,
+                      py: { xs: 2, sm: 2.5 },
                       borderRadius: 2,
                       transition: 'all 0.3s ease',
+                      fontSize: { xs: '0.9rem', sm: '1rem' }
                     }}
                   >
                     {profile ? '✅ Confirmar Reserva y Pagar' : '🔑 Iniciar Sesión para Reservar'}
                   </Button>
 
+                  {/* Mensaje de error de horario */}
                   {!isHorarioDisponible() && reservationData.hora_inicio && reservationData.hora_fin && (
                     <Alert 
                       severity="error" 
@@ -442,12 +573,12 @@ export default function Step4Confirmacion({
                         mt: 3,
                         borderRadius: 2,
                         backgroundColor: '#ffebee',
-                        border: '1px solid #ffcdd2'
+                        border: '1px solid #ffcdd2',
+                        '& .MuiAlert-message': { width: '100%' }
                       }}
                     >
-                      <Typography variant="body2" fontWeight="medium">
-                        ❌ El horario seleccionado ({reservationData.hora_inicio} - {reservationData.hora_fin}) 
-                        no está disponible. Por favor, seleccione otro horario.
+                      <Typography variant="caption" fontWeight="medium">
+                        ❌ Horario no disponible ({reservationData.hora_inicio} - {reservationData.hora_fin})
                       </Typography>
                     </Alert>
                   )}

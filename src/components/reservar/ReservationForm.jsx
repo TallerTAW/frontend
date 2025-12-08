@@ -16,6 +16,7 @@ import {
   Chip,
   Collapse,
   Button,
+  Stack,
 } from '@mui/material';
 import { 
   CalendarToday, 
@@ -67,66 +68,47 @@ export default function ReservationForm({
 
   // Inicializar asistentes
   useEffect(() => {
-  const cantidad = reservationData.cantidad_asistentes || 1;
-  
-  // Si la cantidad cambió, ajustar el array de asistentes
-  if (asistentes.length !== cantidad) {
-    const newAsistentes = [];
+    const cantidad = reservationData.cantidad_asistentes || 1;
     
-    for (let i = 0; i < cantidad; i++) {
-      // Mantener datos existentes si los hay
-      newAsistentes[i] = asistentes[i] || { 
-        nombre: '', 
-        email: '',
-        id: i + 1
-      };
+    if (asistentes.length !== cantidad) {
+      const newAsistentes = [];
+      
+      for (let i = 0; i < cantidad; i++) {
+        newAsistentes[i] = asistentes[i] || { 
+          nombre: '', 
+          email: '',
+          id: i + 1
+        };
+      }
+      
+      setAsistentes(newAsistentes);
+      
+      if (cantidad > 1 && onAsistentesChange) {
+        setTimeout(() => {
+          onAsistentesChange(newAsistentes);
+        }, 100);
+      }
     }
-    
-    console.log('Inicializando asistentes:', { cantidad, newAsistentes });
-    setAsistentes(newAsistentes);
-    
-    // Solo notificar al padre si hay más de 1 asistente
-    if (cantidad > 1 && onAsistentesChange) {
-      setTimeout(() => {
-        onAsistentesChange(newAsistentes);
-      }, 100);
-    }
-  }
-  
-  console.log('Asistentes inicializados:', {
-    cantidad,
-    asistentesLength: asistentes.length,
-    asistentes
-  });
-}, [reservationData.cantidad_asistentes]);
+  }, [reservationData.cantidad_asistentes]);
 
   // Notificar cambios en asistentes al padre
   useEffect(() => {
-  if (reservationData.cantidad_asistentes > 1) {
-    // Notificar al padre con el array actual
-    if (onAsistentesChange) {
-      onAsistentesChange(asistentes);
-    }
-  }
-  
-  // Validar y actualizar errores
-  const errors = {};
-  asistentes.forEach((asistente, index) => {
-    if (asistente && asistente.email && asistente.email.trim() !== '') {
-      if (!isValidEmail(asistente.email)) {
-        errors[`email_${index}`] = true; // Cambia a booleano, no string
+    if (reservationData.cantidad_asistentes > 1) {
+      if (onAsistentesChange) {
+        onAsistentesChange(asistentes);
       }
     }
-  });
-  setValidationErrors(errors);
-  
-  console.log('Asistentes actualizados:', {
-    cantidadAsistentes: reservationData.cantidad_asistentes,
-    asistentesLength: asistentes.length,
-    asistentes,
-    errors
-  });
-}, [asistentes, reservationData.cantidad_asistentes]);
+    
+    const errors = {};
+    asistentes.forEach((asistente, index) => {
+      if (asistente && asistente.email && asistente.email.trim() !== '') {
+        if (!isValidEmail(asistente.email)) {
+          errors[`email_${index}`] = true;
+        }
+      }
+    });
+    setValidationErrors(errors);
+  }, [asistentes, reservationData.cantidad_asistentes]);
 
   // Verificar si el horario está disponible
   useEffect(() => {
@@ -139,44 +121,23 @@ export default function ReservationForm({
   }, [reservationData.hora_inicio, reservationData.hora_fin, isHorarioDisponible]);
 
   const allAsistentesValid = () => {
-  if (reservationData.cantidad_asistentes <= 1) {
-    return true;
-  }
-  
-  console.log('=== VALIDANDO ASISTENTES EN FORMULARIO ===');
-  console.log('Cantidad esperada:', reservationData.cantidad_asistentes);
-  console.log('Cantidad en array:', asistentes.length);
-  console.log('Asistentes:', asistentes);
-  
-  if (asistentes.length !== reservationData.cantidad_asistentes) {
-    console.log('Error: Cantidad no coincide');
-    return false;
-  }
-  
-  const todosValidos = asistentes.every((asistente, index) => {
-    if (!asistente) {
-      console.log(`Asistente ${index + 1} no definido`);
+    if (reservationData.cantidad_asistentes <= 1) {
+      return true;
+    }
+    
+    if (asistentes.length !== reservationData.cantidad_asistentes) {
       return false;
     }
     
-    const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
-    const emailValido = isValidEmail(asistente.email);
-    
-    if (!nombreValido || !emailValido) {
-      console.log(`Asistente ${index + 1} inválido:`, {
-        nombre: asistente.nombre,
-        email: asistente.email,
-        nombreValido,
-        emailValido
-      });
-    }
-    
-    return nombreValido && emailValido;
-  });
-  
-  console.log('Resultado validación formulario:', todosValidos);
-  return todosValidos;
-};
+    return asistentes.every((asistente) => {
+      if (!asistente) return false;
+      
+      const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
+      const emailValido = isValidEmail(asistente.email);
+      
+      return nombreValido && emailValido;
+    });
+  };
 
   const handleHoraInicioChange = (horaInicio) => {
     onReservationChange({
@@ -244,11 +205,27 @@ export default function ReservationForm({
   const tieneMasDeUnAsistente = (reservationData.cantidad_asistentes || 1) > 1;
 
   return (
-    <Box className="space-y-6">
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: { xs: 3, sm: 4 } 
+    }}>
       {/* Fecha */}
-      <Paper elevation={0} sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-        <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CalendarToday sx={{ color: '#0f9fe1' }} />
+      <Paper elevation={0} sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        bgcolor: '#f5f5f5', 
+        borderRadius: 2 
+      }}>
+        <Typography variant="subtitle2" sx={{ 
+          color: '#1a237e', 
+          mb: 2, 
+          fontWeight: 'bold', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          fontSize: { xs: '0.9rem', sm: '1rem' }
+        }}>
+          <CalendarToday sx={{ color: '#0f9fe1', fontSize: { xs: 18, sm: 20 } }} />
           Selecciona la Fecha
         </Typography>
         <TextField
@@ -262,7 +239,6 @@ export default function ReservationForm({
               hora_inicio: '',
               hora_fin: ''
             });
-            // Limpiar asistentes al cambiar fecha
             if (asistentes.length > 0) {
               setAsistentes([]);
             }
@@ -271,7 +247,7 @@ export default function ReservationForm({
           inputProps={{ min: today }}
           required
           variant="outlined"
-          size="medium"
+          size="small"
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 2,
@@ -292,16 +268,31 @@ export default function ReservationForm({
       </Paper>
 
       {/* Horarios */}
-      <Paper elevation={0} sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-        <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 3, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AccessTime sx={{ color: '#0f9fe1' }} />
+      <Paper elevation={0} sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        bgcolor: '#f5f5f5', 
+        borderRadius: 2 
+      }}>
+        <Typography variant="subtitle2" sx={{ 
+          color: '#1a237e', 
+          mb: 3, 
+          fontWeight: 'bold', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          fontSize: { xs: '0.9rem', sm: '1rem' }
+        }}>
+          <AccessTime sx={{ color: '#0f9fe1', fontSize: { xs: 18, sm: 20 } }} />
           Selecciona el Horario
         </Typography>
         
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required error={!!(reservationData.hora_inicio && !isHoraInicioOk)}>
-              <InputLabel sx={{ fontWeight: 'medium' }}>
+              <InputLabel sx={{ 
+                fontWeight: 'medium',
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}>
                 Hora de inicio
               </InputLabel>
               <Select
@@ -310,7 +301,7 @@ export default function ReservationForm({
                 label="Hora de inicio"
                 disabled={!reservationData.fecha_reserva || horasInicioDisponibles.length === 0}
                 variant="outlined"
-                size="medium"
+                size="small"
                 sx={{
                   borderRadius: 2,
                   '& .MuiOutlinedInput-root': {
@@ -335,7 +326,8 @@ export default function ReservationForm({
                     sx={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
                     }}
                   >
                     <span>{hora}</span>
@@ -344,14 +336,23 @@ export default function ReservationForm({
                 ))}
               </Select>
               {reservationData.hora_inicio && !isHoraInicioOk && (
-                <FormHelperText error sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <FormHelperText error sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}>
                   <Cancel sx={{ fontSize: 16 }} />
-                  Esta hora no está disponible para iniciar una reserva
+                  Esta hora no está disponible
                 </FormHelperText>
               )}
               {horasInicioDisponibles.length === 0 && reservationData.fecha_reserva && (
-                <Alert severity="info" sx={{ mt: 1, borderRadius: 1 }}>
-                  No hay horas disponibles para esta fecha
+                <Alert severity="info" sx={{ 
+                  mt: 1, 
+                  borderRadius: 1,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}>
+                  No hay horas disponibles
                 </Alert>
               )}
             </FormControl>
@@ -359,7 +360,10 @@ export default function ReservationForm({
           
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required error={!!(reservationData.hora_fin && !isHoraFinOk)}>
-              <InputLabel sx={{ fontWeight: 'medium' }}>
+              <InputLabel sx={{ 
+                fontWeight: 'medium',
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}>
                 Hora de fin
               </InputLabel>
               <Select
@@ -368,7 +372,7 @@ export default function ReservationForm({
                 label="Hora de fin"
                 disabled={!reservationData.hora_inicio || horasFinDisponibles.length === 0}
                 variant="outlined"
-                size="medium"
+                size="small"
                 sx={{
                   borderRadius: 2,
                   '& .MuiOutlinedInput-root': {
@@ -398,7 +402,8 @@ export default function ReservationForm({
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
                         }}
                       >
                         <span>{hora}</span>
@@ -410,41 +415,50 @@ export default function ReservationForm({
                 })}
               </Select>
               {reservationData.hora_fin && !isHoraFinOk && (
-                <FormHelperText error sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <FormHelperText error sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}>
                   <Cancel sx={{ fontSize: 16 }} />
-                  Esta hora no está disponible para terminar una reserva
+                  Hora no disponible
                 </FormHelperText>
               )}
               {horasFinDisponibles.length === 0 && reservationData.hora_inicio && (
-                <Alert severity="info" sx={{ mt: 1, borderRadius: 1 }}>
-                  No hay horas disponibles después de la hora seleccionada
+                <Alert severity="info" sx={{ 
+                  mt: 1, 
+                  borderRadius: 1,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}>
+                  No hay horas disponibles después
                 </Alert>
               )}
             </FormControl>
           </Grid>
         </Grid>
 
-        {/* Estado del horario - Versión compacta */}
+        {/* Estado del horario */}
         <Collapse in={!!(reservationData.hora_inicio && reservationData.hora_fin)}>
           <Box sx={{ mt: 2 }}>
             <Chip
               label={horarioDisponible 
-                ? `✅ El horario ${reservationData.hora_inicio} - ${reservationData.hora_fin} está disponible` 
-                : `❌ El horario ${reservationData.hora_inicio} - ${reservationData.hora_fin} no está disponible`}
+                ? `✅ ${reservationData.hora_inicio} - ${reservationData.hora_fin} disponible` 
+                : `❌ ${reservationData.hora_inicio} - ${reservationData.hora_fin} no disponible`}
               color={horarioDisponible ? "success" : "error"}
               icon={horarioDisponible ? <CheckCircle /> : <Warning />}
               sx={{
                 width: '100%',
                 justifyContent: 'flex-start',
                 py: 1.5,
-                fontSize: '0.9rem',
+                fontSize: { xs: '0.8rem', sm: '0.9rem' },
                 fontWeight: 'medium',
                 borderRadius: 1,
                 backgroundColor: horarioDisponible ? '#e8f5e9' : '#ffebee',
                 color: horarioDisponible ? '#2e7d32' : '#c62828',
                 border: `1px solid ${horarioDisponible ? '#c8e6c9' : '#ffcdd2'}`,
                 '& .MuiChip-icon': {
-                  fontSize: '1.2rem',
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
                   ml: 0.5
                 }
               }}
@@ -453,121 +467,206 @@ export default function ReservationForm({
             />
             
             {!horarioDisponible && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', ml: 1 }}>
-                Haz clic en la X para limpiar y seleccionar otro horario
+              <Typography variant="caption" color="text.secondary" sx={{ 
+                mt: 1, 
+                display: 'block', 
+                ml: 1,
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}>
+                Haz clic en la X para limpiar
               </Typography>
             )}
           </Box>
         </Collapse>
       </Paper>
 
-      {/* Cantidad de Asistentes y Controles */}
-      <Paper elevation={0} sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="subtitle1" sx={{ color: '#1a237e', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <People sx={{ color: '#0f9fe1' }} />
-            Cantidad de Asistentes
+      {/* Cantidad de Asistentes - MEJORADO Y RESPONSIVO */}
+      <Paper elevation={0} sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        bgcolor: '#f5f5f5', 
+        borderRadius: 2 
+      }}>
+        {/* Título y controles */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'stretch', sm: 'center' }, 
+          gap: { xs: 2, sm: 1 },
+          mb: 2 
+        }}>
+          {/* Título y chip de capacidad */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            width: { xs: '100%', sm: 'auto' }
+          }}>
+            <Typography variant="subtitle2" sx={{ 
+              color: '#1a237e', 
+              fontWeight: 'bold', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              fontSize: { xs: '0.9rem', sm: '1rem' }
+            }}>
+              <People sx={{ color: '#0f9fe1', fontSize: { xs: 18, sm: 20 } }} />
+              Cantidad de Asistentes
+            </Typography>
+            
             <Chip 
               label={`${reservationData.cantidad_asistentes || 1}/${maxCapacity}`} 
               size="small" 
               color="primary"
-              sx={{ ml: 1 }}
+              sx={{ 
+                ml: 1,
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}
             />
-          </Typography>
+          </Box>
           
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          {/* Controles + Info */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            justifyContent: { xs: 'space-between', sm: 'flex-start' }
+          }}>
+            {/* Botón de info */}
             <Tooltip title={`Capacidad máxima: ${maxCapacity} personas`}>
               <IconButton 
                 size="small" 
                 onClick={() => setShowCapacityInfo(!showCapacityInfo)}
-                sx={{ color: '#0f9fe1' }}
+                sx={{ 
+                  color: '#0f9fe1',
+                  fontSize: { xs: 20, sm: 22 }
+                }}
               >
                 <Info />
               </IconButton>
             </Tooltip>
             
-            <IconButton
-              size="small"
-              onClick={removeAsistente}
-              disabled={(reservationData.cantidad_asistentes || 1) <= 1}
-              sx={{ 
-                color: (reservationData.cantidad_asistentes || 1) > 1 ? '#f44336' : '#ccc',
-                '&:hover': {
-                  backgroundColor: (reservationData.cantidad_asistentes || 1) > 1 ? '#ffebee' : 'transparent'
-                }
-              }}
-            >
-              <RemoveCircle />
-            </IconButton>
-            
-            <IconButton
-              size="small"
-              onClick={addAsistente}
-              disabled={(reservationData.cantidad_asistentes || 1) >= maxCapacity}
-              sx={{ 
-                color: (reservationData.cantidad_asistentes || 1) < maxCapacity ? '#4caf50' : '#ccc',
-                '&:hover': {
-                  backgroundColor: (reservationData.cantidad_asistentes || 1) < maxCapacity ? '#e8f5e9' : 'transparent'
-                }
-              }}
-            >
-              <AddCircle />
-            </IconButton>
+            {/* Contador con botones +/- */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              bgcolor: 'white',
+              borderRadius: 2,
+              px: 1,
+              py: 0.5,
+              border: '1px solid #e0e0e0'
+            }}>
+              <IconButton
+                size="small"
+                onClick={removeAsistente}
+                disabled={(reservationData.cantidad_asistentes || 1) <= 1}
+                sx={{ 
+                  color: (reservationData.cantidad_asistentes || 1) > 1 ? '#f44336' : '#ccc',
+                  fontSize: { xs: 20, sm: 22 },
+                  '&:hover': {
+                    backgroundColor: (reservationData.cantidad_asistentes || 1) > 1 ? '#ffebee' : 'transparent'
+                  }
+                }}
+              >
+                <RemoveCircle />
+              </IconButton>
+              
+              <Typography 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: '#1a237e',
+                  minWidth: 30,
+                  textAlign: 'center',
+                  fontSize: { xs: '0.9rem', sm: '1rem' }
+                }}
+              >
+                {reservationData.cantidad_asistentes || 1}
+              </Typography>
+              
+              <IconButton
+                size="small"
+                onClick={addAsistente}
+                disabled={(reservationData.cantidad_asistentes || 1) >= maxCapacity}
+                sx={{ 
+                  color: (reservationData.cantidad_asistentes || 1) < maxCapacity ? '#4caf50' : '#ccc',
+                  fontSize: { xs: 20, sm: 22 },
+                  '&:hover': {
+                    backgroundColor: (reservationData.cantidad_asistentes || 1) < maxCapacity ? '#e8f5e9' : 'transparent'
+                  }
+                }}
+              >
+                <AddCircle />
+              </IconButton>
+            </Box>
           </Box>
         </Box>
         
         {showCapacityInfo && (
-          <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
-            La capacidad máxima permitida es de {maxCapacity} personas
+          <Alert severity="info" sx={{ 
+            mb: 2, 
+            borderRadius: 1,
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          }}>
+            Capacidad máxima: {maxCapacity} personas
           </Alert>
         )}
         
-        <TextField
-          fullWidth
-          type="number"
-          value={reservationData.cantidad_asistentes || 1}
-          onChange={(e) => {
-            const value = e.target.value;
-            const numValue = value === '' ? 1 : parseInt(value, 10);
-            
-            if (!isNaN(numValue) && numValue > 0 && numValue <= maxCapacity) {
-              onReservationChange({
-                ...reservationData,
-                cantidad_asistentes: numValue
-              });
+        {/* Input numérico para desktop */}
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <TextField
+            fullWidth
+            type="number"
+            value={reservationData.cantidad_asistentes || 1}
+            onChange={(e) => {
+              const value = e.target.value;
+              const numValue = value === '' ? 1 : parseInt(value, 10);
               
-              // Si se redujo a 1, limpiar el formulario de asistentes
-              if (numValue <= 1) {
-                setShowAsistentesForm(false);
+              if (!isNaN(numValue) && numValue > 0 && numValue <= maxCapacity) {
+                onReservationChange({
+                  ...reservationData,
+                  cantidad_asistentes: numValue
+                });
+                
+                if (numValue <= 1) {
+                  setShowAsistentesForm(false);
+                }
               }
-            }
-          }}
-          inputProps={{ 
-            min: 1, 
-            max: maxCapacity,
-            style: { textAlign: 'center' }
-          }}
-          required
-          variant="outlined"
-          size="medium"
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              backgroundColor: 'white',
-            }
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <People sx={{ color: '#0f9fe1' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+            }}
+            inputProps={{ 
+              min: 1, 
+              max: maxCapacity,
+              style: { textAlign: 'center' }
+            }}
+            required
+            variant="outlined"
+            size="small"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                backgroundColor: 'white',
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <People sx={{ color: '#0f9fe1' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
 
         {/* Mostrar opción para completar datos solo si hay más de 1 asistente */}
         {tieneMasDeUnAsistente && (
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'stretch', sm: 'center' }, 
+            gap: { xs: 2, sm: 1 },
+            mt: 2 
+          }}>
             <Button
               variant="outlined"
               onClick={() => setShowAsistentesForm(!showAsistentesForm)}
@@ -577,62 +676,83 @@ export default function ReservationForm({
                 '&:hover': {
                   borderColor: '#0d8dc7',
                   backgroundColor: 'rgba(15, 159, 225, 0.04)'
-                }
+                },
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                py: { xs: 1, sm: 0.5 }
               }}
               startIcon={showAsistentesForm ? <ExpandLess /> : <ExpandMore />}
+              fullWidth={{ xs: true, sm: false }}
             >
-              {showAsistentesForm ? 'Ocultar datos de asistentes' : 'Completar datos de asistentes'}
+              {showAsistentesForm ? 'Ocultar datos' : 'Completar datos de asistentes'}
             </Button>
             
             {allAsistentesValid() && (
               <Chip
-                label="✅ Todos los datos completos"
+                label="✅ Todos completos"
                 color="success"
                 size="small"
-                sx={{ fontWeight: 'medium' }}
+                sx={{ 
+                  fontWeight: 'medium',
+                  fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                }}
               />
             )}
           </Box>
         )}
       </Paper>
 
-      {/* Formulario de Asistentes (solo se muestra si hay más de 1 asistente) */}
+      {/* FORMULARIO DE ASISTENTES - CORREGIDO Y CON ESPACIO */}
       <Collapse in={showAsistentesForm && tieneMasDeUnAsistente}>
-        <Paper elevation={0} sx={{ p: 3, bgcolor: '#e8f5e9', borderRadius: 2, mt: 2 }}>
-          <Typography variant="h6" sx={{ 
+        <Paper elevation={0} sx={{ 
+          p: { xs: 2, sm: 3 }, 
+          bgcolor: '#e8f5e9', 
+          borderRadius: 2, 
+          mt: 2 
+        }}>
+          <Typography variant="subtitle2" sx={{ 
             color: '#2e7d32', 
             mb: 3, 
             display: 'flex', 
             alignItems: 'center', 
-            gap: 1 
+            gap: 1,
+            fontSize: { xs: '0.9rem', sm: '1rem' }
           }}>
-            <PersonAdd sx={{ color: '#4caf50' }} />
+            <PersonAdd sx={{ color: '#4caf50', fontSize: { xs: 18, sm: 20 } }} />
             Información de Asistentes ({reservationData.cantidad_asistentes || 1})
           </Typography>
 
-          <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-            Cada asistente recibirá un código QR personal por email para acceder a la cancha.
+          <Alert severity="info" sx={{ 
+            mb: 3, 
+            borderRadius: 2,
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          }}>
+            Cada asistente recibirá un código QR por email para acceder a la cancha.
           </Alert>
 
           {!allAsistentesValid() && asistentes.length > 0 && (
-            <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
-              ⚠️ Por favor completa todos los campos de los asistentes
+            <Alert severity="warning" sx={{ 
+              mb: 3, 
+              borderRadius: 2,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}>
+              ⚠️ Completa todos los campos de los asistentes
             </Alert>
           )}
 
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {asistentes.map((asistente, index) => (
               <Grid item xs={12} key={index}>
-                <Box sx={{ 
-                  p: 2.5, 
-                  borderRadius: 2,
-                  backgroundColor: 'white',
-                  border: '1px solid #c8e6c9',
-                  position: 'relative',
-                  mt: 2.5,
-                  pt: 3.5,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}>
+                <Paper 
+                  elevation={1} 
+                  sx={{ 
+                    p: { xs: 2, sm: 2.5 }, 
+                    borderRadius: 2,
+                    backgroundColor: 'white',
+                    border: '1px solid #c8e6c9',
+                    position: 'relative',
+                    mt: index > 0 ? 2 : 0
+                  }}
+                >
                   <Chip 
                     label={`Asistente ${index + 1}`}
                     size="small"
@@ -644,7 +764,7 @@ export default function ReservationForm({
                       color: 'white',
                       fontWeight: 'bold',
                       height: 24,
-                      fontSize: '0.75rem',
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
                       '& .MuiChip-label': {
                         px: 1.5,
                         py: 0.5
@@ -653,7 +773,7 @@ export default function ReservationForm({
                   />
                   
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6}>
                       <TextField
                         fullWidth
                         label="Nombre completo"
@@ -661,24 +781,27 @@ export default function ReservationForm({
                         onChange={(e) => handleAsistenteChange(index, 'nombre', e.target.value)}
                         required
                         variant="outlined"
-                        size="medium"
+                        size="small"
                         error={!asistente.nombre && asistente.nombre !== ''}
                         helperText={!asistente.nombre && asistente.nombre !== '' ? 'Nombre requerido' : ''}
                         sx={{
                           '& .MuiOutlinedInput-root': {
                             borderRadius: 2,
                             backgroundColor: '#fafafa',
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
                           }
                         }}
                         InputProps={{
                           startAdornment: (
-                            <Person sx={{ color: '#0f9fe1', mr: 1 }} />
+                            <Person sx={{ color: '#0f9fe1', mr: 1, fontSize: { xs: 18, sm: 20 } }} />
                           ),
                         }}
                       />
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6}>
                       <TextField
                         fullWidth
                         label="Email"
@@ -687,7 +810,7 @@ export default function ReservationForm({
                         onChange={(e) => handleAsistenteChange(index, 'email', e.target.value)}
                         required
                         variant="outlined"
-                        size="medium"
+                        size="small"
                         error={!!validationErrors[`email_${index}`]}
                         helperText={
                           validationErrors[`email_${index}`] 
@@ -700,26 +823,40 @@ export default function ReservationForm({
                           '& .MuiOutlinedInput-root': {
                             borderRadius: 2,
                             backgroundColor: '#fafafa',
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
                           }
                         }}
                         InputProps={{
                           startAdornment: (
-                            <Email sx={{ color: '#9eca3f', mr: 1 }} />
+                            <Email sx={{ color: '#9eca3f', mr: 1, fontSize: { xs: 18, sm: 20 } }} />
                           ),
                         }}
                       />
                     </Grid>
                   </Grid>
-                </Box>
+                </Paper>
               </Grid>
             ))}
           </Grid>
 
-          <Box sx={{ mt: 3, p: 2, backgroundColor: '#c8e6c9', borderRadius: 2 }}>
-            <Typography variant="body2" color="#2e7d32" sx={{ fontWeight: 'medium', mb: 1 }}>
+          <Box sx={{ 
+            mt: 3, 
+            p: { xs: 1.5, sm: 2 }, 
+            backgroundColor: '#c8e6c9', 
+            borderRadius: 2 
+          }}>
+            <Typography variant="body2" color="#2e7d32" sx={{ 
+              fontWeight: 'medium', 
+              mb: 1,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}>
               ℹ️ Información importante:
             </Typography>
-            <Typography variant="body2" color="#2e7d32">
+            <Typography variant="body2" color="#2e7d32" sx={{ 
+              fontSize: { xs: '0.7rem', sm: '0.75rem' }
+            }}>
               • Cada asistente recibirá un email con código QR personal<br/>
               • El QR es válido solo para la fecha y hora de la reserva<br/>
               • Presentar el QR al personal de control de acceso<br/>
@@ -730,9 +867,21 @@ export default function ReservationForm({
       </Collapse>
 
       {/* Material Prestado */}
-      <Paper elevation={0} sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-        <Typography variant="subtitle1" sx={{ color: '#1a237e', mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SportsTennis sx={{ color: '#0f9fe1' }} />
+      <Paper elevation={0} sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        bgcolor: '#f5f5f5', 
+        borderRadius: 2 
+      }}>
+        <Typography variant="subtitle2" sx={{ 
+          color: '#1a237e', 
+          mb: 2, 
+          fontWeight: 'bold', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          fontSize: { xs: '0.9rem', sm: '1rem' }
+        }}>
+          <SportsTennis sx={{ color: '#0f9fe1', fontSize: { xs: 18, sm: 20 } }} />
           Material Prestado (Opcional)
         </Typography>
         <TextField
@@ -744,7 +893,7 @@ export default function ReservationForm({
           })}
           placeholder="Ej: Balones, redes, conos, etc."
           variant="outlined"
-          size="medium"
+          size="small"
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 2,
@@ -752,7 +901,11 @@ export default function ReservationForm({
             }
           }}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ 
+          mt: 1, 
+          display: 'block',
+          fontSize: { xs: '0.7rem', sm: '0.75rem' }
+        }}>
           Especifica si necesitas material adicional para tu actividad
         </Typography>
       </Paper>

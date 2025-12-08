@@ -784,7 +784,7 @@ export default function Facilities() {
                     {espacio.imagen ? (
                       <>
                         <img
-                          src={`${api_url}${espacio.imagen}`}
+                          src={espacio.imagen}
                           alt={espacio.nombre}
                           style={{
                             width: '100%',

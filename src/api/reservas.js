@@ -180,7 +180,7 @@ verificarQR: async (codigo_qr, token_verificacion) => {
 
 crearReservaConAsistentes: async (reservaData) => {
   try {
-    const response = await api.post('/control-acceso/crear-con-asistentes', reservaData);
+    const response = await api.post('/reservas/crear-con-asistentes', reservaData);
     return response.data;
   } catch (error) {
     throw error;
