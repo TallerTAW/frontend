@@ -593,7 +593,7 @@ export default function Register() {
                                
                                     mb: 1.5,
                                     py: 1.8,
-                                    backgroundColor: COLOR_ACCENT_RED,
+                                    backgroundColor: COLOR_PRIMARY,
                     
                                     color: COLOR_LIGHT,
                                     fontWeight: 'bold',
