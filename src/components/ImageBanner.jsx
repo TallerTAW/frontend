@@ -28,7 +28,7 @@ const StyledImage = styled('img')({
 
 // CORRECCIÓN DE WARNING: shouldForwardProp para evitar la advertencia 'isImageRight'
 const TextContent = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isImageRight',
+    shouldForwardProp: (prop) => prop !== 'isImageRight',
 })(({ theme, isImageRight }) => ({
     padding: theme.spacing(2),
     textAlign: 'center',
@@ -41,7 +41,8 @@ const TextContent = styled(Box, {
 
 
 // imagePosition: "left" (imagen a la izquierda) o "right" (imagen a la derecha)
-export default function ImageBanner({ titulo, texto, imagenURL, imagePosition = 'right' }) {
+// 🔥 AGREGADO: prop 'onImageClick'
+export default function ImageBanner({ titulo, texto, imagenURL, imagePosition = 'right', onImageClick }) {
     
     const isImageRight = imagePosition === 'right'; 
     const direction = isImageRight ? 'row' : 'row-reverse';
@@ -115,7 +116,15 @@ export default function ImageBanner({ titulo, texto, imagenURL, imagePosition = 
                         variants={imageVariants}
                     >
                         {/* USAMOS EL TAG <img> CON EL SRC PROPORCIONADO POR Home.jsx */}
-                        <ImageWrapper>
+                        {/* 🔥 AGREGADO: Evento Click y estilo de cursor */}
+                        <ImageWrapper
+                            onClick={onImageClick}
+                            sx={{
+                                cursor: onImageClick ? 'pointer' : 'default',
+                                transition: 'transform 0.2s ease-in-out',
+                                '&:hover': onImageClick ? { transform: 'scale(1.05)' } : {}
+                            }}
+                        >
                             <StyledImage src={imagenURL} alt={`Imagen de ${titulo}`} />
                         </ImageWrapper>
                     </motion.div>
