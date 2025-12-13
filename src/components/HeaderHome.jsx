@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
 // NUEVO: Importamos el ícono del "hombrecito"
 import PersonIcon from '@mui/icons-material/Person';
+import logo from '../assets/team.png';
 
 // Colores de tu paleta:
 const COLOR_DARK = '#333333';        
@@ -43,7 +44,7 @@ export default function HeaderHome() {
   };
 
   // Valores por defecto en caso de error o carga
-  const logoUrl = content.header_logo || '/static/uploads/team.jpg';
+  const logoUrl = logo;
   const siteName = content.site_name || 'OLYMPIAHUB';
 
   if (loading) {

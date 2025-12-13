@@ -747,7 +747,9 @@ export default function Facilities() {
           <CircularProgress />
         </Box>
       ) : (
-        <Grid container spacing={4}>
+        <Grid container spacing={4} sx={{ 
+        justifyContent: 'center' 
+    }}>
           {espacios.map((espacio, index) => (
             <Grid item xs={12} sm={6} md={4} key={espacio.id_espacio_deportivo}>
               <motion.div
@@ -765,7 +767,10 @@ export default function Facilities() {
                       transform: 'translateY(-4px)',
                     },
                     opacity: espacio.estado === 'inactivo' ? 0.6 : 1,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    minWidth: 350, 
+                    maxWidth: 350,
+                    height: 600
                   }}
                   onClick={() => handleEspacioClick(espacio)}
                 >
