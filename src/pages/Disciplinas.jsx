@@ -224,7 +224,10 @@ export default function Disciplinas() {
       </Box>
 
       {/* --- Grilla de Disciplinas Responsive --- */}
-      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
+      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }} sx={{ 
+        mt: 3, 
+        justifyContent: 'center' // <-- AÑADIDO: Centra el grupo de tarjetas
+    }}>
         {disciplinas.map((disciplina, index) => {
           const emoji = getSportIcon(disciplina.nombre);
           const iconColorClass = ICON_COLORS[index % ICON_COLORS.length];
@@ -242,13 +245,15 @@ export default function Disciplinas() {
                     borderRadius: { xs: 2, sm: 3 },
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.3s ease',
-                    height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
                     '&:hover': {
                       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
                       transform: isMobile ? 'none' : 'translateY(-4px)',
                     },
+                    minWidth: 300, 
+                    maxWidth: 300, 
+                    height: 330,
                   }}
                 >
                   <CardContent sx={{
