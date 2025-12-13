@@ -1,10 +1,25 @@
-import { Box, Typography, Container, Grid, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+// pages/Home.jsx
+import { Box, Typography, Container, Grid } from "@mui/material";
 import { motion } from "framer-motion";
-import HeaderHome from '../components/HeaderHome'; 
-import { useContent } from '../hooks/useContent';
-import Bannerizq from '../components/Bannerizq';
 
-// ICONOS
+import HeaderHome from '../components/HeaderHome';
+import HeroCarousel from '../components/HeroCarousel'; 
+import ImageBanner from '../components/ImageBanner'; 
+
+import { useContent } from '../hooks/useContent';
+
+// === IMPORTACIÓN DE IMÁGENES LOCALES (VERIFICAR QUE EXISTAN ESTOS ARCHIVOS) ===
+// Asegúrate de que estos archivos estén en src/assets/images/
+import BalonFutbol from '../assets/images/balon-futbol.png';
+import Baloncesto from '../assets/images/balon-baloncesto.png';
+import Beisbol from '../assets/images/balon-beisbol.png';
+
+import ImgCarrusel1 from '../assets/images/carrusel-1.jpg';
+import ImgCarrusel2 from '../assets/images/carrusel-2.jpg';
+import ImgCarrusel3 from '../assets/images/carrusel-3.jpg';
+// ===============================================
+
+// ICONOS DE REDES SOCIALES
 import InstagramIcon from '@mui/icons-material/Instagram';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import XIcon from '@mui/icons-material/X';
@@ -17,12 +32,18 @@ const COLOR_DARK = '#333333';
 const COLOR_LIGHT = '#FFFFFF';
 const COLOR_ACCENT_RED = '#FD7E14';
 
-// IMÁGENES
-const IMAGEN_BALON = 'https://cdn.pixabay.com/photo/2013/07/13/10/51/football-157930_1280.png';
-const IMAGEN_BALON1 = 'https://cdn.pixabay.com/photo/2013/07/13/09/46/basketball-155997_1280.png';
-const IMAGEN_BALON2 = 'https://cdn.pixabay.com/photo/2013/07/12/13/21/baseball-146883_1280.png';
+// ASIGNACIÓN DE IMÁGENES LOCALES
+const IMAGEN_BALON = BalonFutbol;
+const IMAGEN_BALON1 = Baloncesto;
+const IMAGEN_BALON2 = Beisbol;
 
-// TEXTOS DEFAULT
+const CAROUSEL_IMAGES = [
+  ImgCarrusel1,
+  ImgCarrusel2,
+  ImgCarrusel3,
+];
+
+// TEXTOS DE MISIÓN/VISIÓN/OBJETIVOS
 const MISION_TEXTO = `
   Brindar una solución tecnológica confiable y sencilla que conecte a los
   usuarios con los centros deportivos, facilitando el acceso a espacios de
@@ -31,25 +52,28 @@ const MISION_TEXTO = `
 `;
 
 const VISION_TEXTO1 = `
-  Transformar la manera en que las personas acceden al deporte, consolidándonos 
-  como una plataforma de referencia que fomente comunidades activas, saludables 
+  Transformar la manera en que las personas acceden al deporte, consolidándonos
+  como una plataforma de referencia que fomente comunidades activas, saludables
   y mejor conectadas.
 `;
 
 const OBJETIVO_TEXTO1 = `
-  Promover la vida activa y el bienestar en la comunidad. Facilitar el acceso 
-  a instalaciones deportivas de forma práctica y segura. Fomentar el trabajo en 
-  equipo y la creación de comunidades deportivas. Impulsar la innovación tecnológica 
+  Promover la vida activa y el bienestar en la comunidad. Facilitar el acceso
+  a instalaciones deportivas de forma práctica y segura. Fomentar el trabajo en
+  equipo y la creación de comunidades deportivas. Impulsar la innovación tecnológica
   aplicada al deporte. Convertirnos en un referente regional en la gestión de espacios deportivos.
 `;
+
 
 export default function Home() {
   const { content, loading } = useContent();
 
-  const aboutImageTenis = content.about_image_tenis || '/static/uploads/bannercancha.jpg';
   const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas...';
   const servicesText = content.services || 'Ofrecemos productos y servicios...';
-
+  
+  // Usamos el contenido dinámico si está disponible, sino, las imágenes locales por defecto
+  const heroImages = content.about_image_tenis ? [content.about_image_tenis, ...CAROUSEL_IMAGES.slice(1)] : CAROUSEL_IMAGES;
+  
   if (loading) {
     return (
       <Box>
@@ -65,24 +89,11 @@ export default function Home() {
     <Box>
       <HeaderHome />
 
-      {/* === HERO === */}
-      <Box
-        sx={{
-          pt: '64px',
-          height: { xs: '55vh', sm: '65vh', md: '75vh' },
-          backgroundImage: `url(${aboutImageTenis})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'flex-end',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0))'
-          }
-        }}
+      {/* === HERO/CARRUSEL === */}
+      <HeroCarousel 
+        images={heroImages} 
+        colorPrimary={COLOR_PRIMARY}
+        colorLight={COLOR_LIGHT}
       >
         <Container maxWidth="xl" sx={{ zIndex: 2, mb: { xs: 3, sm: 4 } }}>
           <motion.div
@@ -90,25 +101,27 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
           >
-            <Typography 
+            <Typography
               fontWeight="bold"
               sx={{
                 color: COLOR_LIGHT,
                 fontFamily: 'Montserrat',
                 fontSize: { xs: '2.2rem', sm: '2.8rem', md: '4rem' },
-                maxWidth: { xs: '95%', sm: '80%' }
+                maxWidth: { xs: '95%', sm: '80%' },
+                textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
               }}
             >
               ESPACIO DEPORTIVO A TU DISPOSICIÓN
             </Typography>
           </motion.div>
         </Container>
-      </Box>
+      </HeroCarousel>
+
 
       {/* === QUIÉNES SOMOS === */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT }}>
         <Container maxWidth="xl" sx={{ py: { xs: 5, md: 7 } }}>
-          <Typography 
+          <Typography
             variant="h4"
             fontWeight="bold"
             sx={{
@@ -121,7 +134,7 @@ export default function Home() {
             Quiénes somos
           </Typography>
 
-          <Typography 
+          <Typography
             variant="body1"
             sx={{
               maxWidth: '800px',
@@ -138,7 +151,7 @@ export default function Home() {
       {/* === SERVICIOS === */}
       <Box sx={{ backgroundColor: COLOR_PRIMARY, color: COLOR_LIGHT }}>
         <Container maxWidth="xl" sx={{ py: { xs: 5, md: 7 } }}>
-          <Typography 
+          <Typography
             variant="subtitle1"
             sx={{ textTransform: 'uppercase', opacity: 0.8 }}
           >
@@ -159,24 +172,40 @@ export default function Home() {
         </Container>
       </Box>
 
-      {/* === SECCIONES DE MISION / VISION / OBJETIVOS === */}
-      {/* 🔥 RESPONSIVIDAD APLICADA SIN EDITAR Bannerizq */}
+      {/* === SECCIONES DE MISION / VISION / OBJETIVOS (Banners de ancho completo) === */}
+      <Box sx={{ py: { xs: 4, sm: 6 }, backgroundColor: COLOR_PRIMARY }}>
+            
+            {/* MISIÓN - Imagen a la derecha, texto a la izquierda */}
+            <Box sx={{ mb: { xs: 6, md: 10 } }}>
+                <ImageBanner 
+                    titulo="MISIÓN" 
+                    texto={MISION_TEXTO} 
+                    imagenURL={IMAGEN_BALON} 
+                    imagePosition="right" 
+                />
+            </Box>
 
-      <Box sx={{ py: { xs: 4, sm: 6 } }}>
-        <Container maxWidth="xl">
-          <Box sx={{ mb: { xs: 6, md: 10 } }}>
-            <Bannerizq titulo="MISIÓN" texto={MISION_TEXTO} imagenURL={IMAGEN_BALON} />
-          </Box>
+            {/* VISIÓN - Imagen a la izquierda, texto a la derecha */}
+            <Box sx={{ mb: { xs: 6, md: 10 } }}>
+                <ImageBanner 
+                    titulo="VISIÓN" 
+                    texto={VISION_TEXTO1} 
+                    imagenURL={IMAGEN_BALON1} 
+                    imagePosition="left" 
+                />
+            </Box>
 
-          <Box sx={{ mb: { xs: 6, md: 10 } }}>
-            <Bannerizq titulo="VISIÓN" texto={VISION_TEXTO1} imagenURL={IMAGEN_BALON1} />
-          </Box>
-
-          <Box sx={{ mb: { xs: 6, md: 10 } }}>
-            <Bannerizq titulo="OBJETIVOS" texto={OBJETIVO_TEXTO1} imagenURL={IMAGEN_BALON2} />
-          </Box>
-        </Container>
+            {/* OBJETIVOS - Imagen a la derecha, texto a la izquierda */}
+            <Box sx={{ mb: { xs: 6, md: 10 } }}>
+                <ImageBanner 
+                    titulo="OBJETIVOS" 
+                    texto={OBJETIVO_TEXTO1} 
+                    imagenURL={IMAGEN_BALON2} 
+                    imagePosition="right" 
+                />
+            </Box>
       </Box>
+
 
       {/* FOOTER */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT, py: 3, textAlign: 'center' }}>
@@ -190,11 +219,17 @@ export default function Home() {
             '& a:hover': { color: COLOR_ACCENT_RED }
           }}
         >
-          <a href="#"><FacebookIcon fontSize="large" /></a>
-          <a href="#"><InstagramIcon fontSize="large" /></a>
-          <a href="#"><XIcon fontSize="large" /></a>
-          <a href="#"><LinkedInIcon fontSize="large" /></a>
-          <a href="#"><LanguageIcon fontSize="large" /></a>
+          <a href="https://www.facebook.com/people/Code-Cats-Studio/61579204709906/" target="_blank">
+            <FacebookIcon fontSize="large" />
+          </a>
+
+          <a href="https://www.instagram.com/code_cats.studio" target="_blank">
+            <InstagramIcon fontSize="large" />
+          </a>
+
+          <a href="https://code-cats-studio.vercel.app/" target="_blank">
+            <LanguageIcon fontSize="large" />
+          </a>
         </Box>
 
         <Typography variant="body2" sx={{ opacity: 0.7 }}>
