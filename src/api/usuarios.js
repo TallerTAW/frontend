@@ -31,12 +31,14 @@ export const usuariosApi = {
     return response.data;
   },
 
-  // ✅ AQUI DEBE ESTAR
   getGestores: async () => {
     const response = await api.get('/usuarios/rol/gestores');
     return response.data;
   },
   
-};
-
-
+ cambiarContrasenia: async (id, nuevaContrasenia) => {
+  // Enviar como query parameter
+  const response = await api.put(`/usuarios/${id}/cambiar-contrasenia?nueva_contrasenia=${encodeURIComponent(nuevaContrasenia)}`);
+  return response.data;
+},
+}
