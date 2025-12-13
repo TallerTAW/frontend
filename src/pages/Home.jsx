@@ -1,17 +1,16 @@
 // pages/Home.jsx
-import { Box, Typography, Container, Grid } from "@mui/material";
+import { Box, Typography, Container } from "@mui/material";
 import { motion } from "framer-motion";
+import { useNavigate } from 'react-router-dom'; // 1. Importamos useNavigate
 
 import HeaderHome from '../components/HeaderHome';
 import HeroCarousel from '../components/HeroCarousel'; 
-import ImageBanner from '../components/ImageBanner'; 
-
+import ImageBanner from '../components/ImageBanner'; // Usamos tu componente ImageBanner
 import { useContent } from '../hooks/useContent';
 import Bannerizq from '../components/Bannerizq';
 import { useNavigate } from 'react-router-dom'; 
 
-// === IMPORTACIÓN DE IMÁGENES LOCALES (VERIFICAR QUE EXISTAN ESTOS ARCHIVOS) ===
-// Asegúrate de que estos archivos estén en src/assets/images/
+// === IMPORTACIÓN DE IMÁGENES LOCALES ===
 import BalonFutbol from '../assets/images/balon-futbol.png';
 import Baloncesto from '../assets/images/balon-baloncesto.png';
 import Beisbol from '../assets/images/balon-beisbol.png';
@@ -19,7 +18,6 @@ import Beisbol from '../assets/images/balon-beisbol.png';
 import ImgCarrusel1 from '../assets/images/carrusel-1.jpg';
 import ImgCarrusel2 from '../assets/images/carrusel-2.jpg';
 import ImgCarrusel3 from '../assets/images/carrusel-3.jpg';
-// ===============================================
 
 // ICONOS DE REDES SOCIALES
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -34,7 +32,7 @@ const COLOR_DARK = '#333333';
 const COLOR_LIGHT = '#FFFFFF';
 const COLOR_ACCENT_RED = '#FD7E14';
 
-// ASIGNACIÓN DE IMÁGENES LOCALES
+// ASIGNACIÓN DE IMÁGENES
 const IMAGEN_BALON = BalonFutbol;
 const IMAGEN_BALON1 = Baloncesto;
 const IMAGEN_BALON2 = Beisbol;
@@ -45,7 +43,7 @@ const CAROUSEL_IMAGES = [
   ImgCarrusel3,
 ];
 
-// TEXTOS DE MISIÓN/VISIÓN/OBJETIVOS
+// TEXTOS DEFAULT
 const MISION_TEXTO = `
   Brindar una solución tecnológica confiable y sencilla que conecte a los
   usuarios con los centros deportivos, facilitando el acceso a espacios de
@@ -66,35 +64,31 @@ const OBJETIVO_TEXTO1 = `
   aplicada al deporte. Convertirnos en un referente regional en la gestión de espacios deportivos.
 `;
 
-
 export default function Home() {
   const { content, loading } = useContent();
-  const navigate = useNavigate(); 
-
+  const navigate = useNavigate(); // 2. Inicializamos el hook
+  
   const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas...';
   const servicesText = content.services || 'Ofrecemos productos y servicios...';
 
-  // --- FUNCIONES DE NAVEGACIÓN ACTUALIZADAS ---
-  // Ahora apuntan a '/canchas-visitante'
+  // === 3. FUNCIONES DE NAVEGACIÓN ===
+  // Estas funciones redirigen a la vista de visitante con el filtro activado
 
-  // 1. Click en MISIÓN -> Fútbol
   const handleMisionClick = () => {
     navigate('/canchas-visitante', { state: { filterCategory: 'Fútbol' } });
   };
 
-  // 2. Click en VISIÓN -> Baloncesto
   const handleVisionClick = () => {
     navigate('/canchas-visitante', { state: { filterCategory: 'Baloncesto' } });
   };
 
-  // 3. Click en OBJETIVOS -> Voleibol
   const handleObjetivosClick = () => {
     navigate('/canchas-visitante', { state: { filterCategory: 'Voleibol' } });
   };
-
   
-  // Usamos el contenido dinámico si está disponible, sino, las imágenes locales por defecto
-  const heroImages = content.about_image_tenis ? [content.about_image_tenis, ...CAROUSEL_IMAGES.slice(1)] : CAROUSEL_IMAGES;
+  // Selección de imágenes del carrusel
+  const heroImages = content.about_image_tenis ?
+    [content.about_image_tenis, ...CAROUSEL_IMAGES.slice(1)] : CAROUSEL_IMAGES;
   
   if (loading) {
     return (
@@ -139,7 +133,6 @@ export default function Home() {
         </Container>
       </HeroCarousel>
 
-
       {/* === QUIÉNES SOMOS === */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT }}>
         <Container maxWidth="xl" sx={{ py: { xs: 5, md: 7 } }}>
@@ -165,7 +158,7 @@ export default function Home() {
               fontSize: { xs: '1rem', sm: '1.1rem' }
             }}
           >
-            {aboutUsText}
+             {aboutUsText}
           </Typography>
         </Container>
       </Box>
@@ -194,40 +187,45 @@ export default function Home() {
         </Container>
       </Box>
 
-      {/* === SECCIONES DE MISION / VISION / OBJETIVOS (Banners de ancho completo) === */}
+      {/* === SECCIONES DE MISIÓN / VISIÓN / OBJETIVOS === */}
+      {/* 4. Aquí pasamos las funciones al prop 'onImageClick' */}
       <Box sx={{ py: { xs: 4, sm: 6 }, backgroundColor: COLOR_PRIMARY }}>
+         <Container maxWidth="xl">
             
-            {/* MISIÓN - Imagen a la derecha, texto a la izquierda */}
+            {/* MISIÓN - Imagen derecha (Click -> Fútbol) */}
             <Box sx={{ mb: { xs: 6, md: 10 } }}>
                 <ImageBanner 
                     titulo="MISIÓN" 
                     texto={MISION_TEXTO} 
                     imagenURL={IMAGEN_BALON} 
                     imagePosition="right" 
+                    onImageClick={handleMisionClick} 
                 />
             </Box>
 
-            {/* VISIÓN - Imagen a la izquierda, texto a la derecha */}
+            {/* VISIÓN - Imagen izquierda (Click -> Baloncesto) */}
             <Box sx={{ mb: { xs: 6, md: 10 } }}>
                 <ImageBanner 
                     titulo="VISIÓN" 
                     texto={VISION_TEXTO1} 
                     imagenURL={IMAGEN_BALON1} 
-                    imagePosition="left" 
+                    imagePosition="left"
+                    onImageClick={handleVisionClick} 
                 />
             </Box>
 
-            {/* OBJETIVOS - Imagen a la derecha, texto a la izquierda */}
+            {/* OBJETIVOS - Imagen derecha (Click -> Voleibol) */}
             <Box sx={{ mb: { xs: 6, md: 10 } }}>
                 <ImageBanner 
                     titulo="OBJETIVOS" 
                     texto={OBJETIVO_TEXTO1} 
                     imagenURL={IMAGEN_BALON2} 
                     imagePosition="right" 
+                    onImageClick={handleObjetivosClick}
                 />
             </Box>
+         </Container>
       </Box>
-
 
       {/* FOOTER */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT, py: 3, textAlign: 'center' }}>
@@ -241,15 +239,15 @@ export default function Home() {
             '& a:hover': { color: COLOR_ACCENT_RED }
           }}
         >
-          <a href="https://www.facebook.com/people/Code-Cats-Studio/61579204709906/" target="_blank">
+          <a href="https://www.facebook.com/people/Code-Cats-Studio/61579204709906/" target="_blank" rel="noreferrer">
             <FacebookIcon fontSize="large" />
           </a>
 
-          <a href="https://www.instagram.com/code_cats.studio" target="_blank">
+          <a href="https://www.instagram.com/code_cats.studio" target="_blank" rel="noreferrer">
             <InstagramIcon fontSize="large" />
           </a>
 
-          <a href="https://code-cats-studio.vercel.app/" target="_blank">
+          <a href="https://code-cats-studio.vercel.app/" target="_blank" rel="noreferrer">
             <LanguageIcon fontSize="large" />
           </a>
         </Box>
