@@ -2,7 +2,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const Bannerizq = ({ titulo, texto, imagenURL }) => {
+const Bannerizq = ({ titulo, texto, imagenURL, onImageClick }) => {
   return (
     <div
       style={{
@@ -14,20 +14,22 @@ const Bannerizq = ({ titulo, texto, imagenURL }) => {
         minHeight: '400px',
         fontFamily: 'Arial, sans-serif',
         color: '#333',
-
         /* 🔥 RESPONSIVIDAD */
         flexWrap: 'wrap',
       }}
     >
 
-      {/* === IMAGEN (PRIMERO EN MOVIL) === */}
+      {/* === IMAGEN (AHORA ACTÚA COMO BOTÓN SI SE LE PASA UNA FUNCIÓN) === */}
       <div
+        onClick={onImageClick} // Evento Click
         style={{
           flex: '1 1 100%',
           display: 'flex',
           justifyContent: 'center',
           order: 1,
-
+          /* Si hay función de click, ponemos cursor de mano */
+          cursor: onImageClick ? 'pointer' : 'default',
+          
           /* Imagen ocupa el 100% en móvil */
           paddingBottom: '30px',
 
@@ -44,49 +46,67 @@ const Bannerizq = ({ titulo, texto, imagenURL }) => {
           src={imagenURL}
           alt={titulo}
           style={{
-            maxWidth: '90%',
-            maxHeight: '280px',
-            objectFit: 'contain',
-            borderRadius: '10px',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            /* --- CAMBIOS AQUI PARA REDUCIR TAMAÑO EN ESCRITORIO --- */
+            maxWidth: '100%',       // En móvil ocupa todo el ancho disponible
+            maxHeight: '350px',     // 🔥 NUEVO: Limita la altura máxima (evita que sea gigante en PC)
+            width: 'auto',          // 🔥 NUEVO: Ajusta el ancho automáticamente según la altura
+            
+            height: 'auto',
+            borderRadius: '15px',
+            boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+            objectFit: 'cover',
+            /* Efecto suave al pasar el mouse si es clickable */
+            transition: 'transform 0.2s ease-in-out',
+          }}
+          // Efecto hover simple en línea (opcional, para dar feedback visual)
+          onMouseEnter={(e) => {
+             if(onImageClick) e.currentTarget.style.transform = 'scale(1.02)';
+          }}
+          onMouseLeave={(e) => {
+             if(onImageClick) e.currentTarget.style.transform = 'scale(1.00)';
           }}
         />
       </div>
 
-      {/* === TEXTO (SEGUNDO EN MOVIL) === */}
+      {/* === TEXTO === */}
       <div
         style={{
           flex: '1 1 100%',
-          maxWidth: '100%',
-          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
           order: 2,
-
-          /* En pantallas grandes regresa al lado izquierdo */
+          paddingRight: '0px',
+          textAlign: 'center', 
+          
           '@media (min-width: 768px)': {
             flex: 1,
-            maxWidth: '50%',
-            paddingRight: '60px',
-            textAlign: 'left',
             order: 1,
+            paddingRight: '40px',
+            textAlign: 'left', 
           },
         }}
-        className="bannerizq-content"
+        className="bannerizq-text"
       >
-        <h1
+        <h2
           style={{
-            fontSize: '2.5rem',
-            fontWeight: 'normal',
+            fontSize: 'clamp(2rem, 4vw, 3rem)',
+            fontWeight: 'bold',
             marginBottom: '20px',
             color: '#fff',
+            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
           }}
         >
           {titulo}
-        </h1>
-
+        </h2>
         <p
           style={{
-            fontSize: '1.2rem',
-            lineHeight: 1.6,
+            fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
+            lineHeight: '1.6',
+            textAlign: 'justify',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            padding: '20px',
+            borderRadius: '10px',
           }}
         >
           {texto}
@@ -97,8 +117,10 @@ const Bannerizq = ({ titulo, texto, imagenURL }) => {
 };
 
 Bannerizq.propTypes = {
+  titulo: PropTypes.string.isRequired,
   texto: PropTypes.string.isRequired,
   imagenURL: PropTypes.string.isRequired,
+  onImageClick: PropTypes.func, // Nueva prop opcional
 };
 
 export default Bannerizq;

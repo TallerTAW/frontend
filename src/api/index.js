@@ -14,7 +14,7 @@ const getBaseURL = () => {
   }
   
   // En web, usar variable de entorno o valor por defecto
-  //return import.meta.env.VITE_API_URL;// || 'https://backend-olympiahub.onrender.com';
+  //return import.meta.env.VITE_API_URL; //|| 'https://backend-olympiahub.onrender.com';
   return import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000';
 };
 

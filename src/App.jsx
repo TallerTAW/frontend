@@ -20,19 +20,30 @@ import Unauthorized from './pages/No';
 import Register from './pages/Register';
 import ControlAcceso from './pages/ControlAcceso';
 import ProfilePage from './pages/ProfilePage'; // NUEVO IMPORT
+import CourtsVisitante from './pages/CourtsVisitante'; // Importación correcta
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Página pública principal */}
+      {/* =======================================================
+          RUTAS PÚBLICAS (NO REQUIEREN INICIAR SESIÓN)
+         ======================================================= */}
+      
+      {/* Página de Inicio */}
       <Route path="/" element={<Home />} />
 
-      {/* Login */}
+      {/* 🔥 AQUÍ ESTÁ LA CORRECCIÓN: La ruta de visitantes debe estar AQUÍ, fuera de ProtectedRoute */}
+      <Route path="/canchas-visitante" element={<CourtsVisitante />} />
+
+      {/* Autenticación */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Rutas protegidas con Layout */}
+
+      {/* =======================================================
+          RUTAS PROTEGIDAS (DENTRO DEL LAYOUT Y CON PROTECCIÓN)
+         ======================================================= */}
       <Route
         element={
           <ProtectedRoute allowGuest={true}>
@@ -40,7 +51,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        {/* Dashboard - Accesible para invitados */}
+        {/* Dashboard - Accesible para invitados logueados */}
         <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Reservar - Accesible para invitados */}
@@ -57,6 +68,7 @@ function AppRoutes() {
         />
 
         {/* Rutas para Admin */}
+        {/* Rutas para Admin y Gestor */}
         <Route
           path="/espacios"
           element={
@@ -153,7 +165,7 @@ function AppRoutes() {
         />
       </Route>
 
-      {/* Fallback: cualquier otra ruta manda a dashboard si está logueado */}
+      {/* Fallback: cualquier ruta desconocida redirige al dashboard */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
