@@ -19,6 +19,7 @@ import Usuarios from './pages/Usuarios';
 import Unauthorized from './pages/No';
 import Register from './pages/Register';
 import ControlAcceso from './pages/ControlAcceso';
+import ProfilePage from './pages/ProfilePage'; // NUEVO IMPORT
 
 function AppRoutes() {
   return (
@@ -44,6 +45,16 @@ function AppRoutes() {
 
         {/* Reservar - Accesible para invitados */}
         <Route path="/reservar" element={<Reservar />} />
+
+        {/* Perfil del usuario - Solo autenticados */}
+        <Route
+          path="/perfil"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Rutas para Admin */}
         <Route
