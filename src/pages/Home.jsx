@@ -1,8 +1,9 @@
-import { Box, Typography, Container, Grid, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import { Box, Typography, Container } from "@mui/material";
 import { motion } from "framer-motion";
 import HeaderHome from '../components/HeaderHome'; 
 import { useContent } from '../hooks/useContent';
 import Bannerizq from '../components/Bannerizq';
+import { useNavigate } from 'react-router-dom'; 
 
 // ICONOS
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -45,10 +46,29 @@ const OBJETIVO_TEXTO1 = `
 
 export default function Home() {
   const { content, loading } = useContent();
+  const navigate = useNavigate(); 
 
   const aboutImageTenis = content.about_image_tenis || '/static/uploads/bannercancha.jpg';
   const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas...';
   const servicesText = content.services || 'Ofrecemos productos y servicios...';
+
+  // --- FUNCIONES DE NAVEGACIÓN ACTUALIZADAS ---
+  // Ahora apuntan a '/canchas-visitante'
+
+  // 1. Click en MISIÓN -> Fútbol
+  const handleMisionClick = () => {
+    navigate('/canchas-visitante', { state: { filterCategory: 'Fútbol' } });
+  };
+
+  // 2. Click en VISIÓN -> Baloncesto
+  const handleVisionClick = () => {
+    navigate('/canchas-visitante', { state: { filterCategory: 'Baloncesto' } });
+  };
+
+  // 3. Click en OBJETIVOS -> Voleibol
+  const handleObjetivosClick = () => {
+    navigate('/canchas-visitante', { state: { filterCategory: 'Voleibol' } });
+  };
 
   if (loading) {
     return (
@@ -160,21 +180,39 @@ export default function Home() {
       </Box>
 
       {/* === SECCIONES DE MISION / VISION / OBJETIVOS === */}
-      {/* 🔥 RESPONSIVIDAD APLICADA SIN EDITAR Bannerizq */}
-
       <Box sx={{ py: { xs: 4, sm: 6 } }}>
         <Container maxWidth="xl">
+          
+          {/* MISIÓN -> FÚTBOL */}
           <Box sx={{ mb: { xs: 6, md: 10 } }}>
-            <Bannerizq titulo="MISIÓN" texto={MISION_TEXTO} imagenURL={IMAGEN_BALON} />
+            <Bannerizq 
+              titulo="MISIÓN" 
+              texto={MISION_TEXTO} 
+              imagenURL={IMAGEN_BALON} 
+              onImageClick={handleMisionClick} 
+            />
           </Box>
 
+          {/* VISIÓN -> BALONCESTO */}
           <Box sx={{ mb: { xs: 6, md: 10 } }}>
-            <Bannerizq titulo="VISIÓN" texto={VISION_TEXTO1} imagenURL={IMAGEN_BALON1} />
+            <Bannerizq 
+              titulo="VISIÓN" 
+              texto={VISION_TEXTO1} 
+              imagenURL={IMAGEN_BALON1} 
+              onImageClick={handleVisionClick} 
+            />
           </Box>
 
+          {/* OBJETIVOS -> VOLEIBOL */}
           <Box sx={{ mb: { xs: 6, md: 10 } }}>
-            <Bannerizq titulo="OBJETIVOS" texto={OBJETIVO_TEXTO1} imagenURL={IMAGEN_BALON2} />
+            <Bannerizq 
+              titulo="OBJETIVOS" 
+              texto={OBJETIVO_TEXTO1} 
+              imagenURL={IMAGEN_BALON2} 
+              onImageClick={handleObjetivosClick} 
+            />
           </Box>
+
         </Container>
       </Box>
 
