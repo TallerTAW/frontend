@@ -328,7 +328,7 @@ export default function Login() {
                             mb: 1.5,
                             // Ajuste: Reducimos un poco el padding vertical en móviles
                             py: { xs: 1.5, sm: 1.8 },
-                            backgroundColor: COLOR_ACCENT_RED,
+                            backgroundColor: COLOR_PRIMARY,
                             color: COLOR_LIGHT,
                             fontWeight: 'bold',
                             // Ajuste: Reducimos el tamaño de fuente en móviles

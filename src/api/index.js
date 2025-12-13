@@ -9,13 +9,13 @@ const getBaseURL = () => {
   // En móvil nativo, el backend está configurado en capacitor.config.json
   // Las peticiones serán relativas a la URL configurada ahí
   if (isMobileApp) {
-    return import.meta.env.VITE_API_URL; //|| 'https://backend-olympiahub.onrender.com';
-    //return import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000';
+    //return import.meta.env.VITE_API_URL; //|| 'https://backend-olympiahub.onrender.com';
+    return import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000';
   }
   
   // En web, usar variable de entorno o valor por defecto
-  return import.meta.env.VITE_API_URL;// || 'https://backend-olympiahub.onrender.com';
-  //return import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000';
+  //return import.meta.env.VITE_API_URL; //|| 'https://backend-olympiahub.onrender.com';
+  return import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000';
 };
 
 // Configuración global de axios
