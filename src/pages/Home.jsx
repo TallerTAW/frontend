@@ -7,6 +7,8 @@ import HeroCarousel from '../components/HeroCarousel';
 import ImageBanner from '../components/ImageBanner'; 
 
 import { useContent } from '../hooks/useContent';
+import Bannerizq from '../components/Bannerizq';
+import { useNavigate } from 'react-router-dom'; 
 
 // === IMPORTACIÓN DE IMÁGENES LOCALES (VERIFICAR QUE EXISTAN ESTOS ARCHIVOS) ===
 // Asegúrate de que estos archivos estén en src/assets/images/
@@ -67,9 +69,29 @@ const OBJETIVO_TEXTO1 = `
 
 export default function Home() {
   const { content, loading } = useContent();
+  const navigate = useNavigate(); 
 
   const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas...';
   const servicesText = content.services || 'Ofrecemos productos y servicios...';
+
+  // --- FUNCIONES DE NAVEGACIÓN ACTUALIZADAS ---
+  // Ahora apuntan a '/canchas-visitante'
+
+  // 1. Click en MISIÓN -> Fútbol
+  const handleMisionClick = () => {
+    navigate('/canchas-visitante', { state: { filterCategory: 'Fútbol' } });
+  };
+
+  // 2. Click en VISIÓN -> Baloncesto
+  const handleVisionClick = () => {
+    navigate('/canchas-visitante', { state: { filterCategory: 'Baloncesto' } });
+  };
+
+  // 3. Click en OBJETIVOS -> Voleibol
+  const handleObjetivosClick = () => {
+    navigate('/canchas-visitante', { state: { filterCategory: 'Voleibol' } });
+  };
+
   
   // Usamos el contenido dinámico si está disponible, sino, las imágenes locales por defecto
   const heroImages = content.about_image_tenis ? [content.about_image_tenis, ...CAROUSEL_IMAGES.slice(1)] : CAROUSEL_IMAGES;
