@@ -160,7 +160,7 @@ export default function Reservations() {
         )];
 
         const espacioIds = [...new Set(reservas
-          .map(r => r.cancha?.id_espacio_deportivo || r.espacio_deportivo?.id || r.id_espacio)
+          .map(r => r.cancha?.id_espacio_deportivo || r.espacio_deportivo?.id || r.id_espacio || r.cancha?.espacio_id || r.espacio_id)
           .filter(Boolean)
         )];
 
@@ -282,53 +282,60 @@ export default function Reservations() {
   };
 
   const getInfoCancha = (reserva) => {
-    const canchaId = reserva.cancha?.id || reserva.id_cancha;
-    
-    if (!canchaId) {
-      return {
-        nombre: 'Cancha no disponible',
-        tipo: 'No especificado',
-        espacio: 'Espacio no disponible',
-        disciplina: 'No especificada',
-        precio_por_hora: 'N/A'
-      };
-    }
+    const canchaId = reserva.cancha?.id || reserva.id_cancha;
+    
+    if (!canchaId) {
+      return {
+        nombre: 'Cancha no disponible',
+        tipo: 'No especificado',
+        espacio: 'Espacio no disponible',
+        disciplina: 'No especificada',
+        precio_por_hora: 'N/A'
+      };
+    }
 
-    const cancha = canchasCache[canchaId];
-    
-    if (!cancha) {
-      return {
-        nombre: 'Cargando...',
-        tipo: 'Cargando...',
-        espacio: 'Cargando...',
-        disciplina: 'Cargando...',
-        precio_por_hora: 'N/A'
-      };
-    }
+    const cancha = canchasCache[canchaId];
+    
+    if (!cancha) {
+      return {
+        nombre: 'Cargando...',
+        tipo: 'Cargando...',
+        espacio: 'Cargando...',
+        disciplina: 'Cargando...',
+        precio_por_hora: 'N/A'
+      };
+    }
 
-    let espacioNombre = 'Espacio no disponible';
-    if (profile?.rol === 'admin' || profile?.rol === 'gestor') {
-      const espacioId = cancha.id_espacio_deportivo;
-      const espacio = espaciosCache[espacioId];
-      espacioNombre = espacio?.nombre || 'Espacio no disponible';
-    } else {
-      espacioNombre = cancha.espacio_deportivo?.nombre || 'Espacio no disponible';
+
+    let espacioNombre;
+
+    espacioNombre = cancha.espacio_deportivo?.nombre;
+
+    if (!espacioNombre && (profile?.rol === 'admin' || profile?.rol === 'gestor')) {
+        const espacioId = cancha.id_espacio_deportivo || cancha.id_espacio || cancha.espacio_id || reserva.id_espacio || reserva.espacio_id;      
+        const espacio = espaciosCache[espacioId];
+        espacioNombre = espacio?.nombre;
+    }
+    
+    if (!espacioNombre) {
+        espacioNombre = 'Espacio no disponible';
     }
 
     const disciplinaId = reserva.disciplina?.id || reserva.id_disciplina;
     const disciplina = disciplinasCache[disciplinaId];
+
     const disciplinaNombre = disciplina?.nombre || 'No especificada';
 
-    return {
-      nombre: cancha.nombre || `Cancha ${canchaId}`,
-      tipo: cancha.tipo || 'No especificado',
-      espacio: espacioNombre,
-      disciplina: disciplinaNombre,
-      precio_por_hora: cancha.precio_por_hora,
-      hora_apertura: cancha.hora_apertura,
-      hora_cierre: cancha.hora_cierre
-    };
-  };
+      return {
+        nombre: cancha.nombre || `Cancha ${canchaId}`,
+        tipo: cancha.tipo || 'No especificado',
+        espacio: espacioNombre,
+        disciplina: disciplinaNombre,
+        precio_por_hora: cancha.precio_por_hora,
+        hora_apertura: cancha.hora_apertura,
+        hora_cierre: cancha.hora_cierre
+      };
+  };
 
   const getEstadoColor = (estado) => {
     const colores = {
@@ -734,11 +741,27 @@ export default function Reservations() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.05 }}
+                  style={{ width: '100%' }} /* 🔥 AGREGADO: Forza que la animación ocupe todo el ancho */
                 >
                   <Card sx={{ 
+                    width: '100%', /* 🔥 AGREGADO: Forza que la tarjeta ocupe todo el ancho */
                     borderRadius: 2, 
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    borderLeft: `4px solid ${getEstadoColor(reserva.estado)}`
+                    borderLeft: `4px solid ${getEstadoColor(reserva.estado)}`,
+                    
+                    boxShadow: 3,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                        boxShadow: 6,
+                        transform: 'translateY(-4px)',
+                    },
+                    cursor: 'pointer',
+                    
+                    
+                    minWidth: 450, 
+                    maxWidth: 450, 
+                    height: 450, // <-- Alto fijo
+                    
                   }}>
                     <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                       {/* Header de la reserva */}

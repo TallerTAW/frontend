@@ -7,8 +7,6 @@ import HeaderHome from '../components/HeaderHome';
 import HeroCarousel from '../components/HeroCarousel'; 
 import ImageBanner from '../components/ImageBanner'; // Usamos tu componente ImageBanner
 import { useContent } from '../hooks/useContent';
-import Bannerizq from '../components/Bannerizq';
-import { useNavigate } from 'react-router-dom'; 
 
 // === IMPORTACIÓN DE IMÁGENES LOCALES ===
 import BalonFutbol from '../assets/images/balon-futbol.png';
