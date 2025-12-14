@@ -102,8 +102,6 @@ export default function Step3Confirmacion({
         setCodigoReserva(fallbackCode);
         setReservaConfirmada(true);
         setShowCodigoDialog(true);
-        
-        toast.warning('Código generado localmente. Revisa tu email para el código oficial.');
       }
     } catch (error) {
       console.error('Error al confirmar reserva:', error);
@@ -708,51 +706,6 @@ export default function Step3Confirmacion({
           </Grid>
         </>
       )}
-
-      {/* Diálogo del código */}
-      <Dialog open={showCodigoDialog} onClose={() => setShowCodigoDialog(false)}>
-        <DialogTitle>
-          <Typography variant="h6" fontWeight="bold" color="#1a237e">
-            🎉 ¡Reserva Confirmada!
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <QrCode sx={{ fontSize: 60, color: '#0f9fe1', mb: 2 }} />
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              Tu código de reserva es:
-            </Typography>
-            <Typography variant="h4" sx={{ 
-              fontFamily: 'monospace', 
-              fontWeight: 'bold',
-              color: '#2e7d32',
-              mb: 3,
-              letterSpacing: 2
-            }}>
-              {codigoReserva}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Comparte este código con los demás asistentes
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-          <Button
-            onClick={copiarCodigo}
-            variant="contained"
-            startIcon={<ContentCopy />}
-            sx={{ mr: 2 }}
-          >
-            Copiar Código
-          </Button>
-          <Button
-            onClick={() => setShowCodigoDialog(false)}
-            variant="outlined"
-          >
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

@@ -582,77 +582,83 @@ export const useReserva = () => {
   }, []);
 
   // ✅ Manejar confirmación de reserva con cupón
-  const handleConfirmReservation = useCallback(async () => {
+  // ✅ Función para manejar confirmación de reserva con cupón
+const handleConfirmReservation = useCallback(async () => {
     if (!profile) {
-      toast.info('Por favor, inicia sesión para completar tu reserva');
-      navigate('/login', { 
-        state: { 
-          from: '/reservar', 
-          reservationData: {
-            ...reservationData,
-            selectedEspacio,
-            selectedDisciplina, 
-            selectedCancha
-          }
-        } 
-      });
-      return null;
+        toast.info('Por favor, inicia sesión para completar tu reserva');
+        navigate('/login', { 
+            state: { 
+                from: '/reservar', 
+                reservationData: {
+                    ...reservationData,
+                    selectedEspacio,
+                    selectedDisciplina, 
+                    selectedCancha
+                }
+            } 
+        });
+        return null;
     }
 
     if (!isHorarioDisponible()) {
-      toast.error('El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
-      return null;
+        toast.error('El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
+        return null;
     }
 
     try {
-      const codigoCupon = selectedCouponData ? selectedCouponData.codigo : null;
-      
-      const reservaData = {
-        ...reservationData,
-        id_usuario: profile.id,
-        codigo_cupon: codigoCupon,
-      };
-      
-      console.log(`📦 [useReserva] Enviando reserva:`, {
-        con_cupon: !!codigoCupon,
-        cupon_codigo: codigoCupon,
-        costo_calculado: calcularCostoTotal()
-      });
-      
-      // Usar el endpoint para crear reserva
-      const nuevaReserva = await reservasApi.crearReservaConCodigoUnico(reservaData);
-      
-      const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
-      
-      if (codigoCupon) {
-        toast.success(`${mensaje} Cupón ${selectedCouponData.codigo} aplicado exitosamente.`);
-      } else {
-        toast.success(`${mensaje}`);
-      }
-      
-      setConfirmOpen(false);
-      
-      // ✅ DEVOLVER EL CÓDIGO DE RESERVA
-      return {
-        codigo_reserva: nuevaReserva.codigo_reserva,
-        ...nuevaReserva
-      };
-          
+        const codigoCupon = selectedCouponData ? selectedCouponData.codigo : null;
+        
+        // 🎯 FORMATO CORRECTO para crearReservaConCodigoUnico
+        const reservaData = {
+            fecha_reserva: reservationData.fecha_reserva,
+            hora_inicio: reservationData.hora_inicio,
+            hora_fin: reservationData.hora_fin,
+            cantidad_asistentes: reservationData.cantidad_asistentes+1,
+            material_prestado: reservationData.material_prestado,
+            id_disciplina: reservationData.id_disciplina,
+            id_cancha: reservationData.id_cancha,
+            id_usuario: profile.id,
+            codigo_cupon: codigoCupon,
+            // 🚨 NO incluir 'asistentes' aquí, el backend lo maneja diferente
+        };
+        
+        console.log(`📦 [useReserva] Enviando reserva con ${reservationData.cantidad_asistentes} asistentes`);
+        console.log(`📦 [useReserva] Datos:`, reservaData);
+        
+        // Usar el endpoint para crear reserva con código único
+        const nuevaReserva = await reservasApi.crearReservaConCodigoUnico(reservaData);
+        
+        const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
+        
+        if (codigoCupon) {
+            toast.success(`${mensaje} Cupón ${selectedCouponData.codigo} aplicado exitosamente.`);
+        } else {
+            toast.success(`${mensaje}`);
+        }
+        
+        setConfirmOpen(false);
+        
+        // ✅ DEVOLVER EL CÓDIGO DE RESERVA
+        return {
+            codigo_reserva: nuevaReserva.codigo_reserva,
+            ...nuevaReserva
+        };
+            
     } catch (error) {
-      console.error('❌ [useReserva] Error creando reserva:', error);
-      
-      let errorMessage = 'Error al crear la reserva';
-      if (error.response?.data?.detail?.includes('no está disponible') || 
-          error.response?.data?.detail?.includes('ocupado')) {
-        errorMessage = 'El horario seleccionado no está disponible';
-      } else if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      }
-      
-      toast.error(errorMessage);
-      throw error;
+        console.error('❌ [useReserva] Error creando reserva:', error);
+        
+        let errorMessage = 'Error al crear la reserva';
+        if (error.response?.data?.detail?.includes('no está disponible') || 
+            error.response?.data?.detail?.includes('ocupado')) {
+            errorMessage = 'El horario seleccionado no está disponible';
+        } else if (error.response?.data?.detail) {
+            errorMessage = error.response.data.detail;
+        }
+        
+        toast.error(errorMessage);
+        throw error;
     }
-  }, [
+}, [
     profile, 
     navigate, 
     isHorarioDisponible,
@@ -663,7 +669,7 @@ export const useReserva = () => {
     selectedCancha,
     setConfirmOpen,
     calcularCostoTotal
-  ]);
+]);
 
   const resetForm = useCallback(() => {
     setActiveStep(0);
