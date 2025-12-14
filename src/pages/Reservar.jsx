@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useReserva } from '../hooks/useReserva';
-import Step1Espacios from '../components/reservar/Step1Espacios';
-import Step2Disciplinas from '../components/reservar/Step2Disciplinas';
-import Step3Canchas from '../components/reservar/Step3Canchas';
-import Step4Confirmacion from '../components/reservar/Step4Confirmacion';
+import Step1Disciplinas from '../components/reservar/Step1Disciplinas';
+import Step2CanchasFiltradas from '../components/reservar/Step2CanchasFiltradas';
+import Step3Confirmacion from '../components/reservar/Step3Confirmacion';
 import ConfirmacionDialog from '../components/reservar/ConfirmacionDialog';
 import {
   Box,
@@ -39,16 +38,15 @@ export default function Reservar() {
     confirmOpen,
     horariosDisponibles,
     isLoading,
+    espacioFiltro,
     
     // Métodos
     fetchEspacios,
+    fetchAllDisciplinas,
     fetchCuponesUsuario,
-    fetchDisciplinas,
-    fetchCanchas,
+    fetchCanchasByDisciplina,
     fetchHorariosDisponibles,
     setActiveStep,
-    handleEspacioSelect,
- 
     handleDisciplinaSelect,
     handleCanchaSelect,
     setSelectedCoupon,
@@ -67,22 +65,28 @@ export default function Reservar() {
     getHorasFinDisponiblesList,
     asistentes,
     validarAsistentes,
-    handleAsistentesChange
+    handleAsistentesChange,
+    filtrarCanchasPorEspacio,
+    getEspaciosDisponibles,
+    setEspacioFiltro
   } = useReserva();
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales - MODIFICADO para nuevo flujo
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        await fetchEspacios();
+        // Cargar disciplinas y espacios en paralelo
+        await Promise.all([
+          fetchAllDisciplinas(),
+          fetchEspacios()
+        ]);
         if (profile) {
           await fetchCuponesUsuario();
         }
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
-   
         setLoading(false);
       }
     };
@@ -96,20 +100,6 @@ export default function Reservar() {
       fetchHorariosDisponibles();
     }
   }, [selectedCancha, reservationData.fecha_reserva]);
-
-  // Cargar disciplinas cuando se selecciona un espacio
-  useEffect(() => {
-    if (selectedEspacio) {
-      fetchDisciplinas(selectedEspacio.id_espacio_deportivo);
-    }
-  }, [selectedEspacio]);
-
-  // Cargar canchas cuando se selecciona disciplina
-  useEffect(() => {
-    if (selectedEspacio && selectedDisciplina) {
-      fetchCanchas();
-    }
-  }, [selectedEspacio, selectedDisciplina]);
 
   const handleBackToHome = () => {
     navigate('/');
@@ -127,54 +117,44 @@ export default function Reservar() {
     switch (activeStep) {
       case 0:
         return (
-          <Step1Espacios
-            espacios={espacios}
-            onEspacioSelect={handleEspacioSelect}
+          <Step1Disciplinas
+            disciplinas={disciplinas}
+            onDisciplinaSelect={handleDisciplinaSelect}
             loading={loading}
           />
         );
       case 1:
         return (
-          <Step2Disciplinas
-            selectedEspacio={selectedEspacio}
-            disciplinas={disciplinas}
-            onDisciplinaSelect={handleDisciplinaSelect}
+          <Step2CanchasFiltradas
+            selectedDisciplina={selectedDisciplina}
+            canchas={canchas}
+            espacios={espacios}
+            onCanchaSelect={handleCanchaSelect}
             onBack={() => setActiveStep(0)}
             loading={loading}
+            espacioFiltro={espacioFiltro}
+            setEspacioFiltro={setEspacioFiltro}
+            filtrarCanchasPorEspacio={filtrarCanchasPorEspacio}
+            getEspaciosDisponibles={getEspaciosDisponibles}
           />
-        
         );
       case 2:
         return (
-          <Step3Canchas
-            selectedEspacio={selectedEspacio}
-            selectedDisciplina={selectedDisciplina}
-            canchas={canchas}
-            onCanchaSelect={handleCanchaSelect}
-            onBack={() => setActiveStep(1)}
-            loading={loading}
-     
-          />
-        );
-      case 3:
-        return (
-          <Step4Confirmacion
+          <Step3Confirmacion
             selectedEspacio={selectedEspacio}
             selectedDisciplina={selectedDisciplina}
             selectedCancha={selectedCancha}
             cupones={cupones}
             reservationData={reservationData}
             horariosDisponibles={horariosDisponibles}
-        
             selectedCoupon={selectedCoupon}
-            onBack={() => setActiveStep(2)}
+            onBack={() => setActiveStep(1)}
             onCouponChange={setSelectedCoupon}
             onReservationChange={setReservationData}
             onConfirm={() => setConfirmOpen(true)}
             isHorarioDisponible={isHorarioDisponible}
             calcularCostoTotal={calcularCostoTotal}
             getOccupiedHours={getOccupiedHours}
-        
             profile={profile}
             isHoraInicioValida={isHoraInicioValida}
             isHoraFinValida={isHoraFinValida}
@@ -183,7 +163,6 @@ export default function Reservar() {
             horarioDisponible={isHorarioDisponible()}
             asistentes={asistentes}
             validarAsistentes={validarAsistentes}
-            
             onAsistentesChange={handleAsistentesChange}
           />
         );
@@ -202,7 +181,6 @@ export default function Reservar() {
           mb: 2, 
           color: 'text.secondary',
           '&:hover': {
-        
             backgroundColor: 'action.hover'
           }
         }}
@@ -215,7 +193,6 @@ export default function Reservar() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-  
       >
         <Typography 
           variant="h4" 
@@ -224,18 +201,16 @@ export default function Reservar() {
             mb: 4, 
             color: 'primary.main',
             fontSize: { xs: '1.75rem', sm: '2.125rem' }
-      
           }}
         >
           Reservar Cancha
         </Typography>
       </motion.div>
 
-      {/* Stepper - Ocultar en pantallas pequeñas si hay mucho contenido */}
+      {/* Stepper - Ocultar en pantallas pequeñas */}
       <Box sx={{ display: { xs: 'none', sm: 'block' }, mb: 4 }}>
         <Stepper activeStep={activeStep}>
           {steps.map((label) => (
-        
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -246,7 +221,6 @@ export default function Reservar() {
       {/* Indicador de paso para móviles */}
       <Box sx={{ display: { xs: 'block', sm: 'none' }, mb: 3 }}>
         <Typography variant="body1" sx={{ fontWeight: 'medium', color: 'primary.main' }}>
- 
           Paso {activeStep + 1} de {steps.length}: {steps[activeStep]}
         </Typography>
       </Box>
@@ -260,7 +234,6 @@ export default function Reservar() {
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleConfirmReservation}
         selectedCancha={selectedCancha}
-    
         reservationData={reservationData}
         selectedCoupon={selectedCoupon}
         cupones={cupones}
@@ -273,7 +246,6 @@ export default function Reservar() {
         <Box sx={{ 
           mt: 4, 
           p: 2, 
- 
           bgcolor: 'info.light', 
           borderRadius: 1,
           border: '1px solid',
@@ -282,7 +254,6 @@ export default function Reservar() {
           <Typography variant="body2" color="text.primary">
             <strong>Nota:</strong> Necesitarás iniciar sesión para completar la reserva
           </Typography>
-     
         </Box>
       )}
     </Box>

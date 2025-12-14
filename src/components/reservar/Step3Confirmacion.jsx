@@ -5,7 +5,7 @@ import ReservationForm from './ReservationForm';
 import PaymentSummary from './PaymentSummary';
 import { useEffect, useState } from 'react';
 
-export default function Step4Confirmacion({
+export default function Step3Confirmacion({
   selectedEspacio,
   selectedDisciplina,
   selectedCancha,
@@ -491,7 +491,7 @@ export default function Step4Confirmacion({
                   </Paper>
                 )}
 
-                {/* Payment Summary - MODIFICADO para ser responsive */}
+                {/* Payment Summary */}
                 <Box sx={{ mt: 3 }}>
                   <PaymentSummary
                     calcularCostoTotal={calcularCostoTotal}

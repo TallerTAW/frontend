@@ -1,3 +1,6 @@
+// 📍 ARCHIVO: src/api/canchas.js
+// AGREGAR ESTE MÉTODO NUEVO:
+
 import api from './index';
 
 export const canchasApi = {
@@ -13,6 +16,12 @@ export const canchasApi = {
 
   getByEspacio: async (espacioId) => {
     const response = await api.get(`/canchas/espacio/${espacioId}`);
+    return response.data;
+  },
+
+  // NUEVO MÉTODO: Obtener canchas por disciplina
+  getByDisciplina: async (disciplinaId) => {
+    const response = await api.get(`/canchas/public/disciplina/${disciplinaId}`);
     return response.data;
   },
 

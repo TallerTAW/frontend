@@ -15,6 +15,19 @@ import {
   getHorasFinDisponibles 
 } from '../utils/reservaHelpers';
 
+// Función para calcular distancia usando la fórmula del haversine
+const calcularDistancia = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Radio de la Tierra en kilómetros
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distancia en kilómetros
+};
+
 export const useReserva = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -33,7 +46,18 @@ export const useReserva = () => {
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
-  
+  const [espacioFiltro, setEspacioFiltro] = useState('todos');
+  const [ubicacionUsuario, setUbicacionUsuario] = useState(null);
+  const [ordenarPorDistancia, setOrdenarPorDistancia] = useState(false);
+  const [obteniendoUbicacion, setObteniendoUbicacion] = useState(false);
+
+  // Nuevo flujo: Disciplina → Canchas → Confirmación
+  const steps = [
+    'Seleccionar Disciplina',
+    'Seleccionar Cancha', 
+    'Confirmar Reserva'
+  ];
+
   const [reservationData, setReservationData] = useState({
     fecha_reserva: '',
     hora_inicio: '',
@@ -45,14 +69,7 @@ export const useReserva = () => {
     id_usuario: profile?.id
   });
 
-  const steps = [
-    'Seleccionar Espacio',
-    'Seleccionar Disciplina', 
-    'Seleccionar Cancha',
-    'Confirmar Reserva'
-  ];
-
-  // Fetch functions
+  // Fetch functions - Modificadas para nuevo flujo
   const fetchEspacios = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -67,51 +84,43 @@ export const useReserva = () => {
     }
   }, []);
 
-  const fetchDisciplinas = useCallback(async (espacioId) => {
-    if (!espacioId) return;
-    
+  const fetchAllDisciplinas = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await disciplinasApi.getByEspacio(espacioId);
+      const data = await disciplinasApi.getAll();
       setDisciplinas(data);
       setIsLoading(false);
-      
-      if (data.length === 0) {
-        toast.info('El espacio seleccionado no tiene canchas con disciplinas configuradas.');
-      }
       return data;
     } catch (error) {
-      toast.error('Error al cargar disciplinas disponibles');
-      setDisciplinas([]);
+      toast.error('Error al cargar disciplinas');
       setIsLoading(false);
       return [];
     }
   }, []);
 
-  const fetchCanchas = useCallback(async () => {
-    if (!selectedEspacio || !selectedDisciplina) return;
+  // Obtener canchas por disciplina (de todos los espacios)
+  const fetchCanchasByDisciplina = useCallback(async (disciplinaId) => {
+    if (!disciplinaId) return;
     
     try {
       setIsLoading(true);
-      const data = await canchasApi.getByEspacioYDisciplina(
-        selectedEspacio.id_espacio_deportivo,
-        selectedDisciplina.id_disciplina
-      );
+      // Usar el nuevo endpoint que incluye info del espacio deportivo
+      const data = await canchasApi.getByDisciplina(disciplinaId);
       setCanchas(data);
       setIsLoading(false);
       
       if (data.length === 0) {
-        toast.info(`No hay canchas de ${selectedDisciplina.nombre} disponibles en ${selectedEspacio.nombre}`);
+        toast.info(`No hay canchas de esta disciplina disponibles`);
       }
       return data;
     } catch (error) {
-      console.error('Error al cargar canchas:', error);
+      console.error('Error al cargar canchas por disciplina:', error);
       toast.error('Error al cargar canchas disponibles');
       setCanchas([]);
       setIsLoading(false);
       return [];
     }
-  }, [selectedEspacio, selectedDisciplina]);
+  }, []);
 
   const fetchCuponesUsuario = useCallback(async () => {
     if (!profile) return;
@@ -171,42 +180,152 @@ export const useReserva = () => {
     }
   }, [selectedCancha, reservationData.fecha_reserva]);
 
-  // Step handlers
-  const handleEspacioSelect = useCallback((espacio) => {
-    setSelectedEspacio(espacio);
-    setSelectedDisciplina(null);
+  // Step handlers - MODIFICADOS para nuevo flujo
+  const handleDisciplinaSelect = useCallback((disciplina) => {
+    setSelectedDisciplina(disciplina);
+    setSelectedEspacio(null);
     setSelectedCancha(null);
-    setDisciplinas([]);
     setCanchas([]);
     setReservationData(prev => ({ 
       ...prev,
-      id_disciplina: '',
+      id_disciplina: disciplina.id_disciplina,
       id_cancha: ''
     }));
+    setEspacioFiltro('todos');
+    setUbicacionUsuario(null);
+    setOrdenarPorDistancia(false);
+    
+    // Cargar canchas para esta disciplina
+    fetchCanchasByDisciplina(disciplina.id_disciplina);
+    
     setActiveStep(1);
-  }, []);
-
-  const handleDisciplinaSelect = useCallback((disciplina) => {
-    setSelectedDisciplina(disciplina);
-    setReservationData(prev => ({ 
-      ...prev, 
-      id_disciplina: disciplina.id_disciplina 
-    }));
-    setSelectedCancha(null);
-    setActiveStep(2);
-  }, []);
+  }, [fetchCanchasByDisciplina]);
 
   const handleCanchaSelect = useCallback((cancha) => {
-  setSelectedCancha(cancha);
-  setReservationData(prev => ({ 
-    ...prev, 
-    id_cancha: cancha.id_cancha,
-    cantidad_asistentes: 1 // Reiniciar a 1 asistente por defecto
-  }));
-  setActiveStep(3);
-  // Reiniciar asistentes cuando se selecciona nueva cancha
-  setAsistentes([]);
-}, []);
+    setSelectedCancha(cancha);
+    // Encontrar el espacio deportivo de esta cancha
+    const espacioCancha = espacios.find(e => e.id_espacio_deportivo === cancha.id_espacio_deportivo);
+    setSelectedEspacio(espacioCancha);
+    
+    setReservationData(prev => ({ 
+      ...prev, 
+      id_cancha: cancha.id_cancha,
+      cantidad_asistentes: 1
+    }));
+    
+    setActiveStep(2);
+    setAsistentes([]);
+  }, [espacios]);
+
+  // Función para obtener la ubicación del usuario
+  const obtenerUbicacion = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        toast.error('Tu navegador no soporta geolocalización');
+        reject(new Error('Tu navegador no soporta geolocalización'));
+        return;
+      }
+
+      setObteniendoUbicacion(true);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const ubicacion = {
+            latitud: position.coords.latitude,
+            longitud: position.coords.longitude,
+            precision: position.coords.accuracy
+          };
+          setUbicacionUsuario(ubicacion);
+          setOrdenarPorDistancia(true);
+          setObteniendoUbicacion(false);
+          toast.success('Ubicación obtenida correctamente');
+          resolve(ubicacion);
+        },
+        (error) => {
+          let mensajeError = 'No se pudo obtener tu ubicación';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              mensajeError = 'Permiso de ubicación denegado. Por favor habilita la ubicación en tu navegador.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              mensajeError = 'Información de ubicación no disponible';
+              break;
+            case error.TIMEOUT:
+              mensajeError = 'Tiempo de espera agotado para obtener la ubicación';
+              break;
+          }
+          toast.error(mensajeError);
+          setObteniendoUbicacion(false);
+          reject(new Error(mensajeError));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    });
+  }, []);
+
+  // Limpiar ubicación y ordenamiento
+  const limpiarUbicacion = useCallback(() => {
+    setUbicacionUsuario(null);
+    setOrdenarPorDistancia(false);
+  }, []);
+
+  // Función para ordenar canchas por distancia
+  const getCanchasOrdenadasPorDistancia = useCallback(() => {
+    if (!ordenarPorDistancia || !ubicacionUsuario) {
+      return canchas;
+    }
+    
+    const canchasConDistancia = canchas.map(cancha => {
+      const espacioCancha = espacios.find(e => e.id_espacio_deportivo === cancha.id_espacio_deportivo);
+      
+      let distancia = null;
+      if (espacioCancha && espacioCancha.latitud && espacioCancha.longitud) {
+        distancia = calcularDistancia(
+          ubicacionUsuario.latitud,
+          ubicacionUsuario.longitud,
+          espacioCancha.latitud,
+          espacioCancha.longitud
+        );
+      }
+      
+      return {
+        ...cancha,
+        espacio: espacioCancha,
+        distancia: distancia
+      };
+    });
+
+    // Separar canchas con y sin coordenadas
+    const canchasConCoordenadas = canchasConDistancia.filter(c => c.distancia !== null);
+    const canchasSinCoordenadas = canchasConDistancia.filter(c => c.distancia === null);
+
+    // Ordenar por distancia
+    return [
+      ...canchasConCoordenadas.sort((a, b) => a.distancia - b.distancia),
+      ...canchasSinCoordenadas
+    ];
+  }, [canchas, espacios, ordenarPorDistancia, ubicacionUsuario]);
+
+  // Función para filtrar canchas por espacio
+  const filtrarCanchasPorEspacio = useCallback((espacioId, canchasArray = null) => {
+    const canchasAUsar = canchasArray || canchas;
+    
+    if (!espacioId || espacioId === 'todos') {
+      return canchasAUsar;
+    }
+    
+    return canchasAUsar.filter(cancha => cancha.id_espacio_deportivo === parseInt(espacioId));
+  }, [canchas]);
+
+  // Obtener espacios únicos de las canchas disponibles
+  const getEspaciosDisponibles = useCallback(() => {
+    const espaciosIds = [...new Set(canchas.map(c => c.id_espacio_deportivo))];
+    return espacios.filter(e => espaciosIds.includes(e.id_espacio_deportivo));
+  }, [canchas, espacios]);
 
   // Obtener bloques ocupados
   const getOcupiedBlocks = useCallback(() => {
@@ -306,71 +425,37 @@ export const useReserva = () => {
 
   // Validar asistentes
   const validarAsistentes = useCallback(() => {
-  console.log('=== VALIDANDO ASISTENTES ===');
-  console.log('Cantidad esperada:', reservationData.cantidad_asistentes);
-  console.log('Array asistentes:', asistentes);
-  console.log('Longitud array:', asistentes.length);
-  
-  const cantidadAsistentes = reservationData.cantidad_asistentes || 1;
-  
-  // Si solo hay 1 asistente (el que hace la reserva), no necesita completar formulario
-  if (cantidadAsistentes <= 1) {
-    console.log('Solo 1 asistente, validación automática OK');
-    return true;
-  }
-  
-  // Verificar que tengamos el array de asistentes
-  if (!Array.isArray(asistentes) || asistentes.length !== cantidadAsistentes) {
-    console.log('Error: Cantidad de asistentes no coincide', {
-      esperado: cantidadAsistentes,
-      obtenido: asistentes.length,
-      asistentes
-    });
-    return false;
-  }
-  
-  // Validar cada asistente
-  const todosValidos = asistentes.every((asistente, index) => {
-    // Verificar que el objeto asistente exista
-    if (!asistente) {
-      console.log(`Asistente ${index + 1} no definido`);
+    const cantidadAsistentes = reservationData.cantidad_asistentes || 1;
+    
+    // Si solo hay 1 asistente (el que hace la reserva), no necesita completar formulario
+    if (cantidadAsistentes <= 1) {
+      return true;
+    }
+    
+    // Verificar que tengamos el array de asistentes
+    if (!Array.isArray(asistentes) || asistentes.length !== cantidadAsistentes) {
       return false;
     }
     
-    const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
-    const emailValido = asistente.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asistente.email.trim());
+    // Validar cada asistente
+    const todosValidos = asistentes.every((asistente, index) => {
+      if (!asistente) return false;
+      
+      const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
+      const emailValido = asistente.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asistente.email.trim());
+      
+      return nombreValido && emailValido;
+    });
     
-    if (!nombreValido || !emailValido) {
-      console.log(`Asistente ${index + 1} inválido:`, { 
-        nombre: asistente.nombre, 
-        email: asistente.email,
-        nombreValido, 
-        emailValido 
-      });
-    }
-    
-    return nombreValido && emailValido;
-  });
-  
-  console.log('Resultado validación:', { todosValidos });
-  return todosValidos;
-}, [asistentes, reservationData.cantidad_asistentes]);
+    return todosValidos;
+  }, [asistentes, reservationData.cantidad_asistentes]);
 
-const handleAsistentesChange = useCallback((nuevosAsistentes) => {
-  console.log('=== ACTUALIZANDO ASISTENTES EN HOOK ===');
-  console.log('Nuevos asistentes:', nuevosAsistentes);
-  console.log('Cantidad esperada:', reservationData.cantidad_asistentes);
-  setAsistentes(nuevosAsistentes);
-}, [reservationData.cantidad_asistentes]);
+  const handleAsistentesChange = useCallback((nuevosAsistentes) => {
+    setAsistentes(nuevosAsistentes);
+  }, [reservationData.cantidad_asistentes]);
 
   // Reservation handler
   const handleConfirmReservation = useCallback(async () => {
-    console.log('=== INICIANDO CONFIRMACIÓN DE RESERVA ===');
-    console.log('Datos de reserva:', reservationData);
-    console.log('Asistentes:', asistentes);
-    console.log('Validación horario:', isHorarioDisponible());
-    console.log('Validación asistentes:', validarAsistentes());
-    
     if (!profile) {
       toast.info('Por favor, inicia sesión para completar tu reserva');
       navigate('/login', { 
@@ -394,7 +479,6 @@ const handleAsistentesChange = useCallback((nuevosAsistentes) => {
 
     // Validar asistentes
     if (!validarAsistentes()) {
-      console.log('Error: Asistentes no válidos');
       toast.error('Por favor completa la información de todos los asistentes correctamente.');
       return;
     }
@@ -409,11 +493,8 @@ const handleAsistentesChange = useCallback((nuevosAsistentes) => {
         ...reservationData,
         id_usuario: profile.id,
         codigo_cupon: codigoCupon,
-        // Si solo hay 1 asistente (el reservante), no enviar array de asistentes
         asistentes: (reservationData.cantidad_asistentes > 1) ? asistentes : []
       };
-      
-      console.log('Enviando datos al backend:', reservaData);
       
       // Usar el endpoint correcto según si hay asistentes o no
       let nuevaReserva;
@@ -479,6 +560,10 @@ const handleAsistentesChange = useCallback((nuevosAsistentes) => {
     setCanchas([]);
     setHorariosDisponibles([]);
     setAsistentes([]);
+    setEspacioFiltro('todos');
+    setUbicacionUsuario(null);
+    setOrdenarPorDistancia(false);
+    setObteniendoUbicacion(false);
     
     if (profile) {
       fetchCuponesUsuario();
@@ -503,6 +588,10 @@ const handleAsistentesChange = useCallback((nuevosAsistentes) => {
     asistentes,
     loading,
     isLoading,
+    espacioFiltro,
+    ubicacionUsuario,
+    ordenarPorDistancia,
+    obteniendoUbicacion,
     
     // Setters
     setActiveStep,
@@ -511,14 +600,17 @@ const handleAsistentesChange = useCallback((nuevosAsistentes) => {
     setConfirmOpen,
     setAsistentes,
     handleAsistentesChange,
+    setEspacioFiltro,
+    setUbicacionUsuario,
+    setOrdenarPorDistancia,
+    setObteniendoUbicacion,
     
     // Methods
     fetchEspacios,
-    fetchDisciplinas,
-    fetchCanchas,
+    fetchAllDisciplinas,
+    fetchCanchasByDisciplina,
     fetchCuponesUsuario,
     fetchHorariosDisponibles,
-    handleEspacioSelect,
     handleDisciplinaSelect,
     handleCanchaSelect,
     handleConfirmReservation,
@@ -527,8 +619,13 @@ const handleAsistentesChange = useCallback((nuevosAsistentes) => {
     calcularCostoTotal,
     getOccupiedHours,
     validarAsistentes,
+    filtrarCanchasPorEspacio,
+    getEspaciosDisponibles,
+    obtenerUbicacion,
+    limpiarUbicacion,
+    getCanchasOrdenadasPorDistancia,
     
-    // Nuevas funciones para manejo de horas
+    // Funciones para manejo de horas
     getOcupiedBlocks,
     isHoraInicioValida,
     isHoraFinValida,
