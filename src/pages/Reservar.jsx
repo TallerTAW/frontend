@@ -34,6 +34,7 @@ export default function Reservar() {
     selectedDisciplina,
     selectedCancha,
     selectedCoupon,
+    selectedCouponData,
     reservationData,
     confirmOpen,
     horariosDisponibles,
@@ -50,14 +51,16 @@ export default function Reservar() {
     handleDisciplinaSelect,
     handleCanchaSelect,
     setSelectedCoupon,
+    setSelectedCouponData,
     setReservationData,
     setConfirmOpen,
     handleConfirmReservation,
     resetForm,
     isHorarioDisponible,
+    calcularCostoBase,
+    calcularDescuento,
     calcularCostoTotal,
     getOccupiedHours,
-
     getOcupiedBlocks,
     isHoraInicioValida,
     isHoraFinValida,
@@ -68,10 +71,12 @@ export default function Reservar() {
     handleAsistentesChange,
     filtrarCanchasPorEspacio,
     getEspaciosDisponibles,
-    setEspacioFiltro
+    setEspacioFiltro,
+    aplicarCupon,
+    removerCupon
   } = useReserva();
 
-  // Cargar datos iniciales - MODIFICADO para nuevo flujo
+  // Cargar datos iniciales
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
@@ -81,9 +86,6 @@ export default function Reservar() {
           fetchAllDisciplinas(),
           fetchEspacios()
         ]);
-        if (profile) {
-          await fetchCuponesUsuario();
-        }
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
@@ -92,7 +94,31 @@ export default function Reservar() {
     };
     
     loadInitialData();
-  }, [profile]);
+  }, []);
+
+  // Cargar cupones cuando el usuario esté autenticado
+  useEffect(() => {
+    if (profile) {
+      console.log(`👤 [Reservar] Usuario autenticado: ${profile.email}, cargando cupones...`);
+      fetchCuponesUsuario();
+    } else {
+      console.log(`👤 [Reservar] Usuario no autenticado`);
+    }
+  }, [profile, fetchCuponesUsuario]);
+
+  // En tu archivo Reservar.jsx, después del useEffect que carga cupones
+  useEffect(() => {
+    console.log(`🔍 [Reservar] Cupones en estado:`, {
+      total: cupones.length,
+      cupones: cupones.map(c => ({
+        codigo: c.codigo,
+        estado: c.estado,
+        expiracion: c.fecha_expiracion,
+        tipo: c.tipo,
+        monto: c.monto_descuento
+      }))
+    });
+  }, [cupones]);
 
   // Actualizar horarios cuando cambia la fecha o cancha
   useEffect(() => {
@@ -148,11 +174,15 @@ export default function Reservar() {
             reservationData={reservationData}
             horariosDisponibles={horariosDisponibles}
             selectedCoupon={selectedCoupon}
+            selectedCouponData={selectedCouponData}
             onBack={() => setActiveStep(1)}
-            onCouponChange={setSelectedCoupon}
+            onCouponChange={aplicarCupon}
+            onRemoveCoupon={removerCupon}
             onReservationChange={setReservationData}
             onConfirm={() => setConfirmOpen(true)}
             isHorarioDisponible={isHorarioDisponible}
+            calcularCostoBase={calcularCostoBase}
+            calcularDescuento={calcularDescuento}
             calcularCostoTotal={calcularCostoTotal}
             getOccupiedHours={getOccupiedHours}
             profile={profile}
@@ -236,6 +266,7 @@ export default function Reservar() {
         selectedCancha={selectedCancha}
         reservationData={reservationData}
         selectedCoupon={selectedCoupon}
+        selectedCouponData={selectedCouponData}
         cupones={cupones}
         isHorarioDisponible={isHorarioDisponible}
         calcularCostoTotal={calcularCostoTotal}

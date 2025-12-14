@@ -1,5 +1,5 @@
-import { Button, Grid, Card, CardContent, Typography, Box, Divider, Chip, Alert, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
-import { ArrowBack, SportsSoccer, Stadium, People, Money, AccessTime, CalendarMonth, Groups, LocalOffer, QrCode, ContentCopy } from '@mui/icons-material';
+import { Button, Grid, Card, CardContent, Typography, Box, Divider, Chip, Alert, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Select, FormControl, InputLabel, CircularProgress as MuiCircularProgress } from '@mui/material';
+import { ArrowBack, SportsSoccer, Stadium, People, Money, AccessTime, CalendarMonth, Groups, LocalOffer, QrCode, ContentCopy, Discount, Close } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import ReservationForm from './ReservationForm';
 import PaymentSummary from './PaymentSummary';
@@ -7,20 +7,23 @@ import { useEffect, useState } from 'react';
 import { CircularProgress } from '@mui/material';
 import { toast } from 'react-toastify';
 
-
 export default function Step3Confirmacion({
   selectedEspacio,
   selectedDisciplina,
   selectedCancha,
-  cupones,
+  cupones = [],
   reservationData,
   horariosDisponibles,
   selectedCoupon,
+  selectedCouponData,
   onBack,
   onCouponChange,
+  onRemoveCoupon,
   onReservationChange,
   onConfirm,
   isHorarioDisponible,
+  calcularCostoBase,
+  calcularDescuento,
   calcularCostoTotal,
   getOccupiedHours,
   profile,
@@ -40,7 +43,8 @@ export default function Step3Confirmacion({
   const [codigoReserva, setCodigoReserva] = useState('');
   const [showCodigoDialog, setShowCodigoDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [codigoAcceso, setCodigoAcceso] = useState('');
+  const [cuponSeleccionado, setCuponSeleccionado] = useState('');
+  const [cuponValido, setCuponValido] = useState(false);
 
   // Validar horario
   useEffect(() => {
@@ -50,6 +54,20 @@ export default function Step3Confirmacion({
       setHorarioDisponible(true);
     }
   }, [reservationData.hora_inicio, reservationData.hora_fin, reservationData.fecha_reserva]);
+
+  // Actualizar cupón seleccionado cuando cambie selectedCoupon
+  useEffect(() => {
+    if (selectedCoupon) {
+      const cupon = cupones.find(c => c.codigo === selectedCoupon);
+      if (cupon) {
+        setCuponSeleccionado(cupon.codigo);
+        setCuponValido(true);
+      }
+    } else {
+      setCuponSeleccionado('');
+      setCuponValido(false);
+    }
+  }, [selectedCoupon, cupones]);
 
   // Determinar si el botón debe estar deshabilitado
   const isButtonDisabled = () => {
@@ -65,41 +83,232 @@ export default function Step3Confirmacion({
     return Object.values(condiciones).some(c => c);
   };
 
- const handleConfirmarReserva = async () => {
-  try {
-    setLoading(true);
-    
-    const response = await onConfirm();
-    
-    if (response && response.codigo_reserva) {
-      setCodigoReserva(response.codigo_reserva);
-      setReservaConfirmada(true);
-      setShowCodigoDialog(true);
+  const handleConfirmarReserva = async () => {
+    try {
+      setLoading(true);
       
-      // ✅ Forzar un pequeño delay para asegurar que todo se actualice
-      setTimeout(() => {
-        toast.success(`Reserva confirmada! Código: ${response.codigo_reserva}`);
-      }, 500);
-    } else {
-      // ✅ Intentar obtener el código de otras maneras
-      const fallbackCode = response?.data?.codigo_reserva;
-      setCodigoReserva(fallbackCode);
-      setReservaConfirmada(true);
-      setShowCodigoDialog(true);
+      const response = await onConfirm();
       
-      toast.warning('Código generado localmente. Revisa tu email para el código oficial.');
+      if (response && response.codigo_reserva) {
+        setCodigoReserva(response.codigo_reserva);
+        setReservaConfirmada(true);
+        setShowCodigoDialog(true);
+        
+        setTimeout(() => {
+          toast.success(`Reserva confirmada! Código: ${response.codigo_reserva}`);
+        }, 500);
+      } else {
+        const fallbackCode = response?.data?.codigo_reserva;
+        setCodigoReserva(fallbackCode);
+        setReservaConfirmada(true);
+        setShowCodigoDialog(true);
+        
+        toast.warning('Código generado localmente. Revisa tu email para el código oficial.');
+      }
+    } catch (error) {
+      console.error('Error al confirmar reserva:', error);
+      toast.error('Error al confirmar reserva');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error al confirmar reserva:', error);
-    toast.error('Error al confirmar reserva');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
+  // Manejar aplicación de cupón
+  const handleAplicarCupon = (codigoCupon) => {
+    if (!profile) {
+      toast.error('Debes iniciar sesión para aplicar cupones');
+      return;
+    }
+
+    if (onCouponChange) {
+      const aplicado = onCouponChange(codigoCupon);
+      if (aplicado) {
+        setCuponSeleccionado(codigoCupon);
+      }
+    }
+  };
+
+  // Manejar remoción de cupón
+  const handleRemoverCupon = () => {
+    if (onRemoveCoupon) {
+      onRemoveCoupon();
+      setCuponSeleccionado('');
+      setCuponValido(false);
+    }
+  };
+
+  // Filtrar cupones válidos
+  const cuponesValidos = cupones.filter(cupon => {
+    const estadoValido = cupon.estado === 'activo';
+    const fechaValida = !cupon.fecha_expiracion || new Date(cupon.fecha_expiracion) >= new Date();
+    const noUtilizado = !cupon.id_reserva;
+    
+    return estadoValido && fechaValida && noUtilizado;
+  });
+
+  // Renderizar sección de cupones
+  const renderCuponesDisponibles = () => {
+    if (!profile) {
+      return (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body2">
+            🔐 <strong>Inicia sesión</strong> para ver y aplicar tus cupones disponibles
+          </Typography>
+        </Alert>
+      );
+    }
+
+    if (cuponesValidos.length === 0) {
+      return (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body2">
+            No tienes cupones disponibles en este momento
+          </Typography>
+        </Alert>
+      );
+    }
+
+    return (
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 2, 
+            color: '#1a237e',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          <Discount sx={{ color: '#0f9fe1' }} />
+          Tus Cupones Disponibles
+        </Typography>
+        
+        <Grid container spacing={2}>
+          {cuponesValidos.map((cupon) => (
+            <Grid item xs={12} sm={6} md={4} key={cupon.id_cupon}>
+              <Card 
+                variant="outlined"
+                sx={{ 
+                  cursor: 'pointer',
+                  borderColor: cuponSeleccionado === cupon.codigo ? '#4caf50' : '#e0e0e0',
+                  borderWidth: cuponSeleccionado === cupon.codigo ? 2 : 1,
+                  backgroundColor: cuponSeleccionado === cupon.codigo ? '#e8f5e9' : 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: '#0f9fe1',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }
+                }}
+                onClick={() => handleAplicarCupon(cupon.codigo)}
+              >
+                <CardContent sx={{ p: 2, position: 'relative' }}>
+                  {cuponSeleccionado === cupon.codigo && (
+                    <Chip 
+                      label="APLICADO"
+                      color="success"
+                      size="small"
+                      sx={{ 
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  )}
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <LocalOffer sx={{ 
+                      color: cuponSeleccionado === cupon.codigo ? '#4caf50' : '#0f9fe1',
+                      fontSize: 20 
+                    }} />
+                    <Typography variant="subtitle1" fontWeight="bold" color="#1a237e">
+                      {cupon.codigo}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Descuento:
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: '#2e7d32',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {cupon.tipo === 'porcentaje' ? `${cupon.monto_descuento}%` : `$${cupon.monto_descuento}`}
+                    </Typography>
+                  </Box>
+                  
+                  {cupon.fecha_expiracion && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      Válido hasta: {new Date(cupon.fecha_expiracion).toLocaleDateString()}
+                    </Typography>
+                  )}
+                  
+                  <Button
+                    size="small"
+                    variant={cuponSeleccionado === cupon.codigo ? "contained" : "outlined"}
+                    color={cuponSeleccionado === cupon.codigo ? "success" : "primary"}
+                    sx={{ 
+                      mt: 2,
+                      width: '100%',
+                      textTransform: 'none',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {cuponSeleccionado === cupon.codigo ? '✓ Aplicado' : 'Aplicar Cupón'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+        
+        {selectedCoupon && (
+          <Box sx={{ 
+            mt: 2, 
+            p: 2, 
+            bgcolor: '#e8f5e9', 
+            borderRadius: 2,
+            border: '1px solid #4caf50',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Box>
+              <Typography variant="body1" fontWeight="bold" color="#2e7d32">
+                ✓ Cupón aplicado: {selectedCoupon}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedCouponData?.tipo === 'porcentaje' 
+                  ? `${selectedCouponData?.monto_descuento}% de descuento` 
+                  : `$${selectedCouponData?.monto_descuento} de descuento`}
+              </Typography>
+            </Box>
+            <Button
+              startIcon={<Close />}
+              variant="outlined"
+              color="error"
+              size="small"
+              onClick={handleRemoverCupon}
+              sx={{ textTransform: 'none' }}
+            >
+              Remover
+            </Button>
+          </Box>
+        )}
+      </Box>
+    );
+  };
 
   const copiarCodigo = () => {
     navigator.clipboard.writeText(codigoReserva);
-    // Mostrar notificación de copiado
+    toast.success('Código copiado al portapapeles');
   };
 
   return (
@@ -160,7 +369,7 @@ export default function Step3Confirmacion({
               <QrCode sx={{ fontSize: 40, color: '#0f9fe1' }} />
               <Box>
                 <Typography variant="h6" fontWeight="bold" color="#1a237e">
-                  Proximos pasos
+                  Próximos pasos
                 </Typography>
                 <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '1.5rem', letterSpacing: 2 }}>
                   {codigoReserva}
@@ -184,18 +393,6 @@ export default function Step3Confirmacion({
                 Comparte este código con los demás asistentes. Cada uno podrá registrarse usando este código hasta {reservationData.cantidad_asistentes - 1} veces.
               </Typography>
             </Alert>
-
-            <Box sx={{ mt: 3, p: 2, bgcolor: 'white', borderRadius: 2 }}>
-              <Typography variant="subtitle2" fontWeight="bold" color="#1a237e" sx={{ mb: 2 }}>
-                Instrucciones para Invitados:
-              </Typography>
-              <ol style={{ margin: 0, paddingLeft: 20 }}>
-                <li><Typography variant="body2">Comparte el código con los demás asistentes</Typography></li>
-                <li><Typography variant="body2">Los invitados pueden registrarse en la página principal usando el código</Typography></li>
-                <li><Typography variant="body2">Cada invitado recibirá su propio código QR por email</Typography></li>
-                <li><Typography variant="body2">Si ya tienen cuenta, pueden usar el código desde su dashboard</Typography></li>
-              </ol>
-            </Box>
           </Paper>
         </Box>
       ) : (
@@ -222,197 +419,183 @@ export default function Step3Confirmacion({
           {/* Grid Principal Responsivo */}
           <Grid container spacing={{ xs: 3, md: 4 }}>
             {/* Columna 1: Detalles de la Cancha */}
-        <Grid item xs={12} md={5}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Card 
-              sx={{ 
-                borderRadius: 2,
-                overflow: 'hidden',
-                border: 'none',
-                height: '100%',
-                boxShadow: 3
-              }}
-            >
-              {/* Header */}
-              <Box sx={{ 
-                background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)', 
-                p: { xs: 2, sm: 3 },
-                color: 'white'
-              }}>
-                <Typography 
-                  variant="h6" 
+            <Grid item xs={12} md={5}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <Card 
                   sx={{ 
-                    fontWeight: 'bold',
-                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: 'none',
+                    height: '100%',
+                    boxShadow: 3
                   }}
                 >
-                  <SportsSoccer sx={{ fontSize: { xs: 22, sm: 24 } }} />
-                  Detalles de la Cancha
-                </Typography>
-              </Box>
-              
-              {/* Contenido */}
-              <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {/* Información Principal */}
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: { xs: 2, sm: 3 }, 
-                      bgcolor: '#f8f9fa', 
-                      borderRadius: 2 
-                    }}
-                  >
+                  {/* Header */}
+                  <Box sx={{ 
+                    background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)', 
+                    p: { xs: 2, sm: 3 },
+                    color: 'white'
+                  }}>
                     <Typography 
                       variant="h6" 
                       sx={{ 
-                        color: '#0f9fe1', 
-                        mb: 2, 
                         fontWeight: 'bold',
-                        fontSize: { xs: '1rem', sm: '1.1rem' }
+                        fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
                       }}
                     >
-                      {selectedCancha.nombre}
+                      <SportsSoccer sx={{ fontSize: { xs: 22, sm: 24 } }} />
+                      Detalles de la Cancha
                     </Typography>
-                    
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Stadium sx={{ color: '#9eca3f', fontSize: { xs: 20, sm: 22 } }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Espacio Deportivo
-                          </Typography>
-                          <Typography variant="body2" fontWeight="medium">
-                            {selectedEspacio?.nombre}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <People sx={{ color: '#0f9fe1', fontSize: { xs: 20, sm: 22 } }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Disciplina
-                          </Typography>
-                          <Typography variant="body2" fontWeight="medium">
-                            {selectedDisciplina?.nombre}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <AccessTime sx={{ color: '#ff9800', fontSize: { xs: 20, sm: 22 } }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Horario Operativo
-                          </Typography>
-                          <Typography variant="body2" fontWeight="medium">
-                            {selectedCancha.hora_apertura.slice(0,5)} - {selectedCancha.hora_cierre.slice(0,5)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Paper>
-
-                  {/* Precio y Capacidad */}
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: { xs: 2, sm: 3 }, 
-                      bgcolor: '#f0f7ff', 
-                      borderRadius: 2, 
-                      border: '1px solid #e1f5fe' 
-                    }}
-                  >
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ 
-                        color: '#1a237e', 
-                        mb: 2, 
-                        fontWeight: 'bold',
-                        fontSize: { xs: '0.9rem', sm: '1rem' }
-                      }}
-                    >
-                      Información de Tarifas
-                    </Typography>
-                    
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <Box sx={{ 
-                          textAlign: 'center', 
-                          p: 2, 
-                          bgcolor: 'white', 
-                          borderRadius: 2, 
-                          border: '1px solid #e0e0e0' 
-                        }}>
-                          <Money sx={{ fontSize: { xs: 24, sm: 28 }, color: '#4caf50', mb: 1 }} />
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              color: '#2e7d32', 
-                              fontWeight: 'bold',
-                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
-                            }}
-                          >
-                            ${selectedCancha.precio_por_hora}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            por hora
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Box sx={{ 
-                          textAlign: 'center', 
-                          p: 2, 
-                          bgcolor: 'white', 
-                          borderRadius: 2, 
-                          border: '1px solid #e0e0e0' 
-                        }}>
-                          <Groups sx={{ fontSize: { xs: 24, sm: 28 }, color: '#0f9fe1', mb: 1 }} />
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              color: '#1565c0', 
-                              fontWeight: 'bold',
-                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
-                            }}
-                          >
-                            {selectedEspacio?.capacidad}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            capacidad
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </Paper>
-
-                  {/* Estado */}
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <Chip
-                      label="DISPONIBLE"
-                      color="success"
-                      sx={{ 
-                        fontWeight: 'bold',
-                        fontSize: { xs: '0.75rem', sm: '0.85rem' },
-                        px: 3,
-                        py: 1
-                      }}
-                    />
                   </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </Grid>
+                  
+                  {/* Contenido */}
+                  <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {/* Información Principal */}
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: { xs: 2, sm: 3 }, 
+                          bgcolor: '#f8f9fa', 
+                          borderRadius: 2 
+                        }}
+                      >
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: '#0f9fe1', 
+                            mb: 2, 
+                            fontWeight: 'bold',
+                            fontSize: { xs: '1rem', sm: '1.1rem' }
+                          }}
+                        >
+                          {selectedCancha?.nombre}
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Stadium sx={{ color: '#9eca3f', fontSize: { xs: 20, sm: 22 } }} />
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Espacio Deportivo
+                              </Typography>
+                              <Typography variant="body2" fontWeight="medium">
+                                {selectedEspacio?.nombre}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <People sx={{ color: '#0f9fe1', fontSize: { xs: 20, sm: 22 } }} />
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Disciplina
+                              </Typography>
+                              <Typography variant="body2" fontWeight="medium">
+                                {selectedDisciplina?.nombre}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <AccessTime sx={{ color: '#ff9800', fontSize: { xs: 20, sm: 22 } }} />
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Horario Operativo
+                              </Typography>
+                              <Typography variant="body2" fontWeight="medium">
+                                {selectedCancha?.hora_apertura?.slice(0,5)} - {selectedCancha?.hora_cierre?.slice(0,5)}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Paper>
+
+                      {/* Precio y Capacidad */}
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: { xs: 2, sm: 3 }, 
+                          bgcolor: '#f0f7ff', 
+                          borderRadius: 2, 
+                          border: '1px solid #e1f5fe' 
+                        }}
+                      >
+                        <Typography 
+                          variant="subtitle2" 
+                          sx={{ 
+                            color: '#1a237e', 
+                            mb: 2, 
+                            fontWeight: 'bold',
+                            fontSize: { xs: '0.9rem', sm: '1rem' }
+                        }}
+                        >
+                          Información de Tarifas
+                        </Typography>
+                        
+                        <Grid container spacing={2}>
+                          <Grid item xs={6}>
+                            <Box sx={{ 
+                              textAlign: 'center', 
+                              p: 2, 
+                              bgcolor: 'white', 
+                              borderRadius: 2, 
+                              border: '1px solid #e0e0e0' 
+                            }}>
+                              <Money sx={{ fontSize: { xs: 24, sm: 28 }, color: '#4caf50', mb: 1 }} />
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  color: '#2e7d32', 
+                                  fontWeight: 'bold',
+                                  fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                                }}
+                              >
+                                ${selectedCancha?.precio_por_hora || 0}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                por hora
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Box sx={{ 
+                              textAlign: 'center', 
+                              p: 2, 
+                              bgcolor: 'white', 
+                              borderRadius: 2, 
+                              border: '1px solid #e0e0e0' 
+                            }}>
+                              <Groups sx={{ fontSize: { xs: 24, sm: 28 }, color: '#0f9fe1', mb: 1 }} />
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  color: '#1565c0', 
+                                  fontWeight: 'bold',
+                                  fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                                }}
+                              >
+                                {selectedEspacio?.capacidad}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                capacidad
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </Paper>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </Grid>
 
             {/* Columna 2: Formulario de Reserva */}
             <Grid item xs={12} md={7}>
@@ -450,14 +633,17 @@ export default function Step3Confirmacion({
                   
                   {/* Contenido */}
                   <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                    {/* Cupones Disponibles */}
+                    {renderCuponesDisponibles()}
+
                     <ReservationForm
                       reservationData={reservationData}
                       horariosDisponibles={horariosDisponibles}
                       selectedCoupon={selectedCoupon}
-                      cupones={cupones}
+                      cupones={cuponesValidos}
                       selectedEspacio={selectedEspacio}
                       onReservationChange={onReservationChange}
-                      onCouponChange={onCouponChange}
+                      onCouponChange={handleAplicarCupon}
                       isHorarioDisponible={isHorarioDisponible}
                       isHoraInicioValida={isHoraInicioValida}
                       isHoraFinValida={isHoraFinValida}
@@ -468,8 +654,12 @@ export default function Step3Confirmacion({
                     {/* Payment Summary */}
                     <Box sx={{ mt: 3 }}>
                       <PaymentSummary
+                        calcularCostoBase={calcularCostoBase}
+                        calcularDescuento={calcularDescuento}
                         calcularCostoTotal={calcularCostoTotal}
                         selectedCoupon={selectedCoupon}
+                        selectedCouponData={selectedCouponData}
+                        cupones={cuponesValidos}
                         totalHours={totalHours}
                       />
                     </Box>
@@ -503,9 +693,9 @@ export default function Step3Confirmacion({
                         }}
                       >
                         {loading ? (
-                          <CircularProgress size={24} color="inherit" />
+                          <MuiCircularProgress size={24} color="inherit" />
                         ) : profile ? (
-                          '✅ Confirmar Reserva y Obtener Código'
+                          selectedCouponData ? '✅ Confirmar Reserva con Cupón' : '✅ Confirmar Reserva'
                         ) : (
                           '🔑 Iniciar Sesión para Reservar'
                         )}
@@ -519,7 +709,50 @@ export default function Step3Confirmacion({
         </>
       )}
 
-      
+      {/* Diálogo del código */}
+      <Dialog open={showCodigoDialog} onClose={() => setShowCodigoDialog(false)}>
+        <DialogTitle>
+          <Typography variant="h6" fontWeight="bold" color="#1a237e">
+            🎉 ¡Reserva Confirmada!
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', py: 3 }}>
+            <QrCode sx={{ fontSize: 60, color: '#0f9fe1', mb: 2 }} />
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Tu código de reserva es:
+            </Typography>
+            <Typography variant="h4" sx={{ 
+              fontFamily: 'monospace', 
+              fontWeight: 'bold',
+              color: '#2e7d32',
+              mb: 3,
+              letterSpacing: 2
+            }}>
+              {codigoReserva}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Comparte este código con los demás asistentes
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+          <Button
+            onClick={copiarCodigo}
+            variant="contained"
+            startIcon={<ContentCopy />}
+            sx={{ mr: 2 }}
+          >
+            Copiar Código
+          </Button>
+          <Button
+            onClick={() => setShowCodigoDialog(false)}
+            variant="outlined"
+          >
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
