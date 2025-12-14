@@ -32,17 +32,17 @@ import {
   Sort,
   Close,
   Login,
-  Warning // Icono para estados de alerta
+  Warning 
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
-// === AJUSTA TU URL AQUÍ SI ES NECESARIO ===
-const API_BASE_URL = 'http://127.0.0.1:8000';
+// === AJUSTA TU URL AQUÍ ===
+const API_BASE_URL = 'http://127.0.0.1:8000'; 
 
 // COLORES
 const COLOR_AZUL_ELECTRICO = '#00BFFF';
 const COLOR_VERDE_NEON = '#39FF14';
-const COLOR_NARANJA_VIBRANTE = '#FF4500';
+const COLOR_NARANJA_VIBRANTE = '#A2E831';
 
 export default function CourtsVisitante() {
   const navigate = useNavigate();
@@ -69,13 +69,11 @@ export default function CourtsVisitante() {
     }
   }, [location]);
 
-  // 2. FETCH DATA (CON LA NUEVA RUTA)
+  // 2. FETCH DATA
   const fetchData = async () => {
     setLoading(true);
-    
-    // === CAMBIO APLICADO: Usamos la ruta nueva que trae TODAS las canchas ===
     const urlCanchas = `${API_BASE_URL}/canchas/public/all`; 
-    const urlEspacios = `${API_BASE_URL}/espacios/public/list`; 
+    const urlEspacios = `${API_BASE_URL}/espacios`; // Asegúrate de que esta ruta sea pública si falla
 
     try {
       const [resCanchas, resEspacios] = await Promise.all([
@@ -86,8 +84,6 @@ export default function CourtsVisitante() {
       if (resCanchas.ok) {
         const data = await resCanchas.json();
         setCanchas(data || []);
-      } else {
-        console.error("Error al cargar canchas:", resCanchas.status);
       }
 
       if (resEspacios.ok) {
@@ -146,7 +142,9 @@ export default function CourtsVisitante() {
 
 
   const getNombreEspacio = (id) => {
-    const espacio = espacios.find(e => e.id_espacio_deportivo === id);
+    if (!espacios || espacios.length === 0) return 'Cargando...';
+    // Usamos '==' para evitar problemas de tipo (string vs number)
+    const espacio = espacios.find(e => e.id_espacio_deportivo == id);
     return espacio ? espacio.nombre : 'Ubicación desconocida';
   };
 
@@ -160,15 +158,16 @@ export default function CourtsVisitante() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    // 🔥 CAMBIO CLAVE 1: Reduje el padding en 'xs' de 2 a 1 para ganar ancho en móviles
+    <Box sx={{ p: { xs: 1, sm: 2, md: 4 }, minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       
       {/* Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h3" fontWeight="bold" color="primary" gutterBottom>
+        <Typography variant="h3" fontWeight="bold" color="primary" gutterBottom sx={{ fontSize: { xs: '2rem', md: '3rem'} }}>
           Explora Nuestras Canchas
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Encuentra el espacio perfecto para tu próximo partido. Inicia sesión para reservar.
+          Encuentra el espacio perfecto para tu próximo partido.
         </Typography>
         
         <Button 
@@ -242,18 +241,29 @@ export default function CourtsVisitante() {
             <Typography variant="body2">Intenta cambiar los filtros o recargar la página.</Typography>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          /* 🔥 CAMBIO CLAVE 2: Spacing responsivo. En 'xs' es 2 (16px), suficiente para separar verticalmente */
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             {filteredCanchas.map((cancha) => (
+              /* 🔥 CAMBIO CLAVE 3: xs={12} asegura que ocupe todo el ancho en móviles */
               <Grid item xs={12} sm={6} md={4} key={cancha.id_cancha}>
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: '16px', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
+                  <Card sx={{ 
+                    height: '100%', 
+                    width: '410px',
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    borderRadius: '16px', 
+                    transition: 'transform 0.2s', 
+                    boxShadow: 3, // Sombra base para que destaque
+                    '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } 
+                  }}>
                     <Box sx={{ position: 'relative' }}>
                       <CardMedia
                         component="img"
                         height="200"
                         image={cancha.url_imagen || "https://via.placeholder.com/400x200?text=Sin+Imagen"}
                         alt={cancha.nombre}
-                        sx={{ cursor: 'pointer' }}
+                        sx={{ cursor: 'pointer', objectFit: 'cover' }}
                         onClick={() => setImageZoom({ open: true, src: cancha.url_imagen || "https://via.placeholder.com/400x200" })}
                       />
                       <Chip label={cancha.tipo} icon={getIconoDisciplina(cancha.tipo)} size="small" sx={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(255,255,255,0.9)', fontWeight: 'bold', color: COLOR_AZUL_ELECTRICO }} />
@@ -291,7 +301,7 @@ export default function CourtsVisitante() {
                           <Typography variant="caption">Cancha Techada</Typography>
                         </Box>
                       )}
-                      <Button fullWidth variant="contained" startIcon={<Login />} onClick={() => navigate('/login')} sx={{ mt: 2, backgroundColor: COLOR_NARANJA_VIBRANTE, color: '#fff', fontWeight: 'bold', borderRadius: '10px', textTransform: 'none', boxShadow: 'none', '&:hover': { backgroundColor: '#e66b0d' } }}>
+                      <Button fullWidth variant="contained" startIcon={<Login />} onClick={() => navigate('/login')} sx={{ mt: 2, backgroundColor: COLOR_NARANJA_VIBRANTE, color: '#fff', fontWeight: 'bold', borderRadius: '10px', textTransform: 'none', boxShadow: 'none', '&:hover': { backgroundColor: '#A2E831' } }}>
                         Reservar Ahora
                       </Button>
                     </CardContent>
