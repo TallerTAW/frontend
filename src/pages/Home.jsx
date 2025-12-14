@@ -1,11 +1,12 @@
 // pages/Home.jsx
-import { Box, Typography, Container } from "@mui/material";
+import { Box, Typography, Container, Button } from "@mui/material";
 import { motion } from "framer-motion";
-import { useNavigate } from 'react-router-dom'; // 1. Importamos useNavigate
-
+import { useNavigate } from 'react-router-dom'; 
+import { useState } from "react";
+import CodigoAccesoModal from "../components/CodigoAccesoModal";
 import HeaderHome from '../components/HeaderHome';
 import HeroCarousel from '../components/HeroCarousel'; 
-import ImageBanner from '../components/ImageBanner'; // Usamos tu componente ImageBanner
+import ImageBanner from '../components/ImageBanner'; 
 import { useContent } from '../hooks/useContent';
 
 // === IMPORTACIÓN DE IMÁGENES LOCALES ===
@@ -23,12 +24,14 @@ import FacebookIcon from '@mui/icons-material/Facebook';
 import XIcon from '@mui/icons-material/X';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import LanguageIcon from '@mui/icons-material/Language';
+import { QrCode } from '@mui/icons-material';
 
 // COLORES
 const COLOR_PRIMARY = '#00BFFF';
 const COLOR_DARK = '#333333';
 const COLOR_LIGHT = '#FFFFFF';
 const COLOR_ACCENT_RED = '#FD7E14';
+const COLOR_LIME = '#A2E831';
 
 // ASIGNACIÓN DE IMÁGENES
 const IMAGEN_BALON = BalonFutbol;
@@ -68,6 +71,7 @@ export default function Home() {
   
   const aboutUsText = content.about_us || 'Somos una plataforma que conecta personas...';
   const servicesText = content.services || 'Ofrecemos productos y servicios...';
+  const [showCodigoModal, setShowCodigoModal] = useState(false);
 
   // === 3. FUNCIONES DE NAVEGACIÓN ===
   // Estas funciones redirigen a la vista de visitante con el filtro activado
@@ -130,6 +134,29 @@ export default function Home() {
           </motion.div>
         </Container>
       </HeroCarousel>
+
+      {/* === BOTÓN INGRESAR CÓDIGO === */}
+      <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT, display: 'flex', justifyContent: 'center', py: 2 }}>
+      <Button
+        variant="outlined"
+        onClick={() => setShowCodigoModal(true)}
+        sx={{ 
+          color: COLOR_LIME, 
+          borderColor: COLOR_LIME,
+          '&:hover': { 
+            backgroundColor: 'rgba(162, 232, 49, 0.1)',
+            borderColor: COLOR_LIME
+          }
+        }}
+      >
+        <QrCode sx={{ mr: 1 }} />
+        Ingresar Código
+      </Button>
+      </Box>
+      <CodigoAccesoModal 
+        open={showCodigoModal} 
+        onClose={() => setShowCodigoModal(false)} 
+      />
 
       {/* === QUIÉNES SOMOS === */}
       <Box sx={{ backgroundColor: COLOR_DARK, color: COLOR_LIGHT }}>

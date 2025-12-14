@@ -4,10 +4,12 @@ import { espaciosApi } from '../api/espacios';
 import { canchasApi } from '../api/canchas';
 import { reservasApi } from '../api/reservas';
 import { usuariosApi } from '../api/usuarios';
-import { Grid, Card, CardContent, Typography, Box, Button, CircularProgress, IconButton, useTheme, useMediaQuery } from '@mui/material';
+import { Grid, Card, CardContent, Typography, Box, Button, CircularProgress, IconButton, useTheme, useMediaQuery, Paper, TextField } from '@mui/material';
 import { Stadium, SportsSoccer, CalendarMonth, People, Refresh, Menu, AccountCircle, Sports } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import UnirseReservaButton from '../components/UnirseReservaButton';
 
 // === PALETA DE COLORES PERSONALIZADA ===
 const COLOR_AZUL_ELECTRICO = '#00BFFF';
@@ -67,6 +69,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const displayStats = isGuest ? guestStats : stats;
     const [showMobileInfo, setShowMobileInfo] = useState(false);
+    const [codigoInput, setCodigoInput] = useState('');
     
     useEffect(() => {
         if (!isGuest) {
@@ -620,6 +623,11 @@ export default function Dashboard() {
                                             </Typography>
                                         </Box>
                                     </Grid>
+                                </Grid>
+
+                                {/* seccion para poner reservas rapidas */}
+                                <Grid item xs={12} sm={6} md="auto" clear="both">
+                                    <UnirseReservaButton />
                                 </Grid>
 
                                 {/* ACCIONES RÁPIDAS - RESPONSIVE */}

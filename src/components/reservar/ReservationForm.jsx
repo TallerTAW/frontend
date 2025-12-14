@@ -188,7 +188,7 @@ export default function ReservationForm({
     if (cantidadActual > 1) {
       onReservationChange({
         ...reservationData,
-        cantidad_asistentes: cantidadActual - 1
+        cantidad_asistentes: cantidadActual 
       });
     }
   };
@@ -657,7 +657,7 @@ export default function ReservationForm({
           />
         </Box>
 
-        {/* Mostrar opción para completar datos solo si hay más de 1 asistente */}
+        {/* Mostrar opción para completar datos solo si hay más de 1 asistente 
         {tieneMasDeUnAsistente && (
           <Box sx={{ 
             display: 'flex', 
@@ -699,6 +699,7 @@ export default function ReservationForm({
             )}
           </Box>
         )}
+          */}
       </Paper>
 
       {/* FORMULARIO DE ASISTENTES - CORREGIDO Y CON ESPACIO */}

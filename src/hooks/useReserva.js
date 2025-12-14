@@ -454,91 +454,80 @@ export const useReserva = () => {
     setAsistentes(nuevosAsistentes);
   }, [reservationData.cantidad_asistentes]);
 
-  // Reservation handler
-  const handleConfirmReservation = useCallback(async () => {
-    if (!profile) {
-      toast.info('Por favor, inicia sesión para completar tu reserva');
-      navigate('/login', { 
-        state: { 
-          from: '/reservar', 
-          reservationData: {
-            ...reservationData,
-            selectedEspacio,
-            selectedDisciplina, 
-            selectedCancha
-          }
-        } 
-      });
-      return;
-    }
+const handleConfirmReservation = useCallback(async () => {
+  if (!profile) {
+    toast.info('Por favor, inicia sesión para completar tu reserva');
+    navigate('/login', { 
+      state: { 
+        from: '/reservar', 
+        reservationData: {
+          ...reservationData,
+          selectedEspacio,
+          selectedDisciplina, 
+          selectedCancha
+        }
+      } 
+    });
+    return null;
+  }
 
-    if (!isHorarioDisponible()) {
-      toast.error('El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
-      return;
-    }
+  if (!isHorarioDisponible()) {
+    toast.error('El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
+    return null;
+  }
 
-    // Validar asistentes
-    if (!validarAsistentes()) {
-      toast.error('Por favor completa la información de todos los asistentes correctamente.');
-      return;
+  try {
+    const codigoCupon = selectedCoupon 
+      ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
+      : null;
+    
+    const reservaData = {
+      ...reservationData,
+      id_usuario: profile.id,
+      codigo_cupon: codigoCupon,
+    };
+    
+    // Usar el nuevo endpoint
+    const nuevaReserva = await reservasApi.crearReservaConCodigoUnico(reservaData);
+    
+    const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
+    
+    toast.success(`${mensaje} Comparte el código con los demás asistentes.`);
+    
+    setConfirmOpen(false);
+    
+    // ✅ DEVOLVER EL CÓDIGO DE RESERVA EXPLÍCITAMENTE
+    return {
+      codigo_reserva: nuevaReserva.codigo_reserva,
+      ...nuevaReserva
+    };
+        
+  } catch (error) {
+    console.error('Error creando reserva:', error);
+    
+    let errorMessage = 'Error al crear la reserva';
+    if (error.response?.data?.detail?.includes('no está disponible') || 
+        error.response?.data?.detail?.includes('ocupado')) {
+      errorMessage = 'El horario seleccionado no está disponible';
+    } else if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
     }
-
-    try {
-      const codigoCupon = selectedCoupon 
-        ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
-        : null;
-      
-      // Preparar datos para enviar
-      const reservaData = {
-        ...reservationData,
-        id_usuario: profile.id,
-        codigo_cupon: codigoCupon,
-        asistentes: (reservationData.cantidad_asistentes > 1) ? asistentes : []
-      };
-      
-      // Usar el endpoint correcto según si hay asistentes o no
-      let nuevaReserva;
-      if (reservationData.cantidad_asistentes > 1 && asistentes.length > 0) {
-        nuevaReserva = await reservasApi.crearReservaConAsistentes(reservaData);
-      } else {
-        nuevaReserva = await reservasApi.create(reservaData);
-      }
-      
-      const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
-      
-      if (reservationData.cantidad_asistentes > 1) {
-        toast.success(`${mensaje} Se enviarán códigos QR a los asistentes.`);
-      } else {
-        toast.success(mensaje);
-      }
-      
-      setConfirmOpen(false);
-      resetForm();
-      
-    } catch (error) {
-      console.error('Error creando reserva:', error);
-      
-      if (error.response?.data?.detail?.includes('no está disponible') || 
-          error.response?.data?.detail?.includes('ocupado') ||
-          error.response?.status === 400) {
-        toast.error(error.response.data.detail || 'El horario seleccionado no está disponible');
-      } else {
-        toast.error(error.response?.data?.detail || 'Error al crear la reserva');
-      }
-    }
-  }, [
-    profile, 
-    navigate, 
-    isHorarioDisponible, 
-    validarAsistentes,
-    selectedCoupon, 
-    cupones, 
-    reservationData, 
-    asistentes,
-    selectedEspacio, 
-    selectedDisciplina, 
-    selectedCancha
-  ]);
+    
+    toast.error(errorMessage);
+    throw error;
+  }
+}, [
+  profile, 
+  navigate, 
+  isHorarioDisponible,
+  selectedCoupon, 
+  cupones, 
+  reservationData,
+  selectedEspacio, 
+  selectedDisciplina, 
+  selectedCancha,
+  setConfirmOpen
+]);
 
   const resetForm = useCallback(() => {
     setActiveStep(0);

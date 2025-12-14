@@ -19,6 +19,7 @@ import {
     IconButton,
     InputAdornment,
 } from '@mui/material';
+import { QrCode } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
@@ -27,6 +28,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import { reservasApi } from '../api/reservas';
 
 // === COLORES DE LA PALETA UNIFICADA ===
 const COLOR_PRIMARY = '#00BFFF';     // Azul Eléctrico [cite: 6]
@@ -51,6 +53,7 @@ export default function Register() {
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [codigoAcceso, setCodigoAcceso] = useState('');
 
     const navigate = useNavigate();
     const recaptchaRef = useRef(null);
@@ -114,62 +117,130 @@ export default function Register() {
     };
     
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) return;
+    e.preventDefault();
+    if (!validateForm()) return;
 
-        setLoading(true);
-        setError('');
-        
-        try {
-            const token = recaptchaRef.current.getValue();
-            if (!token) {
-                throw new Error('No se pudo obtener el token reCAPTCHA');
-            }
-
-            const { confirmarContrasenia, ...registerData } = formData;
-            await authApi.register({
-                ...registerData,
-                captcha_token: token
-            });
-            toast.success('¡Registro exitoso! Tu cuenta está pendiente de aprobación por un administrador. Te notificaremos por email cuando sea activada.');
-            
-            if (recaptchaRef.current) {
-                recaptchaRef.current.reset();
-                setRecaptchaVerified(false);
-            }
-
-            setTimeout(() => {
-                navigate('/login');
-            }, 2000);
-            
-        } catch (error) {
-            let errorMessage = 'Error al registrar usuario';
-            
-            if (error.response && error.response.data) {
-                 const serverError = error.response.data;
-                 errorMessage = serverError.detail || serverError.message || JSON.stringify(serverError);
-                 
-                 if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
-                    errorMessage = 'Error de verificación reCAPTCHA. Por favor, verifica nuevamente.';
-                 } else if (errorMessage.includes('user already exists')) {
-                    errorMessage = 'El email ya está registrado.';
-                 }
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
-            setError(errorMessage);
-            toast.error(errorMessage);
-            
-            if (recaptchaRef.current) {
-                recaptchaRef.current.reset();
-                setRecaptchaVerified(false);
-            }
-
-        } finally {
-            setLoading(false);
+    setLoading(true);
+    setError('');
+    
+    try {
+        const token = recaptchaRef.current.getValue();
+        if (!token) {
+            throw new Error('No se pudo obtener el token reCAPTCHA');
         }
-    };
+
+        const { confirmarContrasenia, ...registerData } = formData;
+        
+        // ✅ PREPARAR DATOS PARA REGISTRO + UNIÓN A RESERVA
+        let datosRegistro = {
+            ...registerData,
+            captcha_token: token
+        };
+        
+        // NO enviar estado desde frontend - el backend lo maneja
+        // NO enviar codigo_reserva como propiedad, será parte de la URL
+        
+        console.log('Datos enviados al servidor:', datosRegistro);
+        
+        // ✅ DECIDIR QUÉ ENDPOINT USAR
+        let registerResponse;
+        
+        if (codigoAcceso) {
+            console.log('[FRONTEND] Usando registro con código:', codigoAcceso);
+            // Usar el endpoint especial
+            registerResponse = await reservasApi.registerWithReservation(codigoAcceso, datosRegistro);
+        } else {
+            // Registro normal
+            registerResponse = await authApi.register(datosRegistro);
+        }
+        
+        console.log('Respuesta del servidor:', registerResponse);
+        
+        // ✅ MOSTRAR MENSAJE APROPIADO
+        if (codigoAcceso) {
+            if (registerResponse.unido_a_reserva) {
+                toast.success('✅ ¡Registro exitoso! Tu cuenta está activa y te has unido a la reserva. Revisa tu email para el código QR.');
+            } else {
+                toast.success('✅ ¡Registro exitoso! Tu cuenta está activa. Revisa tu email para más detalles.');
+            }
+        } else {
+            toast.success('✅ ¡Registro exitoso! Tu cuenta está pendiente de aprobación por un administrador. Se te enviará un email una vez aprobada.');
+        }
+        
+        // ✅ LIMPIAR RECAPTCHA
+        if (recaptchaRef.current) {
+            recaptchaRef.current.reset();
+            setRecaptchaVerified(false);
+        }
+
+        // ✅ REDIRIGIR DESPUÉS DE 2 SEGUNDOS
+        setTimeout(() => {
+            if (codigoAcceso) {
+                // Si tenía código y se activó automáticamente, intentar login
+                if (registerResponse.estado === 'activo') {
+                    // Intentar login automático
+                    authApi.login({
+                        email: formData.email,
+                        contrasenia: formData.contrasenia
+                    })
+                    .then(loginResponse => {
+                        localStorage.setItem('token', loginResponse.access_token);
+                        localStorage.setItem('user', JSON.stringify(loginResponse.user));
+                        navigate('/dashboard');
+                    })
+                    .catch(() => {
+                        // Si falla el login automático, ir a login manual
+                        navigate('/login', { 
+                            state: { 
+                                message: 'Tu cuenta está activa. Inicia sesión para acceder.',
+                                email: formData.email
+                            } 
+                        });
+                    });
+                } else {
+                    navigate('/login', { 
+                        state: { 
+                            message: 'Tu cuenta está activa. Inicia sesión para acceder.',
+                            email: formData.email
+                        } 
+                    });
+                }
+            } else {
+                navigate('/login');
+            }
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error completo:', error);
+        let errorMessage = 'Error al registrar usuario';
+        
+        if (error.response && error.response.data) {
+            const serverError = error.response.data;
+            errorMessage = serverError.detail || serverError.message || JSON.stringify(serverError);
+            
+            if (errorMessage.includes('Captcha') || errorMessage.includes('captcha')) {
+                errorMessage = 'Error de verificación reCAPTCHA. Por favor, verifica nuevamente.';
+            } else if (errorMessage.includes('user already exists') || errorMessage.includes('ya está registrado')) {
+                errorMessage = 'El email ya está registrado.';
+            } else if (errorMessage.includes('reserva') || errorMessage.includes('cupo')) {
+                errorMessage = 'Error al unirse a la reserva: ' + errorMessage;
+            }
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        setError(errorMessage);
+        toast.error(errorMessage);
+        
+        if (recaptchaRef.current) {
+            recaptchaRef.current.reset();
+            setRecaptchaVerified(false);
+        }
+
+    } finally {
+        setLoading(false);
+    }
+};
     
     // --- ESTILOS UNIFICADOS (Sin cambios) ---
     
@@ -549,6 +620,20 @@ export default function Register() {
                                             ),
                                         }}
     
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth 
+                                        label="Código de Acceso (Opcional)"
+                                        value={codigoAcceso}
+                                        onChange={(e) => setCodigoAcceso(e.target.value)}
+                                        disabled={loading}
+                                        sx={darkInputStyle}
+                                        InputProps={{
+                                            startAdornment: <QrCode sx={{ color: COLOR_PRIMARY, mr: 1 }} />,
+                                        }}
+                                        helperText="Si tienes un código de reserva, ingrésalo aquí"
                                     />
                                 </Grid>
                                 

@@ -195,5 +195,30 @@ obtenerAsistentesReserva: async (reserva_id) => {
     throw error;
   }
 },
+ crearReservaConCodigoUnico: async (reservaData) => {
+  console.log('[API] Enviando reserva con código único');
+  const response = await api.post('/reservas/crear-con-codigo-unico', reservaData);
+  console.log('[API] Reserva creada exitosamente:', response.data);
+  
+  // ✅ Asegurar que la respuesta tiene el código
+  if (!response.data.codigo_reserva) {
+    console.warn('[API] La respuesta no tiene codigo_reserva, usando id como fallback');
+    response.data.codigo_reserva = `RES-${response.data.id_reserva}`;
+  }
+  
+  return response.data;
+},
 
+  unirseConCodigo: async (codigoReserva, invitadoData) => {
+    console.log('[API] Uniendo invitado con código');
+    const response = await api.post(`/reservas/unirse-con-codigo/${codigoReserva}`, invitadoData);
+    console.log('[API] Invitado unido exitosamente');
+    return response.data;
+  },
+  registerWithReservation: async (codigoReserva, userData) => {
+    console.log('[AUTH] Registrando con reserva:', codigoReserva);
+    // Usar el endpoint especial para registro + unión
+    const response = await api.post(`/reservas/registrar-y-unirse/${codigoReserva}`, userData);
+    return response.data;
+  },
 };

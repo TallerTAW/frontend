@@ -1,9 +1,12 @@
-import { Button, Grid, Card, CardContent, Typography, Box, Divider, Chip, Alert, Paper } from '@mui/material';
-import { ArrowBack, SportsSoccer, Stadium, People, Money, AccessTime, CalendarMonth, Groups, LocalOffer } from '@mui/icons-material';
+import { Button, Grid, Card, CardContent, Typography, Box, Divider, Chip, Alert, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { ArrowBack, SportsSoccer, Stadium, People, Money, AccessTime, CalendarMonth, Groups, LocalOffer, QrCode, ContentCopy } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import ReservationForm from './ReservationForm';
 import PaymentSummary from './PaymentSummary';
 import { useEffect, useState } from 'react';
+import { CircularProgress } from '@mui/material';
+import { toast } from 'react-toastify';
+
 
 export default function Step3Confirmacion({
   selectedEspacio,
@@ -32,10 +35,12 @@ export default function Step3Confirmacion({
   const totalHours = reservationData.hora_inicio && reservationData.hora_fin 
     ? parseInt(reservationData.hora_fin.split(':')[0]) - parseInt(reservationData.hora_inicio.split(':')[0])
     : 0;
-  
-  const [asistentesValidos, setAsistentesValidos] = useState(true);
   const [horarioDisponible, setHorarioDisponible] = useState(true);
-  const [mostrarFormAsistentes, setMostrarFormAsistentes] = useState(false);
+  const [reservaConfirmada, setReservaConfirmada] = useState(false);
+  const [codigoReserva, setCodigoReserva] = useState('');
+  const [showCodigoDialog, setShowCodigoDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [codigoAcceso, setCodigoAcceso] = useState('');
 
   // Validar horario
   useEffect(() => {
@@ -46,40 +51,8 @@ export default function Step3Confirmacion({
     }
   }, [reservationData.hora_inicio, reservationData.hora_fin, reservationData.fecha_reserva]);
 
-  // Validar asistentes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (reservationData.cantidad_asistentes <= 1) {
-        setAsistentesValidos(true);
-        return;
-      }
-      
-      const cantidadCoincide = asistentes && asistentes.length === reservationData.cantidad_asistentes;
-      
-      if (!cantidadCoincide) {
-          setAsistentesValidos(false);
-          return;
-      }
-      
-      const todosValidos = asistentes.every((asistente) => {
-        if (!asistente) return false;
-        
-        const nombreValido = asistente.nombre && asistente.nombre.trim() !== '';
-        const emailValido = asistente.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(asistente.email.trim());
-        
-        return nombreValido && emailValido;
-      });
-      
-      setAsistentesValidos(todosValidos);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [asistentes, reservationData.cantidad_asistentes]);
-
   // Determinar si el botón debe estar deshabilitado
   const isButtonDisabled = () => {
-    const tieneMasDeUnAsistente = reservationData.cantidad_asistentes > 1;
-    
     const condiciones = {
       fecha: !reservationData.fecha_reserva,
       hora_inicio: !reservationData.hora_inicio,
@@ -87,10 +60,46 @@ export default function Step3Confirmacion({
       horarioNoDisponible: !isHorarioDisponible() || !horarioDisponible,
       horasInvalidas: reservationData.hora_inicio && reservationData.hora_fin && 
                       parseInt(reservationData.hora_fin.split(':')[0]) <= parseInt(reservationData.hora_inicio.split(':')[0]),
-      asistentesInvalidos: tieneMasDeUnAsistente && mostrarFormAsistentes && !asistentesValidos,
     };
     
     return Object.values(condiciones).some(c => c);
+  };
+
+ const handleConfirmarReserva = async () => {
+  try {
+    setLoading(true);
+    
+    const response = await onConfirm();
+    
+    if (response && response.codigo_reserva) {
+      setCodigoReserva(response.codigo_reserva);
+      setReservaConfirmada(true);
+      setShowCodigoDialog(true);
+      
+      // ✅ Forzar un pequeño delay para asegurar que todo se actualice
+      setTimeout(() => {
+        toast.success(`Reserva confirmada! Código: ${response.codigo_reserva}`);
+      }, 500);
+    } else {
+      // ✅ Intentar obtener el código de otras maneras
+      const fallbackCode = response?.data?.codigo_reserva;
+      setCodigoReserva(fallbackCode);
+      setReservaConfirmada(true);
+      setShowCodigoDialog(true);
+      
+      toast.warning('Código generado localmente. Revisa tu email para el código oficial.');
+    }
+  } catch (error) {
+    console.error('Error al confirmar reserva:', error);
+    toast.error('Error al confirmar reserva');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const copiarCodigo = () => {
+    navigator.clipboard.writeText(codigoReserva);
+    // Mostrar notificación de copiado
   };
 
   return (
@@ -130,31 +139,89 @@ export default function Step3Confirmacion({
             width: { xs: '100%', sm: 'auto' }
           }}
         >
-          Confirmar Reserva
+          {reservaConfirmada ? 'Reserva Confirmada' : 'Confirmar Reserva'}
         </Typography>
       </Box>
 
-      {/* Alerta de horas ocupadas */}
-      {occupiedHours.length > 0 && (
-        <Alert 
-          severity="warning" 
-          sx={{ 
-            mb: 4, 
-            borderRadius: 2,
-            backgroundColor: '#fff3cd',
-            color: '#856404',
-            border: '1px solid #ffeaa7'
-          }}
-        >
-          <Typography variant="body2" fontWeight="medium">
-            ⚠️ Horas ocupadas: <strong>{occupiedHours.join(', ')}</strong>
-          </Typography>
-        </Alert>
-      )}
+      {reservaConfirmada ? (
+        // Vista de reserva confirmada
+        <Box>
+          <Alert severity="success" sx={{ mb: 4, borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight="bold">
+              ✅ ¡Reserva Confirmada!
+            </Typography>
+            <Typography variant="body2">
+              La reserva se ha creado exitosamente. Revisa tu correo para más detalles.
+            </Typography>
+          </Alert>
 
-      {/* Grid Principal Responsivo */}
-      <Grid container spacing={{ xs: 3, md: 4 }}>
-        {/* Columna 1: Detalles de la Cancha */}
+          <Paper sx={{ p: 3, mb: 3, borderRadius: 2, bgcolor: '#e8f5e9' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <QrCode sx={{ fontSize: 40, color: '#0f9fe1' }} />
+              <Box>
+                <Typography variant="h6" fontWeight="bold" color="#1a237e">
+                  Proximos pasos
+                </Typography>
+                <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '1.5rem', letterSpacing: 2 }}>
+                  {codigoReserva}
+                </Typography>
+              </Box>
+              <Button
+                startIcon={<ContentCopy />}
+                onClick={copiarCodigo}
+                variant="outlined"
+                sx={{ ml: 'auto' }}
+              >
+                Copiar
+              </Button>
+            </Box>
+
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              <Typography variant="body2" fontWeight="bold">
+                🎯 Códigos para Invitados: {reservationData.cantidad_asistentes - 1}
+              </Typography>
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                Comparte este código con los demás asistentes. Cada uno podrá registrarse usando este código hasta {reservationData.cantidad_asistentes - 1} veces.
+              </Typography>
+            </Alert>
+
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'white', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight="bold" color="#1a237e" sx={{ mb: 2 }}>
+                Instrucciones para Invitados:
+              </Typography>
+              <ol style={{ margin: 0, paddingLeft: 20 }}>
+                <li><Typography variant="body2">Comparte el código con los demás asistentes</Typography></li>
+                <li><Typography variant="body2">Los invitados pueden registrarse en la página principal usando el código</Typography></li>
+                <li><Typography variant="body2">Cada invitado recibirá su propio código QR por email</Typography></li>
+                <li><Typography variant="body2">Si ya tienen cuenta, pueden usar el código desde su dashboard</Typography></li>
+              </ol>
+            </Box>
+          </Paper>
+        </Box>
+      ) : (
+        // Vista normal de confirmación
+        <>
+          {/* Alerta de horas ocupadas */}
+          {occupiedHours.length > 0 && (
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mb: 4, 
+                borderRadius: 2,
+                backgroundColor: '#fff3cd',
+                color: '#856404',
+                border: '1px solid #ffeaa7'
+              }}
+            >
+              <Typography variant="body2" fontWeight="medium">
+                ⚠️ Horas ocupadas: <strong>{occupiedHours.join(', ')}</strong>
+              </Typography>
+            </Alert>
+          )}
+
+          {/* Grid Principal Responsivo */}
+          <Grid container spacing={{ xs: 3, md: 4 }}>
+            {/* Columna 1: Detalles de la Cancha */}
         <Grid item xs={12} md={5}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -347,247 +414,112 @@ export default function Step3Confirmacion({
           </motion.div>
         </Grid>
 
-        {/* Columna 2: Formulario de Reserva */}
-        <Grid item xs={12} md={7}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <Card sx={{ 
-              borderRadius: 2,
-              overflow: 'hidden',
-              border: 'none',
-              boxShadow: 3
-            }}>
-              {/* Header */}
-              <Box sx={{ 
-                background: 'linear-gradient(135deg, #1a237e 0%, #283593 100%)', 
-                p: { xs: 2, sm: 3 },
-                color: 'white'
-              }}>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 'bold',
-                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}
-                >
-                  <CalendarMonth sx={{ fontSize: { xs: 22, sm: 24 } }} />
-                  Información de la Reserva
-                </Typography>
-              </Box>
-              
-              {/* Contenido */}
-              <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                <ReservationForm
-                  reservationData={reservationData}
-                  horariosDisponibles={horariosDisponibles}
-                  selectedCoupon={selectedCoupon}
-                  cupones={cupones}
-                  selectedEspacio={selectedEspacio}
-                  onReservationChange={onReservationChange}
-                  onCouponChange={onCouponChange}
-                  isHorarioDisponible={isHorarioDisponible}
-                  isHoraInicioValida={isHoraInicioValida}
-                  isHoraFinValida={isHoraFinValida}
-                  getHorasInicioDisponiblesList={getHorasInicioDisponiblesList}
-                  getHorasFinDisponiblesList={getHorasFinDisponiblesList}
-                  onAsistentesChange={onAsistentesChange}
-                  onMostrarFormAsistentes={(mostrar) => setMostrarFormAsistentes(mostrar)}
-                />
-
-                {/* Resumen del Tiempo */}
-                {reservationData.hora_inicio && reservationData.hora_fin && (
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: { xs: 2, sm: 3 }, 
-                      mt: 3, 
-                      bgcolor: '#f5f5f5',
-                      borderRadius: 2,
-                      borderLeft: '4px solid #0f9fe1'
-                    }}
-                  >
+            {/* Columna 2: Formulario de Reserva */}
+            <Grid item xs={12} md={7}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Card sx={{ 
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: 'none',
+                  boxShadow: 3
+                }}>
+                  {/* Header */}
+                  <Box sx={{ 
+                    background: 'linear-gradient(135deg, #1a237e 0%, #283593 100%)', 
+                    p: { xs: 2, sm: 3 },
+                    color: 'white'
+                  }}>
                     <Typography 
-                      variant="subtitle2" 
+                      variant="h6" 
                       sx={{ 
-                        color: '#1a237e', 
-                        mb: 1, 
                         fontWeight: 'bold',
-                        fontSize: { xs: '0.9rem', sm: '1rem' }
+                        fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
                       }}
                     >
-                      Resumen del Horario
+                      <CalendarMonth sx={{ fontSize: { xs: 22, sm: 24 } }} />
+                      Información de la Reserva
                     </Typography>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">
-                          Inicio:
-                        </Typography>
-                        <Typography variant="body2" fontWeight="medium">
-                          {reservationData.hora_inicio}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">
-                          Fin:
-                        </Typography>
-                        <Typography variant="body2" fontWeight="medium">
-                          {reservationData.hora_fin}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Divider sx={{ my: 1 }} />
-                        <Typography variant="caption" color="text.secondary">
-                          Duración total:
-                        </Typography>
-                        <Typography 
-                          variant="subtitle1" 
-                          sx={{ 
-                            color: '#0f9fe1', 
-                            fontWeight: 'bold',
-                            fontSize: { xs: '1rem', sm: '1.1rem' }
-                          }}
-                        >
-                          {totalHours} hora{totalHours !== 1 ? 's' : ''}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                )}
+                  </Box>
+                  
+                  {/* Contenido */}
+                  <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                    <ReservationForm
+                      reservationData={reservationData}
+                      horariosDisponibles={horariosDisponibles}
+                      selectedCoupon={selectedCoupon}
+                      cupones={cupones}
+                      selectedEspacio={selectedEspacio}
+                      onReservationChange={onReservationChange}
+                      onCouponChange={onCouponChange}
+                      isHorarioDisponible={isHorarioDisponible}
+                      isHoraInicioValida={isHoraInicioValida}
+                      isHoraFinValida={isHoraFinValida}
+                      getHorasInicioDisponiblesList={getHorasInicioDisponiblesList}
+                      getHorasFinDisponiblesList={getHorasFinDisponiblesList}
+                    />
 
-                {/* Cupones */}
-                {cupones.length > 0 && (
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: { xs: 2, sm: 3 }, 
-                      mt: 3,
-                      bgcolor: '#fff8e1',
-                      borderRadius: 2,
-                      border: '1px dashed #ffd54f'
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <LocalOffer sx={{ color: '#ff9800', mr: 1, fontSize: { xs: 18, sm: 20 } }} />
-                      <Typography 
-                        variant="subtitle2" 
-                        sx={{ 
-                          color: '#5d4037', 
+                    {/* Payment Summary */}
+                    <Box sx={{ mt: 3 }}>
+                      <PaymentSummary
+                        calcularCostoTotal={calcularCostoTotal}
+                        selectedCoupon={selectedCoupon}
+                        totalHours={totalHours}
+                      />
+                    </Box>
+
+                    {/* Botón de Confirmación */}
+                    <Box sx={{ mt: 4 }}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={handleConfirmarReserva}
+                        disabled={isButtonDisabled() || loading}
+                        sx={{
+                          textTransform: 'none',
+                          background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #0d8dc7 0%, #8ab637 100%)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 25px rgba(15, 159, 225, 0.3)'
+                          },
+                          '&:disabled': {
+                            background: '#e0e0e0',
+                            color: '#9e9e9e',
+                            transform: 'none',
+                            boxShadow: 'none'
+                          },
                           fontWeight: 'bold',
+                          py: { xs: 2, sm: 2.5 },
+                          borderRadius: 2,
+                          transition: 'all 0.3s ease',
                           fontSize: { xs: '0.9rem', sm: '1rem' }
                         }}
                       >
-                        Cupones Disponibles
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Tienes {cupones.length} cupón{cupones.length !== 1 ? 'es' : ''} disponible{cupones.length !== 1 ? 's' : ''}
-                    </Typography>
-                  </Paper>
-                )}
-
-                {/* Payment Summary */}
-                <Box sx={{ mt: 3 }}>
-                  <PaymentSummary
-                    calcularCostoTotal={calcularCostoTotal}
-                    selectedCoupon={selectedCoupon}
-                    totalHours={totalHours}
-                  />
-                </Box>
-
-                {/* Validación de asistentes */}
-                {reservationData.cantidad_asistentes > 1 && (
-                  <Box sx={{ mt: 3 }}>
-                    {!asistentesValidos && (
-                      <Alert 
-                        severity="error" 
-                        sx={{ 
-                          borderRadius: 2,
-                          '& .MuiAlert-message': { width: '100%' }
-                        }}
-                      >
-                        <Typography variant="caption" fontWeight="medium">
-                          ❌ Completa la información de todos los asistentes
-                        </Typography>
-                        {asistentes?.length > 0 && (
-                          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                            {asistentes.filter(a => a && a.nombre && a.email && 
-                              /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())).length}
-                            /{reservationData.cantidad_asistentes} completados
-                          </Typography>
+                        {loading ? (
+                          <CircularProgress size={24} color="inherit" />
+                        ) : profile ? (
+                          '✅ Confirmar Reserva y Obtener Código'
+                        ) : (
+                          '🔑 Iniciar Sesión para Reservar'
                         )}
-                      </Alert>
-                    )}
-                    
-                    {asistentesValidos && asistentes?.length > 0 && (
-                      <Alert severity="success" sx={{ borderRadius: 2 }}>
-                        <Typography variant="caption" fontWeight="medium">
-                          ✅ Todos los asistentes válidos
-                        </Typography>
-                      </Alert>
-                    )}
-                  </Box>
-                )}
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </Grid>
+          </Grid>
+        </>
+      )}
 
-                {/* Botón de Confirmación */}
-                <Box sx={{ mt: 4 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={onConfirm}
-                    disabled={isButtonDisabled()}
-                    sx={{
-                      textTransform: 'none',
-                      background: 'linear-gradient(135deg, #0f9fe1 0%, #9eca3f 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #0d8dc7 0%, #8ab637 100%)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 25px rgba(15, 159, 225, 0.3)'
-                      },
-                      '&:disabled': {
-                        background: '#e0e0e0',
-                        color: '#9e9e9e',
-                        transform: 'none',
-                        boxShadow: 'none'
-                      },
-                      fontWeight: 'bold',
-                      py: { xs: 2, sm: 2.5 },
-                      borderRadius: 2,
-                      transition: 'all 0.3s ease',
-                      fontSize: { xs: '0.9rem', sm: '1rem' }
-                    }}
-                  >
-                    {profile ? '✅ Confirmar Reserva y Pagar' : '🔑 Iniciar Sesión para Reservar'}
-                  </Button>
-
-                  {/* Mensaje de error de horario */}
-                  {!isHorarioDisponible() && reservationData.hora_inicio && reservationData.hora_fin && (
-                    <Alert 
-                      severity="error" 
-                      sx={{ 
-                        mt: 3,
-                        borderRadius: 2,
-                        backgroundColor: '#ffebee',
-                        border: '1px solid #ffcdd2',
-                        '& .MuiAlert-message': { width: '100%' }
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight="medium">
-                        ❌ Horario no disponible ({reservationData.hora_inicio} - {reservationData.hora_fin})
-                      </Typography>
-                    </Alert>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </Grid>
-      </Grid>
+      
     </Box>
   );
 }

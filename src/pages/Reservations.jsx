@@ -749,7 +749,6 @@ export default function Reservations() {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                     borderLeft: `4px solid ${getEstadoColor(reserva.estado)}`,
                     
-                    boxShadow: 3,
                     transition: 'all 0.3s ease',
                     '&:hover': {
                         boxShadow: 6,
