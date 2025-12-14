@@ -1,9 +1,25 @@
-import { Button, Grid, Card, CardContent, Typography, Box, Divider, Chip, Alert, Paper } from '@mui/material';
+// src/components/reservar/Step3Confirmacion.jsx
+
+import { 
+  Button, 
+  Grid, 
+  Card, 
+  CardContent, 
+  Typography, 
+  Box, 
+  Divider, 
+  Chip, 
+  Alert, 
+  Paper,
+  CircularProgress // 🎯 Importar CircularProgress para consistencia
+} from '@mui/material';
 import { ArrowBack, SportsSoccer, Stadium, People, Money, AccessTime, CalendarMonth, Groups, LocalOffer } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import ReservationForm from './ReservationForm';
 import PaymentSummary from './PaymentSummary';
 import { useEffect, useState } from 'react';
+// 🎯 Importar el nuevo Modal
+import ConfirmacionPagoModal from './ConfirmacionPagoModal'; 
 
 export default function Step3Confirmacion({
   selectedEspacio,
@@ -36,6 +52,13 @@ export default function Step3Confirmacion({
   const [asistentesValidos, setAsistentesValidos] = useState(true);
   const [horarioDisponible, setHorarioDisponible] = useState(true);
   const [mostrarFormAsistentes, setMostrarFormAsistentes] = useState(false);
+  
+  // 🎯 NUEVO ESTADO PARA EL MODAL
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Funciones para manejar el modal
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
 
   // Validar horario
   useEffect(() => {
@@ -69,7 +92,7 @@ export default function Step3Confirmacion({
         
         return nombreValido && emailValido;
       });
-      
+     
       setAsistentesValidos(todosValidos);
     }, 100);
     
@@ -486,7 +509,7 @@ export default function Step3Confirmacion({
                       </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary">
-                      Tienes {cupones.length} cupón{cupones.length !== 1 ? 'es' : ''} disponible{cupones.length !== 1 ? 's' : ''}
+                      Tenes {cupones.length} cupón{cupones.length !== 1 ? 'es' : ''} disponible{cupones.length !== 1 ? 's' : ''}
                     </Typography>
                   </Paper>
                 )}
@@ -539,7 +562,8 @@ export default function Step3Confirmacion({
                   <Button
                     fullWidth
                     variant="contained"
-                    onClick={onConfirm}
+                    // 🎯 CAMBIO: Llama a handleOpenModal si está logueado
+                    onClick={profile ? handleOpenModal : onConfirm}
                     disabled={isButtonDisabled()}
                     sx={{
                       textTransform: 'none',
@@ -562,7 +586,8 @@ export default function Step3Confirmacion({
                       fontSize: { xs: '0.9rem', sm: '1rem' }
                     }}
                   >
-                    {profile ? '✅ Confirmar Reserva y Pagar' : '🔑 Iniciar Sesión para Reservar'}
+                    {/* 🎯 CAMBIO DE TEXTO */}
+                    {profile ? 'Confirmar Reserva y Proceder a Pago' : '🔑 Iniciar Sesión para Reservar'}
                   </Button>
 
                   {/* Mensaje de error de horario */}
@@ -588,6 +613,24 @@ export default function Step3Confirmacion({
           </motion.div>
         </Grid>
       </Grid>
+      
+      {/* 🎯 INTEGRACIÓN DEL MODAL */}
+      {profile && (
+          <ConfirmacionPagoModal 
+              open={isModalOpen}
+              onClose={handleCloseModal}
+              reservaData={{ 
+                  ...reservationData, 
+                  // Asegurar que pasamos el ID y nombre de la cancha
+                  cancha_nombre: selectedCancha?.nombre, 
+                  cancha_id: selectedCancha?.id,
+              }} 
+              calcularCostoTotal={calcularCostoTotal}
+              selectedCoupon={selectedCoupon}
+              totalHours={totalHours}
+              asistentes={asistentes}
+          />
+      )}
     </Box>
   );
 }
