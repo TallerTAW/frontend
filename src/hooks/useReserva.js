@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { espaciosApi } from '../api/espacios';
 import { disciplinasApi } from '../api/disciplinas';
 import { canchasApi } from '../api/canchas';
 import { reservasApi } from '../api/reservas';
-import { cuponesApi } from '../api/cupones';
+import { cuponesApi } from '../api/cupones'; // ← USAR TU API
 import { useAuth } from '../context/AuthContext';
 import { 
   getOcupiedTimeBlocks, 
@@ -43,6 +43,7 @@ export const useReserva = () => {
   const [selectedDisciplina, setSelectedDisciplina] = useState(null);
   const [selectedCancha, setSelectedCancha] = useState(null);
   const [selectedCoupon, setSelectedCoupon] = useState('');
+  const [selectedCouponData, setSelectedCouponData] = useState(null);
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
@@ -69,7 +70,7 @@ export const useReserva = () => {
     id_usuario: profile?.id
   });
 
-  // Fetch functions - Modificadas para nuevo flujo
+  // Fetch functions
   const fetchEspacios = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -98,13 +99,11 @@ export const useReserva = () => {
     }
   }, []);
 
-  // Obtener canchas por disciplina (de todos los espacios)
   const fetchCanchasByDisciplina = useCallback(async (disciplinaId) => {
     if (!disciplinaId) return;
     
     try {
       setIsLoading(true);
-      // Usar el nuevo endpoint que incluye info del espacio deportivo
       const data = await canchasApi.getByDisciplina(disciplinaId);
       setCanchas(data);
       setIsLoading(false);
@@ -122,21 +121,69 @@ export const useReserva = () => {
     }
   }, []);
 
+  // ✅ CORRECCIÓN: Usar tu API de cupones
   const fetchCuponesUsuario = useCallback(async () => {
-    if (!profile) return;
+    if (!profile || !profile.id) {
+      setCupones([]);
+      return [];
+    }
     
     try {
+      console.log(`🎫 [useReserva] Cargando cupones para usuario: ${profile.id}`);
       setIsLoading(true);
-      const data = await cuponesApi.getByUsuario(profile.id);
-      const cuponesActivos = data.filter(cupon => 
-        cupon.estado === 'activo' && 
-        (!cupon.fecha_expiracion || new Date(cupon.fecha_expiracion) > new Date())
-      );
+      
+      // Intentar primero con getMisCupones (endpoint específico para usuario actual)
+      let data;
+      try {
+        data = await cuponesApi.getMisCupones();
+        console.log(`🎫 [useReserva] getMisCupones devolvió:`, data);
+      } catch (misCuponesError) {
+        console.log(`⚠️ [useReserva] Falló getMisCupones, intentando getByUsuario`);
+        // Si falla, usar getByUsuario con el ID del usuario
+        data = await cuponesApi.getByUsuario(profile.id);
+        console.log(`🎫 [useReserva] getByUsuario devolvió:`, data);
+      }
+      
+      // Filtrar cupones activos y no expirados
+      const cuponesActivos = data.filter(cupon => {
+        if (!cupon) return false;
+        
+        const estadoValido = cupon.estado === 'activo';
+        const noUtilizado = !cupon.id_reserva || cupon.id_reserva === null;
+        
+        let fechaValida = true;
+        if (cupon.fecha_expiracion) {
+          const expiracion = new Date(cupon.fecha_expiracion);
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0); // Solo fecha, sin hora
+          expiracion.setHours(0, 0, 0, 0);
+          fechaValida = expiracion >= hoy;
+        }
+        
+        const esValido = estadoValido && fechaValida && noUtilizado;
+        
+        if (!esValido) {
+          console.log(`❌ [useReserva] Cupón ${cupon.codigo} inválido:`, {
+            estado: cupon.estado,
+            fecha_expiracion: cupon.fecha_expiracion,
+            id_reserva: cupon.id_reserva
+          });
+        }
+        
+        return esValido;
+      });
+      
       setCupones(cuponesActivos);
       setIsLoading(false);
+      
+      console.log(`✅ [useReserva] Cupones cargados: ${cuponesActivos.length} activos de ${data.length} totales`);
+      console.log(`✅ [useReserva] Cupones activos:`, cuponesActivos.map(c => c.codigo));
+      
       return cuponesActivos;
     } catch (error) {
-      console.error('Error al cargar cupones:', error);
+      console.error('❌ [useReserva] Error al cargar cupones:', error);
+      toast.error('Error al cargar cupones');
+      setCupones([]);
       setIsLoading(false);
       return [];
     }
@@ -180,7 +227,7 @@ export const useReserva = () => {
     }
   }, [selectedCancha, reservationData.fecha_reserva]);
 
-  // Step handlers - MODIFICADOS para nuevo flujo
+  // Step handlers
   const handleDisciplinaSelect = useCallback((disciplina) => {
     setSelectedDisciplina(disciplina);
     setSelectedEspacio(null);
@@ -194,6 +241,8 @@ export const useReserva = () => {
     setEspacioFiltro('todos');
     setUbicacionUsuario(null);
     setOrdenarPorDistancia(false);
+    setSelectedCoupon('');
+    setSelectedCouponData(null);
     
     // Cargar canchas para esta disciplina
     fetchCanchasByDisciplina(disciplina.id_disciplina);
@@ -213,6 +262,8 @@ export const useReserva = () => {
       cantidad_asistentes: 1
     }));
     
+    setSelectedCoupon('');
+    setSelectedCouponData(null);
     setActiveStep(2);
     setAsistentes([]);
   }, [espacios]);
@@ -386,7 +437,58 @@ export const useReserva = () => {
     }
   }, [reservationData, horariosDisponibles, isHoraInicioValida, isHoraFinValida]);
 
-  const calcularCostoTotal = useCallback(() => {
+  // ✅ Función para aplicar cupón - MEJORADA
+  const aplicarCupon = useCallback((cuponCodigo) => {
+    console.log(`🎫 [useReserva] Aplicando cupón: ${cuponCodigo}`);
+    
+    const cupon = cupones.find(c => c.codigo === cuponCodigo);
+    if (!cupon) {
+      toast.error('Cupón no encontrado en tu lista de cupones disponibles');
+      return false;
+    }
+
+    // Validaciones del cupón
+    if (cupon.estado !== 'activo') {
+      toast.error('Este cupón no está activo');
+      return false;
+    }
+
+    if (cupon.id_reserva) {
+      toast.error('Este cupón ya ha sido utilizado');
+      return false;
+    }
+
+    if (cupon.fecha_expiracion) {
+      const hoy = new Date();
+      const expiracion = new Date(cupon.fecha_expiracion);
+      hoy.setHours(0, 0, 0, 0);
+      expiracion.setHours(0, 0, 0, 0);
+      
+      if (expiracion < hoy) {
+        toast.error('Este cupón ha expirado');
+        return false;
+      }
+    }
+
+    // Aplicar el cupón
+    setSelectedCoupon(cupon.codigo);
+    setSelectedCouponData(cupon);
+    
+    console.log(`✅ [useReserva] Cupón aplicado:`, cupon);
+    toast.success(`Cupón ${cupon.codigo} aplicado: ${cupon.tipo === 'porcentaje' ? `${cupon.monto_descuento}%` : `$${cupon.monto_descuento}`} de descuento`);
+    
+    return true;
+  }, [cupones]);
+
+  // ✅ Función para remover cupón
+  const removerCupon = useCallback(() => {
+    setSelectedCoupon('');
+    setSelectedCouponData(null);
+    toast.info('Cupón removido');
+  }, []);
+
+  // ✅ Función para calcular costo base (sin descuento)
+  const calcularCostoBase = useCallback(() => {
     if (!selectedCancha || !reservationData.hora_inicio || !reservationData.hora_fin) return 0;
     
     try {
@@ -396,26 +498,51 @@ export const useReserva = () => {
       
       if (hours <= 0) return 0;
       
-      let total = hours * selectedCancha.precio_por_hora;
-      
-      if (selectedCoupon) {
-        const coupon = cupones.find(c => c.id_cupon === parseInt(selectedCoupon));
-        if (coupon) {
-          if (coupon.tipo === 'porcentaje') {
-            total = total * (1 - coupon.monto_descuento / 100);
-          } else {
-            total = Math.max(0, total - coupon.monto_descuento);
-          }
-        }
-      }
-
-      return Math.max(0, total);
+      const precioPorHora = parseFloat(selectedCancha.precio_por_hora) || 0;
+      const total = hours * precioPorHora;
+      return Math.max(0, parseFloat(total.toFixed(2)));
     } catch (error) {
-      console.error('Error calculando costo:', error);
+      console.error('Error calculando costo base:', error);
       return 0;
     }
-  }, [selectedCancha, reservationData, selectedCoupon, cupones]);
+  }, [selectedCancha, reservationData]);
 
+  // ✅ Función para calcular descuento
+  const calcularDescuento = useCallback(() => {
+    if (!selectedCouponData || !selectedCancha || !reservationData.hora_inicio || !reservationData.hora_fin) return 0;
+    
+    try {
+      const costoBase = calcularCostoBase();
+      
+      if (selectedCouponData.tipo === 'porcentaje') {
+        const porcentaje = parseFloat(selectedCouponData.monto_descuento) || 0;
+        const descuento = (costoBase * porcentaje) / 100;
+        return parseFloat(descuento.toFixed(2));
+      } else {
+        // Descuento fijo
+        const descuentoFijo = parseFloat(selectedCouponData.monto_descuento) || 0;
+        // No dejar que el descuento sea mayor que el costo base
+        return Math.min(descuentoFijo, costoBase);
+      }
+    } catch (error) {
+      console.error('Error calculando descuento:', error);
+      return 0;
+    }
+  }, [selectedCouponData, selectedCancha, reservationData, calcularCostoBase]);
+
+  // ✅ Función para calcular costo total CON descuento
+  const calcularCostoTotal = useCallback(() => {
+    const costoBase = calcularCostoBase();
+    const descuento = calcularDescuento();
+    
+    const totalConDescuento = Math.max(0, costoBase - descuento);
+    
+    console.log(`💰 [useReserva] Cálculo: Base=$${costoBase}, Descuento=$${descuento}, Total=$${totalConDescuento}`);
+    
+    return parseFloat(totalConDescuento.toFixed(2));
+  }, [calcularCostoBase, calcularDescuento]);
+
+  // Obtener horas ocupadas
   const getOccupiedHours = useCallback(() => {
     if (!horariosDisponibles.length) return [];
     return horariosDisponibles
@@ -452,82 +579,91 @@ export const useReserva = () => {
 
   const handleAsistentesChange = useCallback((nuevosAsistentes) => {
     setAsistentes(nuevosAsistentes);
-  }, [reservationData.cantidad_asistentes]);
+  }, []);
 
-const handleConfirmReservation = useCallback(async () => {
-  if (!profile) {
-    toast.info('Por favor, inicia sesión para completar tu reserva');
-    navigate('/login', { 
-      state: { 
-        from: '/reservar', 
-        reservationData: {
-          ...reservationData,
-          selectedEspacio,
-          selectedDisciplina, 
-          selectedCancha
-        }
-      } 
-    });
-    return null;
-  }
-
-  if (!isHorarioDisponible()) {
-    toast.error('El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
-    return null;
-  }
-
-  try {
-    const codigoCupon = selectedCoupon 
-      ? cupones.find(c => c.id_cupon === parseInt(selectedCoupon))?.codigo 
-      : null;
-    
-    const reservaData = {
-      ...reservationData,
-      id_usuario: profile.id,
-      codigo_cupon: codigoCupon,
-    };
-    
-    // Usar el nuevo endpoint
-    const nuevaReserva = await reservasApi.crearReservaConCodigoUnico(reservaData);
-    
-    const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
-    
-    toast.success(`${mensaje} Comparte el código con los demás asistentes.`);
-    
-    setConfirmOpen(false);
-    
-    // ✅ DEVOLVER EL CÓDIGO DE RESERVA EXPLÍCITAMENTE
-    return {
-      codigo_reserva: nuevaReserva.codigo_reserva,
-      ...nuevaReserva
-    };
-        
-  } catch (error) {
-    console.error('Error creando reserva:', error);
-    
-    let errorMessage = 'Error al crear la reserva';
-    if (error.response?.data?.detail?.includes('no está disponible') || 
-        error.response?.data?.detail?.includes('ocupado')) {
-      errorMessage = 'El horario seleccionado no está disponible';
-    } else if (error.response?.data?.detail) {
-      errorMessage = error.response.data.detail;
+  // ✅ Manejar confirmación de reserva con cupón
+  const handleConfirmReservation = useCallback(async () => {
+    if (!profile) {
+      toast.info('Por favor, inicia sesión para completar tu reserva');
+      navigate('/login', { 
+        state: { 
+          from: '/reservar', 
+          reservationData: {
+            ...reservationData,
+            selectedEspacio,
+            selectedDisciplina, 
+            selectedCancha
+          }
+        } 
+      });
+      return null;
     }
-    
-    toast.error(errorMessage);
-    throw error;
-  }
-}, [
-  profile, 
-  navigate, 
-  isHorarioDisponible,
-  selectedCoupon, 
-  cupones, 
-  reservationData,
-  selectedEspacio, 
-  selectedDisciplina, 
-  selectedCancha,
-  setConfirmOpen
-]);
+
+    if (!isHorarioDisponible()) {
+      toast.error('El horario seleccionado no está disponible. Por favor, seleccione otro horario.');
+      return null;
+    }
+
+    try {
+      const codigoCupon = selectedCouponData ? selectedCouponData.codigo : null;
+      
+      const reservaData = {
+        ...reservationData,
+        id_usuario: profile.id,
+        codigo_cupon: codigoCupon,
+      };
+      
+      console.log(`📦 [useReserva] Enviando reserva:`, {
+        con_cupon: !!codigoCupon,
+        cupon_codigo: codigoCupon,
+        costo_calculado: calcularCostoTotal()
+      });
+      
+      // Usar el endpoint para crear reserva
+      const nuevaReserva = await reservasApi.crearReservaConCodigoUnico(reservaData);
+      
+      const mensaje = `Reserva creada exitosamente! Código: ${nuevaReserva.codigo_reserva}`;
+      
+      if (codigoCupon) {
+        toast.success(`${mensaje} Cupón ${selectedCouponData.codigo} aplicado exitosamente.`);
+      } else {
+        toast.success(`${mensaje}`);
+      }
+      
+      setConfirmOpen(false);
+      
+      // ✅ DEVOLVER EL CÓDIGO DE RESERVA
+      return {
+        codigo_reserva: nuevaReserva.codigo_reserva,
+        ...nuevaReserva
+      };
+          
+    } catch (error) {
+      console.error('❌ [useReserva] Error creando reserva:', error);
+      
+      let errorMessage = 'Error al crear la reserva';
+      if (error.response?.data?.detail?.includes('no está disponible') || 
+          error.response?.data?.detail?.includes('ocupado')) {
+        errorMessage = 'El horario seleccionado no está disponible';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [
+    profile, 
+    navigate, 
+    isHorarioDisponible,
+    selectedCouponData, 
+    reservationData,
+    selectedEspacio, 
+    selectedDisciplina, 
+    selectedCancha,
+    setConfirmOpen,
+    calcularCostoTotal
+  ]);
 
   const resetForm = useCallback(() => {
     setActiveStep(0);
@@ -545,6 +681,7 @@ const handleConfirmReservation = useCallback(async () => {
       id_usuario: profile?.id
     });
     setSelectedCoupon('');
+    setSelectedCouponData(null);
     setDisciplinas([]);
     setCanchas([]);
     setHorariosDisponibles([]);
@@ -571,6 +708,7 @@ const handleConfirmReservation = useCallback(async () => {
     selectedDisciplina,
     selectedCancha,
     selectedCoupon,
+    selectedCouponData,
     reservationData,
     confirmOpen,
     horariosDisponibles,
@@ -585,6 +723,7 @@ const handleConfirmReservation = useCallback(async () => {
     // Setters
     setActiveStep,
     setSelectedCoupon,
+    setSelectedCouponData,
     setReservationData,
     setConfirmOpen,
     setAsistentes,
@@ -605,6 +744,8 @@ const handleConfirmReservation = useCallback(async () => {
     handleConfirmReservation,
     resetForm,
     isHorarioDisponible,
+    calcularCostoBase,
+    calcularDescuento,
     calcularCostoTotal,
     getOccupiedHours,
     validarAsistentes,
@@ -613,6 +754,8 @@ const handleConfirmReservation = useCallback(async () => {
     obtenerUbicacion,
     limpiarUbicacion,
     getCanchasOrdenadasPorDistancia,
+    aplicarCupon,
+    removerCupon,
     
     // Funciones para manejo de horas
     getOcupiedBlocks,
