@@ -24,8 +24,8 @@ import {
     Dashboard,
     SportsSoccer,
     CalendarMonth,
-    Star,
     Discount,
+    Star,
     AccountBalanceWallet,
     Stadium,
     People,
@@ -620,25 +620,17 @@ export default function Layout() {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    // El padding (p) es el que da el "aire" visual entre el header y el contenido.
-                    // Si sientes que está muy pegado, puedes aumentar a p: 3 o p: 4
-                    p: { xs: 1.5, sm: 2, md: 3 }, 
-                    
+                    p: { xs: 1.5, sm: 2, md: 3 },
                     width: '100%',
-                    ml: 0,
-                    
-                    // CAMBIO CLAVE: Quitamos el cálculo manual de pixeles.
-                    // Lo dejamos en 0 porque el componente <Toolbar /> de abajo hará el trabajo.
-                    mt: 0, 
-                    
-                    minHeight: '100vh', 
+                    ml: { md: `${DRAWER_WIDTH_DESKTOP}px` },
+                    mt: { xs: '56px', sm: '64px' }, // Compensar altura del header
+                    minHeight: 'calc(100vh - 56px)',
+                    [theme.breakpoints.up('sm')]: {
+                        mt: '64px',
+                        minHeight: 'calc(100vh - 64px)'
+                    }
                 }}
             >
-                {/* --- SOLUCIÓN MÁGICA --- */}
-                {/* Este componente invisible empuja tu contenido hacia abajo 
-                    exactamente la altura de tu Header (sea móvil o escritorio) */}
-                <Toolbar />
-
                 <Outlet />
             </Box>
 
@@ -663,10 +655,12 @@ export default function Layout() {
                         { icon: <Dashboard />, label: 'Inicio', path: '/dashboard' },
                         { icon: <Sports />, label: 'Espacios', path: '/espacios' },
                         { icon: <CalendarMonth />, label: 'Reservar', path: '/reservar' },
-                        { icon: <Discount />, label: 'Cupones', path: '/cupones' },                        // { icon: <CalendarMonth />, label: 'Reservar', onClick: handleAvatarClick },
+                        { icon: <Discount />, label: 'Cupones', path: '/cupones' },
+                        // { icon: <CalendarMonth />, label: 'Reservar', onClick: handleAvatarClick },
                     ].filter(item => {
                         if (item.path === '/reservar' && profile?.rol !== 'cliente' && profile?.rol !== 'gestor') return false;
-                        if (item.path === '/cupones' && !['admin', 'gestor'].includes(profile?.rol)) return false;                        return true;
+                        if (item.path === '/cupones' && !['admin', 'gestor'].includes(profile?.rol)) return false;
+                        return true;
                     }).map((item, index) => (
                         <IconButton
                             key={index}
