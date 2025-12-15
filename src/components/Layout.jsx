@@ -24,6 +24,7 @@ import {
     Dashboard,
     SportsSoccer,
     CalendarMonth,
+    Discount,
     Star,
     AccountBalanceWallet,
     Stadium,
@@ -654,11 +655,11 @@ export default function Layout() {
                         { icon: <Dashboard />, label: 'Inicio', path: '/dashboard' },
                         { icon: <Sports />, label: 'Espacios', path: '/espacios' },
                         { icon: <CalendarMonth />, label: 'Reservar', path: '/reservar' },
-                        { icon: <SportsSoccer />, label: 'Canchas', path: '/canchas' },
+                        { icon: <Discount />, label: 'Cupones', path: '/cupones' },
                         // { icon: <CalendarMonth />, label: 'Reservar', onClick: handleAvatarClick },
                     ].filter(item => {
                         if (item.path === '/reservar' && profile?.rol !== 'cliente' && profile?.rol !== 'gestor') return false;
-                        if (item.path === '/canchas' && !['admin', 'gestor'].includes(profile?.rol)) return false;
+                        if (item.path === '/cupones' && !['admin', 'gestor'].includes(profile?.rol)) return false;
                         return true;
                     }).map((item, index) => (
                         <IconButton

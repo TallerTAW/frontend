@@ -24,8 +24,8 @@ import { Add, Edit, Delete, Add as AddIcon, Menu as MenuIcon } from "@mui/icons-
 import { motion } from "framer-motion";
 
 // === PALETA DE COLORES ===
-const COLOR_AZUL_ELECTRICO = '#00BFFF';
-const COLOR_NARANJA_VIBRANTE = '#FD7E14';
+const COLOR_AZUL_ELECTRICO = '#A2E831';
+const COLOR_NARANJA_VIBRANTE = '#A2E831';
 const COLOR_BLANCO = '#FFFFFF';
 const COLOR_NEGRO_SUAVE = '#212121';
 const COLOR_VERDE_LIMA = '#A2E831';
@@ -331,7 +331,7 @@ export default function Disciplinas() {
                     >
                       <Edit fontSize={isMobile ? "small" : "medium"} />
                     </IconButton>
-                    <IconButton
+                    {/* <IconButton
                       onClick={() => handleDelete(disciplina.id_disciplina)}
                       size={isMobile ? "small" : "medium"}
                       sx={{
@@ -341,7 +341,7 @@ export default function Disciplinas() {
                       title="Eliminar Disciplina"
                     >
                       <Delete fontSize={isMobile ? "small" : "medium"} />
-                    </IconButton>
+                    </IconButton> */}
                   </CardActions>
                 </Card>
               </motion.div>

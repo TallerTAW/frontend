@@ -44,6 +44,21 @@ import { toast } from 'react-toastify';
 import { useCourtsLogic } from '../hooks/useCourtsLogic';
 
 
+// === 1. LISTA DE DISCIPLINAS PERMITIDAS ===
+const DISCIPLINAS = [
+  'Fútbol',
+  'Futsal',
+  'Baloncesto',
+  'Voleibol',
+  'Tenis',
+  'Pádel',
+  'Wally',
+  'Raquetbol',
+  'Natación',
+  'Gimnasio'
+];
+
+
 const ImageUploader = ({ onImageChange, currentImage, COLOR_NARANJA_VIBRANTE, COLOR_AZUL_ELECTRICO }) => {
   const [preview, setPreview] = useState(currentImage);
   const [dragOver, setDragOver] = useState(false);
@@ -734,16 +749,20 @@ export default function Courts() {
                             sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
                         />
 
-                        <TextField
-                            fullWidth
-                            label="Tipo de Deporte"
-                            value={formData.tipo}
-                            onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                            margin="normal"
-                            variant="outlined"
-                            helperText="Ej: Fútbol, Básquetbol, Tenis, etc."
-                            sx={{ '& fieldset': { borderRadius: 2, borderColor: '#ddd' } }}
-                        />
+                        <FormControl fullWidth margin="normal" required>
+                            <InputLabel>Tipo de Deporte</InputLabel>
+                            <Select
+                                value={formData.tipo}
+                                label="Tipo de Deporte"
+                                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                            >
+                                {DISCIPLINAS.map((disciplina) => (
+                                    <MenuItem key={disciplina} value={disciplina}>
+                                        {disciplina}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                         
                         <Box sx={{ 
                             display: 'flex', 

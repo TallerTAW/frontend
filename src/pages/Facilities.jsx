@@ -515,6 +515,23 @@ export default function Facilities() {
     }
   };
 
+  const handleOpen = () => {
+    setEditing(null); // Aseguramos que no estamos editando
+    setFormData({     // Limpiamos el formulario
+      nombre: '',
+      ubicacion: '',
+      capacidad: '',
+      descripcion: '',
+      latitud: -16.5000,
+      longitud: -68.1193,
+      gestor_id: '',
+      control_acceso_id: '',
+    });
+    setImageFile(null);
+    setPreviewImage(null);
+    setOpen(true); // Abrimos el modal
+  };
+
   // Cerrar modal
   const handleClose = () => {
     setOpen(false);
