@@ -1,17 +1,8 @@
-// 📍 ARCHIVO: src/components/reservar/CanchaCard.jsx
-import { Card, CardContent, Typography, Box, Chip, Badge } from '@mui/material';
-import { SportsSoccer, LocationOn, People, AccessTime, NearMe } from '@mui/icons-material';
+import { Card, CardContent, Typography, Box, Chip } from '@mui/material';
+import { SportsSoccer, LocationOn, People, AccessTime } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
-export default function CanchaCard({ cancha, espacio, onClick, index, distancia, mostrarDistancia }) {
-  // Formatear distancia
-  const formatearDistancia = (km) => {
-    if (km < 1) {
-      return `${(km * 1000).toFixed(0)} m`;
-    }
-    return `${km.toFixed(1)} km`;
-  };
-
+export default function CanchaCard({ cancha, espacio, onClick, index }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -29,46 +20,13 @@ export default function CanchaCard({ cancha, espacio, onClick, index, distancia,
           cursor: 'pointer',
           transition: 'all 0.3s ease',
           '&:hover': {
-            boxShadow: 6
-          },
-          position: 'relative'
+            boxShadow: 6,
+            transform: 'translateY(-4px)'
+          }
         }}
         onClick={onClick}
         elevation={2}
       >
-        {/* Badge de distancia */}
-        {mostrarDistancia && distancia !== null && (
-          <Badge
-            badgeContent={
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 0.5,
-                px: 1.5,
-                py: 0.5,
-                bgcolor: '#0f9fe1',
-                color: 'white',
-                borderRadius: '12px',
-                fontSize: '0.75rem',
-                fontWeight: 'bold'
-              }}>
-                <NearMe sx={{ fontSize: 14 }} />
-                {formatearDistancia(distancia)}
-              </Box>
-            }
-            sx={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              zIndex: 2,
-              '& .MuiBadge-badge': {
-                position: 'relative',
-                transform: 'none'
-              }
-            }}
-          />
-        )}
-
         {/* Imagen de la cancha */}
         <Box
           sx={{
@@ -93,8 +51,7 @@ export default function CanchaCard({ cancha, espacio, onClick, index, distancia,
               backgroundColor: cancha.estado === 'disponible' ? '#16a34a' : '#dc2626',
               color: 'white',
               fontWeight: 'bold',
-              fontSize: '0.75rem',
-              zIndex: 1
+              fontSize: '0.75rem'
             }}
           />
           
@@ -149,29 +106,6 @@ export default function CanchaCard({ cancha, espacio, onClick, index, distancia,
                 <People sx={{ fontSize: 16, color: 'text.secondary', mr: 1 }} />
                 <Typography variant="body2" color="text.secondary">
                   Capacidad: {espacio.capacidad} personas
-                </Typography>
-              </Box>
-            </Box>
-          )}
-          
-          {/* Información de distancia si está disponible */}
-          {mostrarDistancia && distancia !== null && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              mb: 2,
-              p: 1.5,
-              bgcolor: '#e8f5e9',
-              borderRadius: 1,
-              border: '1px solid #c8e6c9'
-            }}>
-              <NearMe sx={{ fontSize: 18, color: '#4caf50', mr: 1.5 }} />
-              <Box>
-                <Typography variant="body2" color="#2e7d32" sx={{ fontSize: '0.875rem', fontWeight: 'medium' }}>
-                  Distancia desde tu ubicación
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1b5e20' }}>
-                  {formatearDistancia(distancia)}
                 </Typography>
               </Box>
             </Box>

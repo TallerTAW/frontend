@@ -1,4 +1,3 @@
-// 📍 ARCHIVO: src/components/reservar/Step2CanchasFiltradas.jsx
 import { useState, useEffect } from 'react';
 import { 
   Button, 
@@ -29,32 +28,7 @@ import CanchaCard from './CanchaCard';
 import LoadingState from '../common/LoadingState';
 import EmptyState from '../common/EmptyState';
 import { motion } from 'framer-motion';
-
-// Función para calcular distancia usando la fórmula del haversine
-const calcularDistancia = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Radio de la Tierra en kilómetros
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distancia en kilómetros
-};
-
-// Función para formatear distancia
-const formatearDistancia = (km) => {
-  if (km === null || km === undefined) return 'N/A';
-  
-  if (km < 1) {
-    return `${(km * 1000).toFixed(0)} m`;
-  }
-  if (km < 10) {
-    return `${km.toFixed(1)} km`;
-  }
-  return `${km.toFixed(0)} km`;
-};
+import { toast } from 'react-toastify';
 
 export default function Step2CanchasFiltradas({
   selectedDisciplina,
@@ -72,29 +46,68 @@ export default function Step2CanchasFiltradas({
   obteniendoUbicacion,
   obtenerUbicacion,
   limpiarUbicacion,
-  getCanchasOrdenadasPorDistancia
+  fetchCanchasByDisciplina,
+  setOrdenarPorDistancia
 }) {
   const [canchasOrdenadas, setCanchasOrdenadas] = useState([]);
 
-  // Ordenar canchas cuando cambian los parámetros
   useEffect(() => {
-    if (ordenarPorDistancia && ubicacionUsuario && canchas.length > 0) {
-      const ordenadas = getCanchasOrdenadasPorDistancia();
-      setCanchasOrdenadas(ordenadas);
-    } else {
-      // Restaurar orden original
-      const canchasConEspacio = canchas.map(cancha => ({
-        ...cancha,
-        espacio: espacios.find(e => e.id_espacio_deportivo === cancha.id_espacio_deportivo)
-      }));
-      setCanchasOrdenadas(canchasConEspacio);
-    }
-  }, [canchas, espacios, ordenarPorDistancia, ubicacionUsuario, getCanchasOrdenadasPorDistancia]);
+    const canchasConEspacio = canchas.map(cancha => ({
+      ...cancha,
+      espacio: cancha.espacio || espacios.find(e => e.id_espacio_deportivo === cancha.id_espacio_deportivo)
+    }));
+    
+    setCanchasOrdenadas(canchasConEspacio);
+    
+    // Depuración
+    console.log('🔍 Estado actual:');
+    console.log(`- Ordenar por distancia: ${ordenarPorDistancia}`);
+    console.log(`- Ubicación disponible: ${!!ubicacionUsuario}`);
+    console.log(`- Total canchas: ${canchasConEspacio.length}`);
+  }, [canchas, espacios, ordenarPorDistancia, ubicacionUsuario]);
 
-  // Aplicar filtro de espacio a las canchas ordenadas
   const canchasFiltradas = filtrarCanchasPorEspacio(espacioFiltro, canchasOrdenadas);
-
   const espaciosDisponibles = getEspaciosDisponibles();
+
+  // Función para manejar el clic en el botón de ordenar
+  const handleOrdenarClick = async () => {
+    if (!ubicacionUsuario) {
+      // No hay ubicación → obtenerla
+      try {
+        console.log('📍 Obteniendo ubicación...');
+        await obtenerUbicacion();
+        // Después de obtener ubicación, recargar canchas automáticamente
+        // porque ordenarPorDistancia se activa en obtenerUbicacion
+        setTimeout(() => {
+          if (selectedDisciplina) {
+            fetchCanchasByDisciplina(selectedDisciplina.id_disciplina);
+          }
+        }, 500);
+      } catch (error) {
+        console.error("Error al obtener ubicación:", error);
+      }
+    } else {
+      // Ya hay ubicación → alternar entre los dos modos
+      const nuevoOrden = !ordenarPorDistancia;
+      console.log(`🔄 Cambiando orden: ${ordenarPorDistancia ? 'Distancia' : 'Alfabético'} → ${nuevoOrden ? 'Distancia' : 'Alfabético'}`);
+      
+      setOrdenarPorDistancia(nuevoOrden);
+      
+      // Recargar canchas con el nuevo ordenamiento
+      if (selectedDisciplina) {
+        try {
+          await fetchCanchasByDisciplina(selectedDisciplina.id_disciplina);
+          if (nuevoOrden) {
+            toast.success("Canchas ordenadas por cercanía");
+          } else {
+            toast.info("Canchas ordenadas alfabéticamente");
+          }
+        } catch (error) {
+          console.error("Error al recargar canchas:", error);
+        }
+      }
+    }
+  };
 
   if (loading) {
     return <LoadingState message="Cargando canchas..." />;
@@ -124,7 +137,6 @@ export default function Step2CanchasFiltradas({
 
   return (
     <Box>
-      {/* Header con filtros */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -138,7 +150,7 @@ export default function Step2CanchasFiltradas({
           gap: 3,
           mb: 4
         }}>
-          {/* Botón atrás y título */}
+          {/* Título */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button
               startIcon={<ArrowBack />}
@@ -157,12 +169,12 @@ export default function Step2CanchasFiltradas({
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {canchasFiltradas.length} cancha{canchasFiltradas.length !== 1 ? 's' : ''} disponible{canchasFiltradas.length !== 1 ? 's' : ''}
-                {ordenarPorDistancia && ubicacionUsuario && ' • Ordenadas por cercanía'}
+                {ordenarPorDistancia && ubicacionUsuario ? ' • Ordenadas por cercanía' : ' • Ordenadas alfabéticamente'}
               </Typography>
             </Box>
           </Box>
 
-          {/* Controles de filtros y ubicación */}
+          {/* Controles */}
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
@@ -170,17 +182,11 @@ export default function Step2CanchasFiltradas({
             gap: 2,
             minWidth: { md: 400 }
           }}>
-            {/* Botón de ubicación */}
+            {/* Botón de ordenar */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Tooltip title={ordenarPorDistancia ? "Ordenar por cercanía" : "Ordenar alfabéticamente"}>
+              <Tooltip title={ordenarPorDistancia ? "Ordenar alfabéticamente" : "Ordenar por cercanía"}>
                 <IconButton
-                  onClick={() => {
-                    if (ubicacionUsuario) {
-                      // Si ya tenemos ubicación, solo alternar ordenamiento
-                      // Si no tenemos ubicación, obtenerla primero
-                    }
-                  }}
-                  disabled={!ubicacionUsuario}
+                  onClick={handleOrdenarClick}
                   sx={{
                     bgcolor: ordenarPorDistancia ? 'primary.main' : 'transparent',
                     color: ordenarPorDistancia ? 'white' : 'primary.main',
@@ -243,39 +249,31 @@ export default function Step2CanchasFiltradas({
           </Box>
         </Box>
 
-        {/* Información de ubicación */}
+        {/* Alerta de ubicación */}
         {ubicacionUsuario && (
           <Alert 
             severity="success" 
-            sx={{ 
-              mb: 3, 
-              borderRadius: 2,
-              '& .MuiAlert-message': { width: '100%' }
-            }}
+            sx={{ mb: 3, borderRadius: 2 }}
             action={
               <Button 
                 color="inherit" 
                 size="small" 
-                onClick={limpiarUbicacion}
+                onClick={() => {
+                  limpiarUbicacion();
+                }}
               >
                 Limpiar
               </Button>
             }
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              <Typography variant="body2" fontWeight="medium">
-                📍 Ubicación obtenida • Precisión: {ubicacionUsuario.precision?.toFixed(0) || 'N/A'}m
-              </Typography>
-              {ordenarPorDistancia && (
-                <Typography variant="caption">
-                  Canchas ordenadas por cercanía a tu ubicación
-                </Typography>
-              )}
-            </Box>
+            <Typography variant="body2" fontWeight="medium">
+              📍 Ubicación obtenida • Precisión: {ubicacionUsuario.precision?.toFixed(0) || 'N/A'}m
+              {ordenarPorDistancia ? ' • Ordenando por cercanía' : ' • Ordenando alfabéticamente'}
+            </Typography>
           </Alert>
         )}
 
-        {/* Chips de espacios disponibles */}
+        {/* Espacios disponibles */}
         <Paper elevation={0} sx={{ 
           p: 2, 
           mb: 4, 
@@ -328,45 +326,31 @@ export default function Step2CanchasFiltradas({
         />
       ) : (
         <Grid container spacing={3}>
-          {canchasFiltradas.map((cancha, index) => {
-            const espacioCancha = espacios.find(e => e.id_espacio_deportivo === cancha.id_espacio_deportivo);
-            
-            return (
-              <Grid 
-                item 
-                xs={12}
-                sm={6}
-                md={4}
-                key={cancha.id_cancha}
+          {canchasFiltradas.map((cancha, index) => (
+            <Grid 
+              item 
+              xs={12}
+              sm={6}
+              md={4}
+              key={cancha.id_cancha}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                style={{ height: '100%' }}
               >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  style={{ height: '100%' }}
-                >
-                  <Box
-                    sx={{
-                      height: '100%',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        transition: 'transform 0.3s ease'
-                      }
-                    }}
-                  >
-                    <CanchaCard
-                      cancha={cancha}
-                      espacio={espacioCancha}
-                      onClick={() => onCanchaSelect(cancha)}
-                      index={index}
-                      distancia={cancha.distancia}
-                      mostrarDistancia={ordenarPorDistancia}
-                    />
-                  </Box>
-                </motion.div>
-              </Grid>
-            );
-          })}
+                <Box sx={{ height: '100%' }}>
+                  <CanchaCard
+                    cancha={cancha}
+                    espacio={cancha.espacio}
+                    onClick={() => onCanchaSelect(cancha)}
+                    index={index}
+                  />
+                </Box>
+              </motion.div>
+            </Grid>
+          ))}
         </Grid>
       )}
     </Box>

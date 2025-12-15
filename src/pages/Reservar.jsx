@@ -40,6 +40,9 @@ export default function Reservar() {
     horariosDisponibles,
     isLoading,
     espacioFiltro,
+    ubicacionUsuario,
+    ordenarPorDistancia,
+    obteniendoUbicacion,
     
     // Métodos
     fetchEspacios,
@@ -73,7 +76,12 @@ export default function Reservar() {
     getEspaciosDisponibles,
     setEspacioFiltro,
     aplicarCupon,
-    removerCupon
+    removerCupon,
+    obtenerUbicacion,
+    limpiarUbicacion,
+    setOrdenarPorDistancia,
+    setUbicacionUsuario,
+    setObteniendoUbicacion
   } = useReserva();
 
   // Cargar datos iniciales
@@ -105,20 +113,6 @@ export default function Reservar() {
       console.log(`👤 [Reservar] Usuario no autenticado`);
     }
   }, [profile, fetchCuponesUsuario]);
-
-  // En tu archivo Reservar.jsx, después del useEffect que carga cupones
-  useEffect(() => {
-    console.log(`🔍 [Reservar] Cupones en estado:`, {
-      total: cupones.length,
-      cupones: cupones.map(c => ({
-        codigo: c.codigo,
-        estado: c.estado,
-        expiracion: c.fecha_expiracion,
-        tipo: c.tipo,
-        monto: c.monto_descuento
-      }))
-    });
-  }, [cupones]);
 
   // Actualizar horarios cuando cambia la fecha o cancha
   useEffect(() => {
@@ -157,11 +151,18 @@ export default function Reservar() {
             espacios={espacios}
             onCanchaSelect={handleCanchaSelect}
             onBack={() => setActiveStep(0)}
-            loading={loading}
+            loading={loading || isLoading}
             espacioFiltro={espacioFiltro}
             setEspacioFiltro={setEspacioFiltro}
             filtrarCanchasPorEspacio={filtrarCanchasPorEspacio}
             getEspaciosDisponibles={getEspaciosDisponibles}
+            ubicacionUsuario={ubicacionUsuario}
+            ordenarPorDistancia={ordenarPorDistancia}
+            obteniendoUbicacion={obteniendoUbicacion}
+            obtenerUbicacion={obtenerUbicacion}
+            limpiarUbicacion={limpiarUbicacion}
+            fetchCanchasByDisciplina={fetchCanchasByDisciplina}
+            setOrdenarPorDistancia={setOrdenarPorDistancia}
           />
         );
       case 2:
