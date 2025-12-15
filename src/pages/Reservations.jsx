@@ -4,6 +4,7 @@ import { reservasApi } from '../api/reservas';
 import { toast } from 'react-toastify';
 import {
   Box,
+  InputAdornment,
   Typography,
   Grid,
   Card,
@@ -38,6 +39,7 @@ import {
 import { 
   CalendarMonth,
   Edit,
+  Search, // 👈 AGREGAR ESTO
   Cancel,
   CheckCircle,
   Person,
@@ -83,6 +85,8 @@ export default function Reservations() {
   // Estados principales de reservas
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState('total'); 
+  const [searchTerm, setSearchTerm] = useState(''); // <--- AGREGAR ESTO
   const [editDialog, setEditDialog] = useState(null);
   const [cancelDialog, setCancelDialog] = useState(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
@@ -349,14 +353,17 @@ export default function Reservations() {
   };
 
   const getEstadoTexto = (estado) => {
+    if (!estado || typeof estado !== 'string') {
+        return 'Estado Desconocido'; 
+    }
     const textos = {
       pendiente: 'PENDIENTE',
       confirmada: 'CONFIRMADA',
-      en_curso: 'EN CURSO',
+      en_curso: 'EN_CURSO',
       completada: 'COMPLETADA',
       cancelada: 'CANCELADA'
     };
-    return textos[estado] || estado.toUpperCase();
+    return textos[estado] || estado.toLowerCase();
   };
 
   const handleEstadoChange = async (reservaId, nuevoEstado) => {
@@ -441,8 +448,24 @@ export default function Reservations() {
     pendientes: reservas.filter(r => r.estado === 'pendiente').length,
     canceladas: reservas.filter(r => r.estado === 'cancelada').length,
     en_curso: reservas.filter(r => r.estado === 'en_curso').length,
-    completadas: reservas.filter(r => r.estado === 'completada').length
+    completadas: reservas.filter(r => r.estado === 'completada').length,
+    
   };
+
+  const filteredReservas = reservas.filter(reserva => {
+    // 1. Filtrar por Estado (Botones)
+  const matchesStatus = filter === 'total' ? true : reserva.estado === filter;
+  
+  // 2. Filtrar por Código (Buscador)
+  // Obtenemos el código y aseguramos que exista
+  const codigo = getCodigoReserva(reserva).toString().toLowerCase();
+  const termino = searchTerm.toLowerCase();
+  const matchesSearch = codigo.includes(termino);
+
+  // Retornar solo si cumple AMBAS condiciones
+  return matchesStatus && matchesSearch;
+  });
+
 
   if (loading) {
     return (
@@ -661,20 +684,33 @@ export default function Reservations() {
         >
           <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 4 }}>
             {[
-              { label: 'Total', value: estadisticas.total, color: COLOR_AZUL_ELECTRICO, icon: <CalendarMonth /> },
-              { label: 'Confirmadas', value: estadisticas.confirmadas, color: COLOR_VERDE_LIMA, icon: <CheckCircle /> },
-              { label: 'Pendientes', value: estadisticas.pendientes, color: COLOR_AMARILLO, icon: <Schedule /> },
-              { label: 'Canceladas', value: estadisticas.canceladas, color: COLOR_ROJO, icon: <Cancel /> },
+              { label: 'Total', value: estadisticas.total, color: COLOR_AZUL_ELECTRICO, icon: <CalendarMonth />,statusKey: 'total' },
+              { label: 'Confirmadas', value: estadisticas.confirmadas, color: COLOR_VERDE_LIMA, icon: <CheckCircle />, statusKey: 'confirmada'},
+              { label: 'Pendientes', value: estadisticas.pendientes, color: COLOR_AMARILLO, icon: <Schedule />, statusKey: 'pendiente' },
+              { label: 'Canceladas', value: estadisticas.canceladas, color: COLOR_ROJO, icon: <Cancel />,statusKey: 'cancelada' },
+              { label: 'Completadas', value: estadisticas.completadas, color: '#3eec44ff', icon: <Receipt />,statusKey: 'completada' },
+              { label: 'En Curso', value: estadisticas.en_curso, color: COLOR_AZUL_ELECTRICO, icon: <AccessTime />, statusKey: 'en_curso' },
             ].map((stat, index) => (
-              <Grid item xs={6} sm={3} key={index}>
-                <Card sx={{ 
-                  textAlign: 'center', 
-                  p: { xs: 1.5, sm: 2 },
-                  backgroundColor: `${stat.color}15`,
-                  border: `2px solid ${stat.color}`,
-                  borderRadius: 2,
-                  height: '100%'
-                }}>
+              <Grid item key={index}
+              sx={{
+                width: { xs: '30%', sm: '45%', md: '30%' }, 
+                justifyContent: 'center'
+              }}>
+                <Card onClick={() => setFilter(stat.statusKey)} // ⬅️ NUEVO: Hace la tarjeta clickable
+                  sx={{ 
+                    textAlign: 'center', 
+                    p: { xs: 1.5, sm: 2 },
+                    // ⬅️ ESTILO CONDICIONAL para resaltar la tarjeta activa
+                    backgroundColor: `${stat.color}${filter === stat.statusKey ? '30' : '15'}`,
+                    border: `2px solid ${filter === stat.statusKey ? stat.color : `${stat.color}70`}`,
+                    borderRadius: 2,
+                    height: '100%',
+                    cursor: 'pointer', // ⬅️ NUEVO: Puntero de clic
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                        boxShadow: `0 0 10px ${stat.color}80`
+                    }
+                  }}>
                   <Box sx={{ 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -718,9 +754,51 @@ export default function Reservations() {
             ))}
           </Grid>
         </motion.div>
+
       )}
 
+
+      {/* 🔍 BARRA DE BÚSQUEDA */}
+      <Box sx={{ mb: 3, px: { xs: 0, sm: 2 } }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Buscar por código de reserva (ej: TEMP-123)..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search sx={{ color: COLOR_AZUL_ELECTRICO }} />
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: 3,
+              backgroundColor: 'background.paper',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(0,0,0,0.1)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: COLOR_AZUL_ELECTRICO,
+              },
+            }
+          }}
+        />
+      </Box>
+
       {/* LISTA DE RESERVAS */}
+      {/* NUEVO: Indicador de filtro activo para admin/gestor */}
+      {(profile?.rol === 'admin' || profile?.rol === 'gestor') && reservas.length > 0 && (
+          <Typography 
+            variant="h6" 
+            sx={{ mb: 2, fontWeight: 'bold', color: COLOR_NEGRO_SUAVE }}
+          >
+              Reservas: {estadisticas[filter] === 0 ? '0' : estadisticas[filter]} {filter === 'total' ? 'Reservas Totales' : getEstadoTexto(filter)}
+          </Typography>
+      )}
+      
+      
       {loadingDetails && reservas.length > 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress size={40} sx={{ color: COLOR_AZUL_ELECTRICO }} />
@@ -728,9 +806,9 @@ export default function Reservations() {
             Cargando detalles de reservas...
           </Typography>
         </Box>
-      ) : reservas.length > 0 ? (
+        ) : filteredReservas.length > 0 ? (
         <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
-          {reservas.map((reserva, index) => {
+          {filteredReservas.map((reserva, index) => {
             const infoUsuario = getInfoUsuario(reserva);
             const infoCancha = getInfoCancha(reserva);
             const isExpanded = expandedCard === reserva.id_reserva;
@@ -749,6 +827,7 @@ export default function Reservations() {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                     borderLeft: `4px solid ${getEstadoColor(reserva.estado)}`,
                     
+                    boxShadow: 3,
                     transition: 'all 0.3s ease',
                     '&:hover': {
                         boxShadow: 6,
